@@ -1,14 +1,14 @@
 import type { Question } from '../../src/types'
 
 export const quizData: Question[] = [
-  { id: 1, text: '日本の首都はどこですか？', answer: '東京' },
-  { id: 2, text: '水の化学式は何ですか？', answer: 'H2O' },
-  { id: 3, text: '1 + 1 は何ですか？', answer: '2' },
-  { id: 4, text: '地球から最も近い恒星は何ですか？', answer: '太陽' },
-  { id: 5, text: '光の速度は秒速約何kmですか？', answer: '30万km' },
-  { id: 6, text: '人体で最も大きい臓器はどれですか？', answer: '皮膚' },
-  { id: 7, text: 'ピタゴラスの定理で直角三角形の斜辺の二乗は？', answer: '他の二辺の二乗の和' },
-  { id: 8, text: '元素記号 "O" は何の元素ですか？', answer: '酸素' },
-  { id: 9, text: '太陽系で最も大きな惑星はどれですか？', answer: '木星' },
-  { id: 10, text: 'DNAの正式名称は何ですか？', answer: 'デオキシリボ核酸' },
+  { id: 1,  text: '日本の首都はどこですか？',               answer: 'とうきょう' },
+  { id: 2,  text: '太陽系で最も大きな惑星は何ですか？',     answer: 'もくせい' },
+  { id: 3,  text: '日本で一番高い山は何ですか？',           answer: 'ふじさん' },
+  { id: 4,  text: '地球の自然の衛星の名前は何ですか？',     answer: 'つき' },
+  { id: 5,  text: '人間の体で最も大きい臓器は何ですか？',   answer: 'ひふ' },
+  { id: 6,  text: '日本で最も長い川は何ですか？',           answer: 'しなのがわ' },
+  { id: 7,  text: '光が一年間に進む距離の単位は何ですか？', answer: 'こうねん' },
+  { id: 8,  text: 'リンゴを英語で何といいますか？',         answer: 'あっぷる' },
+  { id: 9,  text: '春の次の季節は何ですか？',               answer: 'なつ' },
+  { id: 10, text: '世界で最も深い湖はどこですか？',         answer: 'ばいかるこ' },
 ]
