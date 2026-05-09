@@ -1,39 +1,14 @@
-import { Server } from 'socket.io'
-import type { Server as HttpServer } from 'http'
-import type {
-  ServerToClientEvents,
-  ClientToServerEvents,
-  InterServerEvents,
-  SocketData,
-} from '../../src/types'
-import { registerHandlers } from './handlers'
-import { gameManager } from '../game/GameManager'
+import http from 'http'
+import { createApp } from './app'
+import { initSocketIO } from './socket'
 
-export function initSocketIO(httpServer: HttpServer) {
-  const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
-    httpServer,
-    {
-      cors: {
-        origin:
-          process.env.NODE_ENV === 'production'
-            ? false
-            : ['http://localhost:5173', 'http://127.0.0.1:5173'],
-        methods: ['GET', 'POST'],
-      },
-    }
-  )
+const PORT = parseInt(process.env.PORT ?? '3000', 10)
 
-  gameManager.setBroadcast((roomId, state) => {
-    io.to(roomId).emit('room-update', state)
-  })
+const app = createApp()
+const httpServer = http.createServer(app)
 
-  io.on('connection', (socket) => {
-    console.log(`[Socket] connected: ${socket.id}`)
-    registerHandlers(io, socket)
-    socket.on('disconnect', () => {
-      console.log(`[Socket] disconnected: ${socket.id}`)
-    })
-  })
+initSocketIO(httpServer)
 
-  return io
-}
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Server] QuizSpark running on http://0.0.0.0:${PORT}`)
+})
