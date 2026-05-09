@@ -1,49 +1,39 @@
-export type Phase = 'lobby' | 'question' | 'buzzing' | 'judging' | 'result' | 'finished'
+import { Server } from 'socket.io'
+import type { Server as HttpServer } from 'http'
+import type {
+  ServerToClientEvents,
+  ClientToServerEvents,
+  InterServerEvents,
+  SocketData,
+} from '../../src/types'
+import { registerHandlers } from './handlers'
+import { gameManager } from '../game/GameManager'
 
-export interface Player {
-  id: string
-  name: string
-  score: number
-  isHost: boolean
-}
+export function initSocketIO(httpServer: HttpServer) {
+  const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
+    httpServer,
+    {
+      cors: {
+        origin:
+          process.env.NODE_ENV === 'production'
+            ? false
+            : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+        methods: ['GET', 'POST'],
+      },
+    }
+  )
 
-export interface Question {
-  id: number
-  text: string
-  answer: string
-}
+  gameManager.setBroadcast((roomId, state) => {
+    io.to(roomId).emit('room-update', state)
+  })
 
-export interface RoomState {
-  id: string
-  hostId: string
-  players: Player[]
-  phase: Phase
-  currentQuestionIndex: number
-  currentQuestion: Question | null
-  buzzedPlayerId: string | null
-  buzzedPlayerName: string | null
-  lastJudgement: 'correct' | 'incorrect' | null
-  totalQuestions: number
-}
+  io.on('connection', (socket) => {
+    console.log(`[Socket] connected: ${socket.id}`)
+    registerHandlers(io, socket)
+    socket.on('disconnect', () => {
+      console.log(`[Socket] disconnected: ${socket.id}`)
+    })
+  })
 
-export interface ServerToClientEvents {
-  'room-update': (state: RoomState) => void
-  'buzz-accepted': (playerId: string, playerName: string) => void
-  error: (message: string) => void
-}
-
-export interface ClientToServerEvents {
-  'create-room': (name: string, callback: (roomId: string) => void) => void
-  'join-room': (roomId: string, name: string, callback: (error: string | null) => void) => void
-  'start-game': () => void
-  buzz: () => void
-  judge: (correct: boolean) => void
-  'next-question': () => void
-}
-
-export interface InterServerEvents {}
-
-export interface SocketData {
-  roomId: string
-  playerId: string
+  return io
 }
