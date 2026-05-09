@@ -35,8 +35,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     socket.data.roomId = roomId
     socket.data.playerId = socket.id
     socket.join(roomId)
-    const state = gameManager.getRoom(roomId)!
-    broadcast(io, roomId, state)
+    broadcast(io, roomId, gameManager.getRoom(roomId)!)
     callback(null)
   })
 
@@ -60,30 +59,16 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     broadcast(io, roomId, state)
   })
 
-  socket.on('judge', (correct) => {
+  socket.on('submit-answer', (answer) => {
     const roomId = socket.data.roomId
     if (!roomId) return
-    const state = gameManager.getRoom(roomId)
-    if (!state || state.hostId !== socket.id) return
-    gameManager.judge(roomId, correct)
-    broadcast(io, roomId, gameManager.getRoom(roomId)!)
-  })
-
-  socket.on('next-question', () => {
-    const roomId = socket.data.roomId
-    if (!roomId) return
-    const state = gameManager.getRoom(roomId)
-    if (!state || state.hostId !== socket.id) return
-    gameManager.nextQuestion(roomId)
-    broadcast(io, roomId, gameManager.getRoom(roomId)!)
+    gameManager.submitAnswer(roomId, socket.id, answer)
   })
 
   socket.on('disconnect', () => {
     const affectedRoomId = gameManager.leaveRoom(socket.id)
     if (!affectedRoomId) return
     const state = gameManager.getRoom(affectedRoomId)
-    if (state) {
-      broadcast(io, affectedRoomId, state)
-    }
+    if (state) broadcast(io, affectedRoomId, state)
   })
 }
