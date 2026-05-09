@@ -1,5 +1,5 @@
 import { Server } from 'socket.io'
-import type { HttpServer } from 'vite'
+import type { Server as HttpServer } from 'http'
 import type {
   ServerToClientEvents,
   ClientToServerEvents,
@@ -7,6 +7,7 @@ import type {
   SocketData,
 } from '../../src/types'
 import { registerHandlers } from './handlers'
+import { gameManager } from '../game/GameManager'
 
 export function initSocketIO(httpServer: HttpServer) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
@@ -21,6 +22,10 @@ export function initSocketIO(httpServer: HttpServer) {
       },
     }
   )
+
+  gameManager.setBroadcast((roomId, state) => {
+    io.to(roomId).emit('room-update', state)
+  })
 
   io.on('connection', (socket) => {
     console.log(`[Socket] connected: ${socket.id}`)
