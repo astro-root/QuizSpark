@@ -3,11 +3,16 @@ import {
   createRoom,
   addPlayer,
   removePlayer,
-  startGame,
   advanceQuestion,
   acceptBuzz,
-  applyJudgement,
+  applyAnswer,
+  reassignHost,
+  BUZZ_TIMEOUT_MS,
+  ANSWER_TIMEOUT_MS,
+  RESULT_SHOW_MS,
 } from './RoomState'
+
+type BroadcastFn = (roomId: string, state: RoomState) => void
 
 function generateRoomId(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
@@ -16,14 +21,75 @@ function generateRoomId(): string {
 class GameManager {
   private rooms: Map<string, RoomState> = new Map()
   private playerRoomMap: Map<string, string> = new Map()
+  private timers: Map<string, ReturnType<typeof setTimeout>> = new Map()
+  private broadcastFn?: BroadcastFn
+
+  setBroadcast(fn: BroadcastFn) {
+    this.broadcastFn = fn
+  }
+
+  private broadcast(roomId: string) {
+    const state = this.rooms.get(roomId)
+    if (state && this.broadcastFn) {
+      this.broadcastFn(roomId, state)
+    }
+  }
+
+  private clearTimer(roomId: string) {
+    const t = this.timers.get(roomId)
+    if (t) {
+      clearTimeout(t)
+      this.timers.delete(roomId)
+    }
+  }
+
+  private startBuzzTimer(roomId: string) {
+    this.clearTimer(roomId)
+    const t = setTimeout(() => {
+      const state = this.rooms.get(roomId)
+      if (!state || state.phase !== 'question') return
+      const next = advanceQuestion(state)
+      this.rooms.set(roomId, next)
+      this.broadcast(roomId)
+      if (next.phase === 'question') {
+        this.startBuzzTimer(roomId)
+      }
+    }, BUZZ_TIMEOUT_MS)
+    this.timers.set(roomId, t)
+  }
+
+  private startAnswerTimer(roomId: string) {
+    this.clearTimer(roomId)
+    const t = setTimeout(() => {
+      const state = this.rooms.get(roomId)
+      if (!state || state.phase !== 'answering') return
+      const { nextState } = applyAnswer(state, state.buzzedPlayerId ?? '', '')
+      this.rooms.set(roomId, nextState)
+      this.broadcast(roomId)
+      this.startResultTimer(roomId)
+    }, ANSWER_TIMEOUT_MS)
+    this.timers.set(roomId, t)
+  }
+
+  private startResultTimer(roomId: string) {
+    this.clearTimer(roomId)
+    const t = setTimeout(() => {
+      const state = this.rooms.get(roomId)
+      if (!state || state.phase !== 'result') return
+      const next = advanceQuestion(state)
+      this.rooms.set(roomId, next)
+      this.broadcast(roomId)
+      if (next.phase === 'question') {
+        this.startBuzzTimer(roomId)
+      }
+    }, RESULT_SHOW_MS)
+    this.timers.set(roomId, t)
+  }
 
   createRoom(hostId: string, hostName: string): string {
     let roomId = generateRoomId()
-    while (this.rooms.has(roomId)) {
-      roomId = generateRoomId()
-    }
-    const state = createRoom(roomId, hostId, hostName)
-    this.rooms.set(roomId, state)
+    while (this.rooms.has(roomId)) roomId = generateRoomId()
+    this.rooms.set(roomId, createRoom(roomId, hostId, hostName))
     this.playerRoomMap.set(hostId, roomId)
     return roomId
   }
@@ -32,8 +98,7 @@ class GameManager {
     const state = this.rooms.get(roomId)
     if (!state) return 'ルームが存在しません'
     if (state.phase !== 'lobby') return 'ゲームはすでに開始されています'
-    const updated = addPlayer(state, playerId, playerName)
-    this.rooms.set(roomId, updated)
+    this.rooms.set(roomId, addPlayer(state, playerId, playerName))
     this.playerRoomMap.set(playerId, roomId)
     return null
   }
@@ -43,23 +108,15 @@ class GameManager {
     if (!roomId) return null
     const state = this.rooms.get(roomId)
     if (!state) return null
-    const updated = removePlayer(state, playerId)
+    let updated = removePlayer(state, playerId)
     this.playerRoomMap.delete(playerId)
     if (updated.players.length === 0) {
       this.rooms.delete(roomId)
+      this.clearTimer(roomId)
       return null
     }
-    if (state.hostId === playerId && updated.players.length > 0) {
-      const newHost = updated.players[0]
-      const reassigned: RoomState = {
-        ...updated,
-        hostId: newHost.id,
-        players: updated.players.map((p) =>
-          p.id === newHost.id ? { ...p, isHost: true } : p
-        ),
-      }
-      this.rooms.set(roomId, reassigned)
-      return roomId
+    if (state.hostId === playerId) {
+      updated = reassignHost(updated)
     }
     this.rooms.set(roomId, updated)
     return roomId
@@ -68,27 +125,31 @@ class GameManager {
   startGame(roomId: string): boolean {
     const state = this.rooms.get(roomId)
     if (!state || state.phase !== 'lobby') return false
-    this.rooms.set(roomId, startGame(state))
+    const next = advanceQuestion(state)
+    this.rooms.set(roomId, next)
+    if (next.phase === 'question') this.startBuzzTimer(roomId)
     return true
   }
 
   buzz(roomId: string, playerId: string): boolean {
     const state = this.rooms.get(roomId)
     if (!state || state.phase !== 'question') return false
-    this.rooms.set(roomId, acceptBuzz(state, playerId))
+    this.clearTimer(roomId)
+    const next = acceptBuzz(state, playerId)
+    this.rooms.set(roomId, next)
+    this.startAnswerTimer(roomId)
     return true
   }
 
-  judge(roomId: string, correct: boolean): void {
+  submitAnswer(roomId: string, playerId: string, rawAnswer: string): void {
     const state = this.rooms.get(roomId)
-    if (!state) return
-    this.rooms.set(roomId, applyJudgement(state, correct))
-  }
-
-  nextQuestion(roomId: string): void {
-    const state = this.rooms.get(roomId)
-    if (!state) return
-    this.rooms.set(roomId, advanceQuestion(state))
+    if (!state || state.phase !== 'answering') return
+    if (state.buzzedPlayerId !== playerId) return
+    this.clearTimer(roomId)
+    const { nextState } = applyAnswer(state, playerId, rawAnswer)
+    this.rooms.set(roomId, nextState)
+    this.broadcast(roomId)
+    this.startResultTimer(roomId)
   }
 
   getRoom(roomId: string): RoomState | undefined {
