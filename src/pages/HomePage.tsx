@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 
 export default function HomePage() {
   const { createRoom, joinRoom, connected } = useSocketContext()
-  const { user, loginWithGoogle, loginWithPassword, register, logout } = useAuth()
+  const { user, loginWithGoogle, loginWithPassword, register, updateProfile, logout } = useAuth()
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [roomId, setRoomId] = useState('')
@@ -20,6 +20,9 @@ export default function HomePage() {
   const [authName, setAuthName] = useState('')
   const [authError, setAuthError] = useState('')
   const [showAuth, setShowAuth] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
+  const [profileName, setProfileName] = useState('')
+  const [profileError, setProfileError] = useState('')
 
   async function handleCreate() {
     if (!name.trim()) { setError('名前を入力してください'); return }
@@ -105,7 +108,10 @@ export default function HomePage() {
               {user.avatarUrl && <img src={user.avatarUrl} style={{ width:28, height:28, borderRadius:'50%' }} alt="" />}
               <span style={{ fontSize:14, color:'var(--sub)' }}>{user.name}</span>
             </div>
-            <button onClick={logout} style={{ fontSize:12, color:'var(--muted)', background:'none', padding:0 }}>ログアウト</button>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => { setProfileName(user.name); setShowProfile(true) }} style={{ fontSize:12, color:'var(--sub)', background:'none', padding:0 }}>編集</button>
+              <button onClick={logout} style={{ fontSize:12, color:'var(--muted)', background:'none', padding:0 }}>ログアウト</button>
+            </div>
           </div>
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -124,6 +130,41 @@ export default function HomePage() {
 
         {!connected && <p style={{ textAlign:'center', color:'var(--muted)', fontSize:12, marginTop:12 }}>接続中...</p>}
       </div>
+
+
+      {/* Profile Modal */}
+      {showProfile && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', padding:20, zIndex:1000 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowProfile(false) }}>
+          <div style={{ width:'100%', maxWidth:320, background:'var(--surface)', borderRadius:16, padding:24 }}>
+            <p style={{ fontWeight:800, fontSize:16, marginBottom:20 }}>プロフィール編集</p>
+            <div style={{ marginBottom:16 }}>
+              <p style={lbl}>名前</p>
+              <input value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="ニックネーム" style={inp}
+                onKeyDown={e => e.key==='Enter' && (async () => {
+                  const err = await updateProfile(profileName)
+                  if (err) setProfileError(err)
+                  else setShowProfile(false)
+                })()}/>
+            </div>
+            {profileError && <p style={{ color:'var(--wrong)', fontSize:13, marginBottom:12 }}>{profileError}</p>}
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setShowProfile(false)}
+                style={{ flex:1, padding:'12px', borderRadius:10, fontSize:14, fontWeight:700, background:'var(--surface2)', color:'var(--muted)', border:'1px solid var(--border)' }}>
+                キャンセル
+              </button>
+              <button onClick={async () => {
+                  const err = await updateProfile(profileName)
+                  if (err) setProfileError(err)
+                  else setShowProfile(false)
+                }}
+                style={{ flex:1, padding:'12px', borderRadius:10, fontSize:14, fontWeight:900, background:'linear-gradient(135deg,var(--accent),var(--accent2))', color:'#fff' }}>
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Auth Modal */}
       {showAuth && (
