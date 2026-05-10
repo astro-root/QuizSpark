@@ -89,6 +89,7 @@ export default function HomePage() {
         </button>
 
         {!connected && <p style={{ textAlign:'center', color:'var(--muted)', fontSize:12, marginTop:12 }}>接続中...</p>}
+        <p style={{ textAlign:'center', marginTop:20 }}><a href='/submit' style={{ color:'var(--muted)', fontSize:13 }}>問題を投稿する →</a></p>
       </div>
     </div>
   )
