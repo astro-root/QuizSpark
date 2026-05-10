@@ -39,7 +39,15 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     callback(null)
   })
 
-  socket.on('start-game', () => {
+  socket.on('update-settings', (settings) => {
+    const roomId = socket.data.roomId
+    if (!roomId) return
+    const ok = gameManager.updateSettings(roomId, socket.id, settings)
+    if (!ok) return
+    broadcast(io, roomId, gameManager.getRoom(roomId)!)
+  })
+
+    socket.on('start-game', () => {
     const roomId = socket.data.roomId
     if (!roomId) return
     const state = gameManager.getRoom(roomId)

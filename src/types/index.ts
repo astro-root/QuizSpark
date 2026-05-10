@@ -1,39 +1,72 @@
-import { Server } from 'socket.io'
-import type { Server as HttpServer } from 'http'
-import type {
-  ServerToClientEvents,
-  ClientToServerEvents,
-  InterServerEvents,
-  SocketData,
-} from '../../src/types'
-import { registerHandlers } from './handlers'
-import { gameManager } from '../game/GameManager'
+export type Phase = 'lobby' | 'question' | 'answering' | 'result' | 'finished'
 
-export function initSocketIO(httpServer: HttpServer) {
-  const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
-    httpServer,
-    {
-      cors: {
-        origin:
-          process.env.NODE_ENV === 'production'
-            ? false
-            : ['http://localhost:5173', 'http://127.0.0.1:5173'],
-        methods: ['GET', 'POST'],
-      },
-    }
-  )
+export type RuleId =
+  | 'free' | 'mon' | 'newyork' | 'updown' | 'by'
+  | 'freeze' | 'mon_rest' | 'swedish' | 'divide'
+  | 'lucky' | 'rensei' | 'rengou' | 'combo'
 
-  gameManager.setBroadcast((roomId, state) => {
-    io.to(roomId).emit('room-update', state)
-  })
+export interface GameSettings {
+  ruleId: RuleId
+  ruleParams: Record<string, number>
+  questionCount: number   // 1セットの問題数
+  winnerCount: number     // 何人勝ち抜けで終了 (0=無制限)
+  loserCount: number      // 何人失格で終了 (0=無制限)
+}
 
-  io.on('connection', (socket) => {
-    console.log(`[Socket] connected: ${socket.id}`)
-    registerHandlers(io, socket)
-    socket.on('disconnect', () => {
-      console.log(`[Socket] disconnected: ${socket.id}`)
-    })
-  })
+export type PlayerStatus = 'ACTIVE' | 'WIN' | 'LOSE'
 
-  return io
+export interface Player {
+  id: string
+  name: string
+  score: number
+  isHost: boolean
+  status: PlayerStatus
+  ruleState: Record<string, number | boolean | string>
+}
+
+export interface Question {
+  id: number
+  text: string
+  answer: string
+  answers?: string[]
+  displayAnswer: string
+}
+
+export interface RoomState {
+  id: string
+  hostId: string
+  players: Player[]
+  phase: Phase
+  currentQuestionIndex: number
+  currentQuestion: Question | null
+  buzzedPlayerId: string | null
+  buzzedPlayerName: string | null
+  lastJudgement: 'correct' | 'incorrect' | 'skip' | null
+  lastAnswerPlayerId: string | null
+  timerEndsAt: number | null
+  totalQuestions: number
+  questionOrder: number[]
+  settings: GameSettings
+}
+
+export interface ServerToClientEvents {
+  'room-update': (state: RoomState) => void
+  'buzz-accepted': (playerId: string, playerName: string) => void
+  error: (message: string) => void
+}
+
+export interface ClientToServerEvents {
+  'create-room': (name: string, callback: (roomId: string) => void) => void
+  'join-room': (roomId: string, name: string, callback: (error: string | null) => void) => void
+  'update-settings': (settings: GameSettings) => void
+  'start-game': () => void
+  buzz: () => void
+  'submit-answer': (answer: string) => void
+}
+
+export interface InterServerEvents {}
+
+export interface SocketData {
+  roomId: string
+  playerId: string
 }

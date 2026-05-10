@@ -1,0 +1,31 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0f1117;
+  --surface:  #1a1d2e;
+  --surface2: #222640;
+  --border:   rgba(255,255,255,0.07);
+  --accent:   #6366f1;
+  --accent2:  #8b5cf6;
+  --buzz:     #f43f5e;
+  --correct:  #10b981;
+  --wrong:    #f43f5e;
+  --gold:     #fbbf24;
+  --text:     #f1f5f9;
+  --muted:    #64748b;
+  --sub:      #94a3b8;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic Pro', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; outline: none; transition: opacity .15s, transform .1s; }
+button:active { transform: scale(0.97); }
+input, select { font-family: inherit; outline: none; }
+select { cursor: pointer; }
