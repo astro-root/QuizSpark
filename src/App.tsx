@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SocketProvider } from './context/SocketContext'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import { ConnectionBanner } from './components/ConnectionBanner'
 import HomePage from './pages/HomePage'
 import LobbyPage from './pages/LobbyPage'
@@ -10,6 +11,7 @@ import AdminPage from './pages/AdminPage'
 
 export default function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
     <SocketProvider>
       <ConnectionBanner />
@@ -25,5 +27,6 @@ export default function App() {
       </BrowserRouter>
     </SocketProvider>
     </AuthProvider>
+    </ThemeProvider>
   )
 }
