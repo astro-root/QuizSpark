@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
+import RoomChat from '../components/RoomChat'
 import { useTheme } from '../context/ThemeContext'
 import type { GameSettings, RuleId } from '../types'
 
@@ -233,6 +234,7 @@ export default function LobbyPage() {
           </div>
         </div>
       </div>
+      {roomState && <RoomChat myId={myId} />}
     </div>
   )
 }

@@ -142,6 +142,17 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     leaveQueue(socket.id)
   })
 
+  socket.on('send-chat', (text) => {
+    const roomId = socket.data.roomId
+    if (!roomId || !text?.trim()) return
+    const state = gameManager.getRoom(roomId)
+    if (!state) return
+    const player = state.players.find(p => p.id === socket.id)
+    const name = player?.name ?? (socket.request as any).user?.name ?? 'ゲスト'
+    const safe = text.trim().slice(0, 100)
+    io.to(roomId).emit('chat-message', socket.id, name, safe, Date.now())
+  })
+
   socket.on('disconnect', () => {
     leaveQueue(socket.id)
     userIdMap.delete(socket.id)

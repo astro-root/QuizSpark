@@ -55,6 +55,7 @@ export interface ServerToClientEvents {
   'room-update': (state: RoomState) => void
   'match-found': (roomId: string) => void
   'queue-status': (position: number) => void
+  'chat-message': (playerId: string, playerName: string, text: string, ts: number) => void
   'buzz-accepted': (playerId: string, playerName: string) => void
   error: (message: string) => void
 }
@@ -73,6 +74,7 @@ export interface ClientToServerEvents {
   'reset-game': () => void
   'join-queue': (ruleId: RuleId, questionCount: number) => void
   'leave-queue': () => void
+  'send-chat': (text: string) => void
   'start-game': () => void
   buzz: () => void
   'submit-answer': (answer: string) => void

@@ -84,6 +84,7 @@ export function useSocket() {
   const buzz = useCallback(() => { socket.emit('buzz') }, [])
   const submitAnswer = useCallback((answer: string) => { socket.emit('submit-answer', answer) }, [])
   const joinQueue = useCallback((ruleId: RuleId, questionCount: number) => { socket.emit('join-queue', ruleId, questionCount) }, [])
+  const sendChat = useCallback((text: string) => { socket.emit('send-chat', text) }, [])
   const leaveQueue = useCallback(() => { socket.emit('leave-queue') }, [])
 
   const isHost = roomState?.hostId === myId
@@ -91,6 +92,6 @@ export function useSocket() {
   return {
     roomState, myId, connected, reconnecting, isHost,
     createRoom, joinRoom, updateSettings, resetGame, startGame, buzz, submitAnswer,
-    joinQueue, leaveQueue, socket,
+    joinQueue, leaveQueue, sendChat, socket,
   }
 }
