@@ -8,6 +8,7 @@ import type {
 } from '../../src/types'
 import { gameManager } from '../game/GameManager'
 import { prisma } from '../lib/prisma'
+import { joinQueue, leaveQueue, setOnMatch } from '../game/MatchmakingManager'
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 type IoSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
@@ -18,6 +19,28 @@ function broadcast(io: IoServer, roomId: string, state: RoomState) {
 
 // socketId → DB userId
 const userIdMap = new Map<string, string>()
+
+// マッチメイキング成立時の処理（一度だけ設定）
+let matchCallbackSet = false
+function ensureMatchCallback(io: IoServer) {
+  if (matchCallbackSet) return
+  matchCallbackSet = true
+  setOnMatch((roomId, playerIds) => {
+    for (const pid of playerIds) {
+      // そのsocketを探してルームに参加させる
+      io.sockets.sockets.forEach(s => {
+        if (s.id === pid) {
+          s.data.roomId = roomId
+          s.data.playerId = pid
+          s.join(roomId)
+          s.emit('match-found', roomId)
+        }
+      })
+    }
+    const state = require('../game/GameManager').gameManager.getRoom(roomId)
+    if (state) io.to(roomId).emit('room-update', state)
+  })
+}
 
 // ゲーム終了時に戦績を保存
 gameManager.setOnFinish(async (state) => {
@@ -46,6 +69,8 @@ gameManager.setOnFinish(async (state) => {
 })
 
 export function registerHandlers(io: IoServer, socket: IoSocket) {
+  ensureMatchCallback(io)
+
   // DB userIdをsocketに紐付け
   const dbUserId = (socket.request as any).user?.id
   if (dbUserId) userIdMap.set(socket.id, dbUserId)
@@ -107,7 +132,18 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
   })
 
+  socket.on('join-queue', (ruleId, questionCount) => {
+    const name = (socket.request as any).user?.name ?? 'プレイヤー'
+    const pos = joinQueue({ playerId: socket.id, playerName: name, ruleId, questionCount })
+    if (pos >= 0) socket.emit('queue-status', pos + 1)
+  })
+
+  socket.on('leave-queue', () => {
+    leaveQueue(socket.id)
+  })
+
   socket.on('disconnect', () => {
+    leaveQueue(socket.id)
     userIdMap.delete(socket.id)
     const affectedRoomId = gameManager.leaveRoom(socket.id)
     if (!affectedRoomId) return

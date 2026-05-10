@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
+import MatchmakingModal from '../components/MatchmakingModal'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
@@ -29,6 +30,7 @@ export default function HomePage() {
   const [profileError, setProfileError] = useState('')
 
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
+  const [showMatchmaking, setShowMatchmaking] = useState(false)
   const [publicRooms, setPublicRooms] = useState<{id:string;playerCount:number;hostName:string;ruleId:string;questionCount:number}[]>([])
 
   // URLパラメータ ?join=XXXXXX で自動入力
@@ -161,6 +163,13 @@ export default function HomePage() {
                 </div>
               </div>
             )}
+
+            <button onClick={() => setShowMatchmaking(true)}
+              style={{ width:'100%', padding:'16px', borderRadius:14, fontSize:15, fontWeight:900,
+                background:'linear-gradient(135deg,#7c3aed,#a855f7)', color:'#fff',
+                boxShadow:'0 4px 20px rgba(124,58,237,0.35)', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+              <span style={{ fontSize:22 }}>🎲</span> ランダムマッチ
+            </button>
 
             <div style={{ display:'flex', gap:16 }}>
               <a href="/submit" style={{ color:'var(--muted)', fontSize:13 }}>問題を投稿</a>
@@ -305,6 +314,7 @@ export default function HomePage() {
           </div>
         </Modal>
       )}
+    {showMatchmaking && <MatchmakingModal onClose={() => setShowMatchmaking(false)} />}
     </div>
   )
 }

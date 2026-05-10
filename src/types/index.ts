@@ -53,8 +53,17 @@ export interface RoomState {
 
 export interface ServerToClientEvents {
   'room-update': (state: RoomState) => void
+  'match-found': (roomId: string) => void
+  'queue-status': (position: number) => void
   'buzz-accepted': (playerId: string, playerName: string) => void
   error: (message: string) => void
+}
+
+export interface MatchmakingEntry {
+  playerId: string
+  playerName: string
+  ruleId: RuleId
+  questionCount: number
 }
 
 export interface ClientToServerEvents {
@@ -62,6 +71,8 @@ export interface ClientToServerEvents {
   'join-room': (roomId: string, name: string, callback: (error: string | null) => void) => void
   'update-settings': (settings: GameSettings) => void
   'reset-game': () => void
+  'join-queue': (ruleId: RuleId, questionCount: number) => void
+  'leave-queue': () => void
   'start-game': () => void
   buzz: () => void
   'submit-answer': (answer: string) => void
