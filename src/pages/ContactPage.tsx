@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AppHeader from '../components/AppHeader'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
@@ -31,13 +32,7 @@ export default function ContactPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column' }}>
-      <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 24px', borderBottom:'1px solid var(--border)', background:'var(--surface)' }}>
-        <button onClick={() => navigate('/')} style={{ background:'none', color:'var(--muted)', fontSize:13, padding:0 }}>← ホーム</button>
-        <span style={{ fontFamily:'Orbitron,sans-serif', fontWeight:900, fontSize:15, color:'var(--accent)' }}>お問い合わせ</span>
-        <button onClick={toggle} style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'5px 9px', fontSize:14 }}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-      </header>
+      <AppHeader title="お問い合わせ" />
 
       <main style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 20px' }}>
         <div style={{ width:'100%', maxWidth:480 }}>
