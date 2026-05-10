@@ -19,8 +19,10 @@ class GameManager {
   private playerRoomMap: Map<string, string> = new Map()
   private timers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private broadcastFn?: BroadcastFn
+  private finishFn?: (state: import('../../src/types').RoomState) => void
 
   setBroadcast(fn: BroadcastFn) { this.broadcastFn = fn }
+  setOnFinish(fn: (state: import('../../src/types').RoomState) => void) { this.finishFn = fn }
 
   private broadcast(roomId: string) {
     const state = this.rooms.get(roomId)
@@ -70,6 +72,7 @@ class GameManager {
       this.rooms.set(roomId, next)
       this.broadcast(roomId)
       if (next.phase === 'question') this.startBuzzTimer(roomId)
+      else if (next.phase === 'finished' && this.finishFn) this.finishFn(next)
     }, RESULT_SHOW_MS)
     this.timers.set(roomId, t)
   }

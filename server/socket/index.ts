@@ -8,6 +8,8 @@ import type {
 } from '../../src/types'
 import { registerHandlers } from './handlers'
 import { gameManager } from '../game/GameManager'
+import { sessionMiddleware } from '../lib/sessionMiddleware'
+import passport from '../auth/passport'
 
 export function initSocketIO(httpServer: HttpServer) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
@@ -23,6 +25,12 @@ export function initSocketIO(httpServer: HttpServer) {
   gameManager.setBroadcast((roomId, state) => {
     io.to(roomId).emit('room-update', state)
   })
+
+  // セッション共有
+  const wrap = (m: any) => (s: any, n: any) => m(s.request, {}, n)
+  io.use(wrap(sessionMiddleware))
+  io.use(wrap(passport.initialize()))
+  io.use(wrap(passport.session()))
 
   io.on('connection', (socket) => {
     console.log(`[Socket] connected: ${socket.id}`)

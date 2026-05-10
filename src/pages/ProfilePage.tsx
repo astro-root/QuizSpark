@@ -9,7 +9,7 @@ interface Stats { total: number; wins: number; winRate: number; totalCorrect: nu
 interface Record { id: string; ruleId: string; result: string; correct: number; wrong: number; score: number; playerCount: number; playedAt: string }
 
 export default function ProfilePage() {
-  const { user, updateProfile, logout } = useAuth()
+  const { user, loading: authLoading, updateProfile, logout } = useAuth()
   const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [tab, setTab] = useState<'profile'|'sets'|'records'>('profile')
@@ -37,11 +37,12 @@ export default function ProfilePage() {
   const [records, setRecords] = useState<Record[]>([])
 
   useEffect(() => {
+    if (authLoading) return
     if (!user) { navigate('/'); return }
     setName(user.name)
     setBio(user.bio ?? '')
     setUsername(user.username ?? '')
-  }, [user])
+  }, [user, authLoading])
 
   useEffect(() => {
     if (tab === 'sets') fetchSets()
