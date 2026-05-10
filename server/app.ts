@@ -13,7 +13,7 @@ export function createApp() {
 
   // Session
   const PgSession = ConnectPgSimple(session)
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false })
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
   app.use(session({
     store: new PgSession({ pool, tableName: 'session', createTableIfMissing: true }),
     secret: process.env.SESSION_SECRET ?? 'quizspark-dev-secret',
