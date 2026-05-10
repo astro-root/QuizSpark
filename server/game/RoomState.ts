@@ -94,6 +94,7 @@ export function advanceQuestion(state: RoomState, customQuestions?: import('../.
     phase: 'question',
     currentQuestionIndex: nextIndex,
     currentQuestion: question,
+    questionStartedAt: Date.now(),
     buzzedPlayerId: null,
     buzzedPlayerName: null,
     lastJudgement: null,

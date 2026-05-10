@@ -57,11 +57,17 @@ function useCountdown(timerEndsAt: number | null) {
   return remaining
 }
 
-function useTypewriter(text: string, active: boolean, speed = 120) {
+function useTypewriter(text: string, active: boolean, speed = 120, startedAt?: number) {
   const [displayed, setDisplayed] = useState('')
   const [done, setDone] = useState(false)
   const pos = useRef(0)
-  useEffect(() => { setDisplayed(''); setDone(false); pos.current = 0 }, [text])
+  useEffect(() => {
+    // サーバーの開始時刻から経過分をスキップしてラグ補正
+    const skip = startedAt ? Math.floor((Date.now() - startedAt) / speed) : 0
+    pos.current = Math.min(skip, text.length)
+    setDisplayed(text.slice(0, pos.current))
+    setDone(pos.current >= text.length)
+  }, [text])
   useEffect(() => {
     if (!active || !text || pos.current >= text.length) return
     const id = setInterval(() => {
@@ -164,7 +170,7 @@ export default function GamePage() {
   }, [countdown, roomState?.phase])
 
   const twActive = !showQNum && roomState?.phase==='question'
-  const { displayed: qText, done: twDone } = useTypewriter(roomState?.currentQuestion?.text ?? '', twActive)
+  const { displayed: qText, done: twDone } = useTypewriter(roomState?.currentQuestion?.text ?? '', twActive, 120, roomState?.questionStartedAt)
 
   const qTextRef = useRef('')
   const [frozen, setFrozen] = useState('')

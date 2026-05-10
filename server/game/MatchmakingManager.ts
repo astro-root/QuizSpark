@@ -1,12 +1,8 @@
 import type { RuleId, MatchmakingEntry } from '../../src/types'
 import { gameManager } from './GameManager'
 
-// ruleId → キュー
-const queues = new Map<string, MatchmakingEntry[]>()
-
-function queueKey(ruleId: RuleId, questionCount: number) {
-  return `${ruleId}:${questionCount}`
-}
+// ruleId → キュー（問題数は問わない）
+const queues = new Map<RuleId, MatchmakingEntry[]>()
 
 type OnMatchFn = (roomId: string, playerIds: string[]) => void
 let onMatchCallback: OnMatchFn | null = null
@@ -16,22 +12,20 @@ export function setOnMatch(fn: OnMatchFn) {
 }
 
 export function joinQueue(entry: MatchmakingEntry): number {
-  const key = queueKey(entry.ruleId, entry.questionCount)
-  const q = queues.get(key) ?? []
-  // 既にキューに入っていたら更新
-  const existing = q.findIndex(e => e.playerId === entry.playerId)
-  if (existing >= 0) q.splice(existing, 1)
+  const q = queues.get(entry.ruleId) ?? []
+  // 既存エントリを更新
+  const idx = q.findIndex(e => e.playerId === entry.playerId)
+  if (idx >= 0) q.splice(idx, 1)
   q.push(entry)
-  queues.set(key, q)
+  queues.set(entry.ruleId, q)
 
-  // 2人以上いたらマッチ成立
   if (q.length >= 2) {
     const matched = q.splice(0, 2)
-    queues.set(key, q)
+    queues.set(entry.ruleId, q)
     createMatch(matched)
+    return -1
   }
-
-  return queues.get(key)?.findIndex(e => e.playerId === entry.playerId) ?? -1
+  return q.findIndex(e => e.playerId === entry.playerId)
 }
 
 export function leaveQueue(playerId: string) {
@@ -56,12 +50,11 @@ function createMatch(entries: MatchmakingEntry[]) {
   })
   const joinErr = gameManager.joinRoom(roomId, guest.playerId, guest.playerName)
   if (joinErr) { console.error('[Matchmaking] join failed:', joinErr); return }
-  // 全員に通知してから3秒後に自動スタート
-  if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId])
-  // isMatchmakingフラグをセット
+
   const state = gameManager.getRoom(roomId)
   if (state) gameManager['rooms'].set(roomId, { ...state, isMatchmaking: true })
-  setTimeout(() => {
-    gameManager.startGame(roomId)
-  }, 3000)
+
+  if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId])
+
+  setTimeout(() => { gameManager.startGame(roomId) }, 3000)
 }
