@@ -14,8 +14,10 @@ router.get('/google/callback',
 )
 
 router.get('/me', (req, res) => {
-  if (req.user) res.json(req.user)
-  else res.status(401).json(null)
+  if (req.user) {
+    const u = req.user as any
+    res.json({ id: u.id, name: u.name, avatarUrl: u.avatarUrl, isAdmin: u.isAdmin })
+  } else res.status(401).json(null)
 })
 
 router.patch('/profile', async (req, res) => {

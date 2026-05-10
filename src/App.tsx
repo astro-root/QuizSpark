@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import LobbyPage from './pages/LobbyPage'
 import GamePage from './pages/GamePage'
 import SubmitPage from './pages/SubmitPage'
+import AdminPage from './pages/AdminPage'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/room/:roomId" element={<LobbyPage />} />
           <Route path="/room/:roomId/game" element={<GamePage />} />
           <Route path="/submit" element={<SubmitPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -127,6 +127,7 @@ export default function HomePage() {
         )}
 
         <p style={{ textAlign:'center', marginTop:16 }}><a href='/submit' style={{ color:'var(--muted)', fontSize:13 }}>問題を投稿する →</a></p>
+        {user?.isAdmin && <p style={{ textAlign:'center', marginTop:8 }}><a href='/admin' style={{ color:'var(--accent)', fontSize:13, fontWeight:700 }}>⚙️ 管理画面</a></p>}
 
         {!connected && <p style={{ textAlign:'center', color:'var(--muted)', fontSize:12, marginTop:12 }}>接続中...</p>}
       </div>

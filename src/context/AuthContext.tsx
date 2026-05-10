@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 
-interface User { id: string; name: string; avatarUrl: string | null }
+interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean }
 
 interface AuthCtx {
   user: User | null
