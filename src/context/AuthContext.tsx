@@ -5,7 +5,9 @@ interface User { id: string; name: string; avatarUrl: string | null }
 interface AuthCtx {
   user: User | null
   loading: boolean
-  login: () => void
+  loginWithGoogle: () => void
+  loginWithPassword: (email: string, password: string) => Promise<string | null>
+  register: (name: string, email: string, password: string) => Promise<string | null>
   logout: () => void
 }
 
@@ -22,10 +24,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => setLoading(false))
   }, [])
 
-  const login = () => { window.location.href = '/auth/google' }
+  const loginWithGoogle = () => { window.location.href = '/auth/google' }
+
+  const loginWithPassword = async (email: string, password: string) => {
+    const r = await fetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
+    const data = await r.json()
+    if (!r.ok) return data.error as string
+    setUser(data); return null
+  }
+
+  const register = async (name: string, email: string, password: string) => {
+    const r = await fetch('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) })
+    const data = await r.json()
+    if (!r.ok) return data.error as string
+    setUser(data); return null
+  }
+
   const logout = () => fetch('/auth/logout', { method: 'POST' }).then(() => setUser(null))
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithPassword, register, logout }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

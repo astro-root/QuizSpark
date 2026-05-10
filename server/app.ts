@@ -4,6 +4,7 @@ import ConnectPgSimple from 'connect-pg-simple'
 import { Pool } from 'pg'
 import passport from './auth/passport'
 import authRouter from './auth/router'
+import localAuthRouter from './auth/local'
 import questionsRouter from './routes/questions'
 import path from 'path'
 
@@ -27,6 +28,7 @@ export function createApp() {
   app.use(passport.session())
 
   app.use('/auth', authRouter)
+  app.use('/auth', localAuthRouter)
   app.use('/api/questions', questionsRouter)
 
   if (process.env.NODE_ENV === 'production') {
