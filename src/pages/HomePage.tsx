@@ -91,7 +91,7 @@ export default function HomePage() {
           </button>
           {user ? (
             <>
-              <button onClick={() => { setProfileName(user.name); setShowProfile(true) }}
+              <button onClick={() => navigate('/profile')}
                 style={{ display:'flex', alignItems:'center', gap:8, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:10, padding:'6px 12px', color:'var(--text)' }}>
                 {user.avatarUrl
                   ? <img src={user.avatarUrl} style={{ width:22, height:22, borderRadius:'50%' }} alt="" />

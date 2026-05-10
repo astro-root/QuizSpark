@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 
-interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean }
+interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string }
 
 interface AuthCtx {
   user: User | null
@@ -8,7 +8,7 @@ interface AuthCtx {
   loginWithGoogle: () => void
   loginWithPassword: (email: string, password: string) => Promise<string | null>
   register: (name: string, email: string, password: string) => Promise<string | null>
-  updateProfile: (name: string) => Promise<string | null>
+  updateProfile: (name: string, bio?: string, username?: string) => Promise<string | null>
   logout: () => void
 }
 
@@ -41,8 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data); return null
   }
 
-  const updateProfile = async (name: string) => {
-    const r = await fetch('/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) })
+  const updateProfile = async (name: string, bio?: string, username?: string) => {
+    const r = await fetch('/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, bio, username }) })
     const data = await r.json()
     if (!r.ok) return data.error as string
     setUser(data); return null
