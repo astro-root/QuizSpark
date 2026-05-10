@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SocketProvider } from './context/SocketContext'
+import { AuthProvider } from './context/AuthContext'
 import { ConnectionBanner } from './components/ConnectionBanner'
 import HomePage from './pages/HomePage'
 import LobbyPage from './pages/LobbyPage'
@@ -8,6 +9,7 @@ import SubmitPage from './pages/SubmitPage'
 
 export default function App() {
   return (
+    <AuthProvider>
     <SocketProvider>
       <ConnectionBanner />
       <BrowserRouter>
@@ -20,5 +22,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </SocketProvider>
+    </AuthProvider>
   )
 }

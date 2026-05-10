@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
 
 export default function HomePage() {
   const { createRoom, joinRoom, connected } = useSocketContext()
+  const { user, login, logout } = useAuth()
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [roomId, setRoomId] = useState('')
@@ -89,6 +91,23 @@ export default function HomePage() {
         </button>
 
         {!connected && <p style={{ textAlign:'center', color:'var(--muted)', fontSize:12, marginTop:12 }}>接続中...</p>}
+
+        {/* Auth */}
+        <div style={{ marginTop:20, padding:'14px 16px', background:'var(--surface)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          {user ? (
+            <>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                {user.avatarUrl && <img src={user.avatarUrl} style={{ width:28, height:28, borderRadius:'50%' }} alt="" />}
+                <span style={{ fontSize:14, color:'var(--sub)' }}>{user.name}</span>
+              </div>
+              <button onClick={logout} style={{ fontSize:12, color:'var(--muted)', background:'none', padding:0 }}>ログアウト</button>
+            </>
+          ) : (
+            <button onClick={login} style={{ width:'100%', padding:'10px', borderRadius:9, fontSize:14, fontWeight:700, background:'var(--surface2)', color:'var(--text)', border:'1px solid var(--border)' }}>
+              🔑 Googleでログイン
+            </button>
+          )}
+        </div>
         <p style={{ textAlign:'center', marginTop:20 }}><a href='/submit' style={{ color:'var(--muted)', fontSize:13 }}>問題を投稿する →</a></p>
       </div>
     </div>
