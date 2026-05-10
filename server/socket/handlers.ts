@@ -73,7 +73,15 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     gameManager.submitAnswer(roomId, socket.id, answer)
   })
 
-  socket.on('disconnect', () => {
+  socket.on('reset-game', () => {
+    const roomId = socket.data.roomId
+    if (!roomId) return
+    const ok = gameManager.resetGame(roomId, socket.id)
+    if (!ok) return
+    broadcast(io, roomId, gameManager.getRoom(roomId)!)
+  })
+
+    socket.on('disconnect', () => {
     const affectedRoomId = gameManager.leaveRoom(socket.id)
     if (!affectedRoomId) return
     const state = gameManager.getRoom(affectedRoomId)

@@ -59,6 +59,7 @@ export interface ClientToServerEvents {
   'create-room': (name: string, callback: (roomId: string) => void) => void
   'join-room': (roomId: string, name: string, callback: (error: string | null) => void) => void
   'update-settings': (settings: GameSettings) => void
+  'reset-game': () => void
   'start-game': () => void
   buzz: () => void
   'submit-answer': (answer: string) => void

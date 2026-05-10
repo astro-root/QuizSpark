@@ -54,7 +54,7 @@ function scoreLabel(p: Player, ruleId: string): string {
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId:string }>()
-  const { roomState, myId, buzz, submitAnswer } = useSocketContext()
+  const { roomState, myId, buzz, submitAnswer, resetGame, isHost } = useSocketContext()
   const navigate = useNavigate()
   const [answer, setAnswer] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -143,9 +143,16 @@ export default function GamePage() {
             </div>
           ))}
         </div>
-        <button onClick={() => navigate('/')} style={{ width:'100%',padding:'15px',background:'var(--surface)',color:'var(--text)',borderRadius:12,fontSize:15,fontWeight:700,border:'1px solid var(--border)' }}>
-          トップに戻る
-        </button>
+        <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
+          {isHost && (
+            <button onClick={resetGame} style={{ width:'100%',padding:'15px',background:'linear-gradient(135deg,var(--accent),var(--accent2))',color:'#fff',borderRadius:12,fontSize:15,fontWeight:700,border:'none',boxShadow:'0 4px 16px rgba(99,102,241,0.35)' }}>
+              もう一度遊ぶ
+            </button>
+          )}
+          <button onClick={() => navigate('/')} style={{ width:'100%',padding:'15px',background:'var(--surface)',color:'var(--text)',borderRadius:12,fontSize:15,fontWeight:700,border:'1px solid var(--border)' }}>
+            トップに戻る
+          </button>
+        </div>
       </div>
     </div>
   )

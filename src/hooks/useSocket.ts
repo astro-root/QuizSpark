@@ -79,6 +79,7 @@ export function useSocket() {
   }, [])
 
   const updateSettings = useCallback((settings: GameSettings) => { socket.emit('update-settings', settings) }, [])
+  const resetGame = useCallback(() => { socket.emit('reset-game') }, [])
   const startGame = useCallback(() => { socket.emit('start-game') }, [])
   const buzz = useCallback(() => { socket.emit('buzz') }, [])
   const submitAnswer = useCallback((answer: string) => { socket.emit('submit-answer', answer) }, [])
@@ -87,6 +88,6 @@ export function useSocket() {
 
   return {
     roomState, myId, connected, reconnecting, isHost,
-    createRoom, joinRoom, updateSettings, startGame, buzz, submitAnswer,
+    createRoom, joinRoom, updateSettings, resetGame, startGame, buzz, submitAnswer,
   }
 }

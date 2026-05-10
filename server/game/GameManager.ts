@@ -138,6 +138,34 @@ class GameManager {
     this.startResultTimer(roomId)
   }
 
+
+  resetGame(roomId: string, playerId: string): boolean {
+    const state = this.rooms.get(roomId)
+    if (!state || state.hostId !== playerId || state.phase !== 'finished') return false
+    this.clearTimer(roomId)
+    const rule = require('./rules').getRuleDef(state.settings.ruleId)
+    const players = state.players.map((p: import('../../src/types').Player) => ({
+      ...p,
+      score: 0,
+      status: 'ACTIVE' as const,
+      ruleState: rule.initState(state.settings.ruleParams),
+    }))
+    this.rooms.set(roomId, {
+      ...state,
+      phase: 'lobby',
+      currentQuestionIndex: -1,
+      currentQuestion: null,
+      buzzedPlayerId: null,
+      buzzedPlayerName: null,
+      lastJudgement: null,
+      lastAnswerPlayerId: null,
+      timerEndsAt: null,
+      questionOrder: [],
+      players,
+    })
+    return true
+  }
+
   getRoom(roomId: string): RoomState | undefined { return this.rooms.get(roomId) }
   getRoomIdByPlayer(playerId: string): string | undefined { return this.playerRoomMap.get(playerId) }
 }
