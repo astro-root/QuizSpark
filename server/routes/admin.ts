@@ -52,3 +52,55 @@ router.delete('/announcements/:id', async (req, res) => {
 })
 
 export default router
+
+// ユーザー一覧
+router.get('/users', async (_req, res) => {
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true, name: true, username: true, email: true,
+      avatarUrl: true, isAdmin: true, createdAt: true,
+      _count: { select: { battleRecords: true, questionSets: true } }
+    }
+  })
+  res.json(users)
+})
+
+// ユーザー詳細（戦績込み）
+router.get('/users/:id', async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.params.id },
+    select: {
+      id: true, name: true, username: true, email: true,
+      avatarUrl: true, isAdmin: true, bio: true, createdAt: true,
+      battleRecords: { orderBy: { playedAt: 'desc' }, take: 20 },
+      questionSets: { select: { id: true, name: true, isPublic: true, _count: { select: { items: true } } } },
+      _count: { select: { battleRecords: true, questionSets: true } }
+    }
+  })
+  if (!user) { res.status(404).json({ error: 'Not found' }); return }
+  res.json(user)
+})
+
+// 管理者権限の付与/剥奪
+router.patch('/users/:id/admin', async (req, res) => {
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data: { isAdmin: req.body.isAdmin },
+    select: { id: true, name: true, isAdmin: true }
+  })
+  res.json(user)
+})
+
+// お問い合わせ一覧
+router.get('/contacts', async (_req, res) => {
+  res.json(await prisma.contact.findMany({ orderBy: { createdAt: 'desc' } }))
+})
+
+// お問い合わせステータス更新
+router.patch('/contacts/:id', async (req, res) => {
+  res.json(await prisma.contact.update({
+    where: { id: req.params.id },
+    data: { status: req.body.status }
+  }))
+})
