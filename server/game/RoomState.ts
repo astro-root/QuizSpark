@@ -76,7 +76,7 @@ function shuffle(arr: number[]): number[] {
   return a
 }
 
-export function advanceQuestion(state: RoomState): RoomState {
+export function advanceQuestion(state: RoomState, customQuestions?: import('../../src/types').Question[]): RoomState {
   const nextIndex = state.currentQuestionIndex + 1
   const count = Math.min(state.settings.questionCount, getQuizData().length)
   const order = state.questionOrder.length === count

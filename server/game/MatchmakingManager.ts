@@ -56,5 +56,12 @@ function createMatch(entries: MatchmakingEntry[]) {
   })
   const joinErr = gameManager.joinRoom(roomId, guest.playerId, guest.playerName)
   if (joinErr) { console.error('[Matchmaking] join failed:', joinErr); return }
+  // 全員に通知してから3秒後に自動スタート
   if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId])
+  // isMatchmakingフラグをセット
+  const state = gameManager.getRoom(roomId)
+  if (state) gameManager['rooms'].set(roomId, { ...state, isMatchmaking: true })
+  setTimeout(() => {
+    gameManager.startGame(roomId)
+  }, 3000)
 }

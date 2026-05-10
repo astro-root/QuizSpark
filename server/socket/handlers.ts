@@ -101,11 +101,30 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
   })
 
-  socket.on('start-game', () => {
+  socket.on('start-game', async () => {
     const roomId = socket.data.roomId
     if (!roomId) return
     const state = gameManager.getRoom(roomId)
     if (!state || state.hostId !== socket.id) return
+    // 問題セットが指定されていればDB読み込み
+    if (state.settings.questionSetId) {
+      try {
+        const items = await prisma.questionSetItem.findMany({
+          where: { setId: state.settings.questionSetId },
+          orderBy: { order: 'asc' },
+        })
+        const questions = items.map(item => ({
+          id: item.id,
+          text: item.text,
+          answer: item.answer,
+          answers: item.answers as string[],
+          displayAnswer: item.displayAnswer,
+        }))
+        gameManager.setCustomQuestions(roomId, questions)
+      } catch (e) {
+        console.error('[StartGame] failed to load question set:', e)
+      }
+    }
     if (gameManager.startGame(roomId))
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
   })

@@ -49,6 +49,7 @@ export interface RoomState {
   totalQuestions: number
   questionOrder: number[]
   settings: GameSettings
+  isMatchmaking?: boolean
 }
 
 export interface ServerToClientEvents {

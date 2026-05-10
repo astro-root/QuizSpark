@@ -19,6 +19,7 @@ class GameManager {
   private playerRoomMap: Map<string, string> = new Map()
   private timers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private broadcastFn?: BroadcastFn
+  private customQuestionsMap = new Map<string, import('../../src/types').Question[]>()
   private finishFn?: (state: import('../../src/types').RoomState) => void
 
   setBroadcast(fn: BroadcastFn) { this.broadcastFn = fn }
@@ -68,7 +69,7 @@ class GameManager {
     const t = setTimeout(() => {
       const state = this.rooms.get(roomId)
       if (!state || state.phase !== 'result') return
-      const next = advanceQuestion(state)
+      const next = advanceQuestion(state, this.customQuestionsMap.get(roomId))
       this.rooms.set(roomId, next)
       this.broadcast(roomId)
       if (next.phase === 'question') this.startBuzzTimer(roomId)
@@ -118,7 +119,7 @@ class GameManager {
   startGame(roomId: string): boolean {
     const state = this.rooms.get(roomId)
     if (!state || state.phase !== 'lobby') return false
-    const next = advanceQuestion(state)
+    const next = advanceQuestion(state, this.customQuestionsMap.get(roomId))
     this.rooms.set(roomId, next)
     if (next.phase === 'question') this.startBuzzTimer(roomId)
     return true
@@ -149,6 +150,7 @@ class GameManager {
     const state = this.rooms.get(roomId)
     if (!state || state.hostId !== playerId || state.phase !== 'finished') return false
     this.clearTimer(roomId)
+    this.customQuestionsMap.delete(roomId)
     const rule = require('./rules').getRuleDef(state.settings.ruleId)
     const players = state.players.map((p: import('../../src/types').Player) => ({
       ...p,
@@ -173,6 +175,8 @@ class GameManager {
   }
 
   getRoom(roomId: string): RoomState | undefined { return this.rooms.get(roomId) }
+  setCustomQuestions(roomId: string, questions: import('../../src/types').Question[]) { this.customQuestionsMap.set(roomId, questions) }
+  getCustomQuestions(roomId: string) { return this.customQuestionsMap.get(roomId) }
   getPublicRooms() {
     return [...this.rooms.values()]
       .filter(r => r.settings?.isPublic && r.phase === 'lobby')
