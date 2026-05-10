@@ -3,7 +3,7 @@ services:
     name: quizspark
     runtime: node
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: node dist-server/server/index.js
     envVars:
       - key: NODE_ENV
         value: production
