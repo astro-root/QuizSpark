@@ -8,7 +8,10 @@ import {
 type BroadcastFn = (roomId: string, state: RoomState) => void
 
 function generateRoomId(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' // 0/O/1/I/L除外
+  let id = ''
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)]
+  return id
 }
 
 class GameManager {
