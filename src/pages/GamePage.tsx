@@ -194,7 +194,7 @@ export default function GamePage() {
 
         {/* 早押し */}
         {phase==='question' && (
-          <button onClick={buzz} style={{ padding:'28px',background:'linear-gradient(135deg,var(--buzz),#f97316)',color:'#fff',borderRadius:14,fontSize:24,fontWeight:900,boxShadow:'0 6px 28px rgba(244,63,94,0.4)',letterSpacing:2 }}>
+          <button onClick={buzz} style={{ padding:'36px 28px',background:'linear-gradient(135deg,var(--buzz),#f97316)',color:'#fff',borderRadius:16,fontSize:26,fontWeight:900,boxShadow:'0 6px 28px rgba(244,63,94,0.4)',letterSpacing:2,width:'100%' }}>
             早押し！
           </button>
         )}

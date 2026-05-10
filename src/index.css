@@ -29,3 +29,15 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; tra
 button:active { transform: scale(0.97); }
 input, select { font-family: inherit; outline: none; }
 select { cursor: pointer; }
+
+/* スマホ対応 */
+button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+input, select {
+  font-size: 16px; /* iOSズーム防止 */
+}
+* {
+  -webkit-text-size-adjust: 100%;
+}
