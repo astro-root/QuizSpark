@@ -228,4 +228,6 @@ export const DEFAULT_SETTINGS = {
   questionCount: 10,
   winnerCount: 1,
   loserCount: 0,
+  isPublic: false,
+  questionSetId: null as string | null,
 }

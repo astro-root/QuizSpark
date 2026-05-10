@@ -32,7 +32,7 @@ export default function LobbyPage() {
   const { roomState, myId, startGame, updateSettings } = useSocketContext()
   const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
-  const [local, setLocal] = useState<GameSettings>({ ruleId:'mon', ruleParams:{m:5,n:2}, questionCount:10, winnerCount:1, loserCount:0 })
+  const [local, setLocal] = useState<GameSettings>({ ruleId:'mon', ruleParams:{m:5,n:2}, questionCount:10, winnerCount:1, loserCount:0, isPublic:false, questionSetId:null })
   const [synced, setSynced] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -197,6 +197,13 @@ export default function LobbyPage() {
                   <option value={0}>なし</option>
                   {[1,2,3,4,5].map(n=><option key={n} value={n}>{n}人</option>)}
                 </select>
+              </Row>
+              <Row label="公開ルーム">
+                <label style={{ display:'flex', alignItems:'center', gap:8, cursor: isHost?'pointer':'default' }}>
+                  <input type="checkbox" disabled={!isHost} checked={!!local.isPublic}
+                    onChange={e => emit({...local, isPublic: e.target.checked})} />
+                  <span style={{ fontSize:13, color:'var(--sub)' }}>誰でも参加可能にする</span>
+                </label>
               </Row>
               <Row label="失格人数で終了">
                 <select disabled={!isHost} value={local.loserCount} onChange={e=>onField('loserCount',Number(e.target.value))} style={sel}>

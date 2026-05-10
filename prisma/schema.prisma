@@ -92,3 +92,23 @@ model Announcement {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 }
+
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  category  String
+  body      String
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  category  String
+  body      String
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+}

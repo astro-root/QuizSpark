@@ -173,6 +173,11 @@ class GameManager {
   }
 
   getRoom(roomId: string): RoomState | undefined { return this.rooms.get(roomId) }
+  getPublicRooms() {
+    return [...this.rooms.values()]
+      .filter(r => r.settings?.isPublic && r.phase === 'lobby')
+      .map(r => ({ id: r.id, playerCount: r.players.length, hostName: r.players.find(p => p.id === r.hostId)?.name ?? '?', ruleId: r.settings.ruleId, questionCount: r.settings.questionCount }))
+  }
   getRoomIdByPlayer(playerId: string): string | undefined { return this.playerRoomMap.get(playerId) }
 }
 

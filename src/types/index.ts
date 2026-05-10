@@ -11,6 +11,8 @@ export interface GameSettings {
   questionCount: number   // 1セットの問題数
   winnerCount: number     // 何人勝ち抜けで終了 (0=無制限)
   loserCount: number      // 何人失格で終了 (0=無制限)
+  isPublic: boolean        // 公開ルーム
+  questionSetId: string | null // 使用する問題セットID (nullは共有DB)
 }
 
 export type PlayerStatus = 'ACTIVE' | 'WIN' | 'LOSE'

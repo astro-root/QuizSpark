@@ -29,6 +29,7 @@ export default function HomePage() {
   const [profileError, setProfileError] = useState('')
 
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
+  const [publicRooms, setPublicRooms] = useState<{id:string;playerCount:number;hostName:string;ruleId:string;questionCount:number}[]>([])
 
   // URLパラメータ ?join=XXXXXX で自動入力
   useEffect(() => {
@@ -41,6 +42,10 @@ export default function HomePage() {
 
   useEffect(() => {
     fetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
+    const fetchRooms = () => fetch('/api/rooms/public').then(r => r.ok ? r.json() : []).then(setPublicRooms).catch(() => {})
+    fetchRooms()
+    const roomsTimer = setInterval(fetchRooms, 5000)
+    return () => clearInterval(roomsTimer)
   }, [])
 
   // アカウント未ログイン時はログイン画面を強制表示（ローディング完了後）
@@ -137,8 +142,29 @@ export default function HomePage() {
               </div>
             )}
 
+            {publicRooms.length > 0 && (
+              <div style={{ background:'var(--surface)', borderRadius:14, padding:'16px 18px', border:'1px solid var(--border)' }}>
+                <p style={{ fontWeight:800, fontSize:14, marginBottom:12 }}>🌐 参加できるルーム</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {publicRooms.map(room => (
+                    <div key={room.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px', background:'var(--surface2)', borderRadius:10 }}>
+                      <div style={{ flex:1 }}>
+                        <p style={{ fontSize:13, fontWeight:700 }}>{room.hostName} のルーム</p>
+                        <p style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{room.ruleId.toUpperCase()} · {room.questionCount}問 · {room.playerCount}人参加中</p>
+                      </div>
+                      <button onClick={() => { setRoomId(room.id); setTab('join'); }}
+                        style={{ padding:'7px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'var(--buzz)', color:'#fff', flexShrink:0 }}>
+                        参加
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ display:'flex', gap:16 }}>
               <a href="/submit" style={{ color:'var(--muted)', fontSize:13 }}>問題を投稿</a>
+              <a href="/contact" style={{ color:'var(--muted)', fontSize:13 }}>お問い合わせ</a>
               {(user as any)?.isAdmin && <a href="/admin" style={{ color:'var(--accent)', fontSize:13, fontWeight:700 }}>⚙ 管理画面</a>}
             </div>
           </div>
