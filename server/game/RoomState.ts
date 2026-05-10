@@ -1,5 +1,5 @@
 import type { Player, RoomState, GameSettings } from '../../src/types'
-import { quizData } from './quizData'
+import { getQuizData } from './quizData'
 import { getRuleDef, DEFAULT_SETTINGS } from './rules'
 
 export const BUZZ_TIMEOUT_MS = 5000
@@ -78,16 +78,16 @@ function shuffle(arr: number[]): number[] {
 
 export function advanceQuestion(state: RoomState): RoomState {
   const nextIndex = state.currentQuestionIndex + 1
-  const count = Math.min(state.settings.questionCount, quizData.length)
+  const count = Math.min(state.settings.questionCount, getQuizData().length)
   const order = state.questionOrder.length === count
     ? state.questionOrder
-    : shuffle(quizData.map((_, i) => i)).slice(0, count)
+    : shuffle(getQuizData().map((_, i) => i)).slice(0, count)
 
   // 問題数終了 or 全員WIN/LOSEならfinished
   if (nextIndex >= order.length || checkGameEnd(state)) {
     return { ...state, phase: 'finished', currentQuestion: null, timerEndsAt: null, questionOrder: order }
   }
-  const question = quizData[order[nextIndex]]
+  const question = getQuizData()[order[nextIndex]]
   const typewriterMs = question.text.length * TYPEWRITER_SPEED_MS
   return {
     ...state,
