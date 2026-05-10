@@ -20,9 +20,14 @@ export default function HomePage() {
   const [authName, setAuthName] = useState('')
   const [authError, setAuthError] = useState('')
   const [showAuth, setShowAuth] = useState(false)
+  const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
   const [showProfile, setShowProfile] = useState(false)
   const [profileName, setProfileName] = useState('')
   const [profileError, setProfileError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
+  }, [])
 
   async function handleCreate() {
     if (!name.trim()) { setError('名前を入力してください'); return }
@@ -123,6 +128,17 @@ export default function HomePage() {
               style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:14, fontWeight:700, background:'var(--surface)', color:'var(--text)', border:'1px solid var(--border)' }}>
               🔑 Googleでログイン
             </button>
+          </div>
+        )}
+
+        {announcements.length > 0 && (
+          <div style={{ marginTop:16, display:'flex', flexDirection:'column', gap:8 }}>
+            {announcements.map(a => (
+              <div key={a.id} style={{ padding:'12px 16px', background:'rgba(99,102,241,0.08)', border:'1px solid rgba(99,102,241,0.2)', borderRadius:10 }}>
+                <p style={{ fontSize:13, fontWeight:700, color:'var(--accent)', marginBottom:4 }}>📢 {a.title}</p>
+                <p style={{ fontSize:13, color:'var(--sub)' }}>{a.body}</p>
+              </div>
+            ))}
           </div>
         )}
 
