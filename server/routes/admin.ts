@@ -21,6 +21,21 @@ router.patch('/questions/:id/approve', async (req, res) => {
   res.json(q)
 })
 
+// 承認済み含む全問題一覧
+router.get('/questions/all', async (_req, res) => {
+  res.json(await prisma.question.findMany({ orderBy: { createdAt: 'desc' }, take: 200 }))
+})
+
+// 問題編集
+router.patch('/questions/:id', async (req, res) => {
+  const { text, answer, answers, displayAnswer } = req.body
+  const q = await prisma.question.update({
+    where: { id: parseInt(req.params.id) },
+    data: { text, answer, answers, displayAnswer }
+  })
+  res.json(q)
+})
+
 // 削除
 router.delete('/questions/:id', async (req, res) => {
   await prisma.question.delete({ where: { id: parseInt(req.params.id) } })

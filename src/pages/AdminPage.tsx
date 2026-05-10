@@ -25,6 +25,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('questions')
 
   const [questions, setQuestions] = useState<Question[]>([])
+  const [allQuestions, setAllQuestions] = useState<Question[]>([])
+  const [editingQ, setEditingQ] = useState<Question | null>(null)
+  const [qTab, setQTab] = useState<'pending'|'approved'>('pending')
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [users, setUsers] = useState<UserSummary[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -36,16 +39,25 @@ export default function AdminPage() {
   useEffect(() => { if (!loading && !(user as any)?.isAdmin) navigate('/') }, [user, loading])
 
   useEffect(() => {
-    if (tab === 'questions') fetchQuestions()
+    if (tab === 'questions') { fetchQuestions(); fetchAllQuestions() }
     else if (tab === 'announcements') fetchAnnouncements()
     else if (tab === 'users') fetchUsers()
     else if (tab === 'contacts') fetchContacts()
   }, [tab])
 
   async function fetchQuestions() { const r = await fetch('/api/admin/questions'); if (r.ok) setQuestions(await r.json()) }
+  async function fetchAllQuestions() { const r = await fetch('/api/admin/questions/all'); if (r.ok) setAllQuestions(await r.json()) }
   async function fetchAnnouncements() { const r = await fetch('/api/admin/announcements'); if (r.ok) setAnnouncements(await r.json()) }
   async function fetchUsers() { const r = await fetch('/api/admin/users'); if (r.ok) setUsers(await r.json()) }
   async function fetchContacts() { const r = await fetch('/api/admin/contacts'); if (r.ok) setContacts(await r.json()) }
+
+  async function saveEdit(q: Question) {
+    await fetch(`/api/admin/questions/${q.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: q.text, answer: q.answer, answers: [q.answer], displayAnswer: q.displayAnswer })
+    })
+    setEditingQ(null); fetchQuestions(); fetchAllQuestions()
+  }
 
   async function approve(id: number) {
     await fetch(`/api/admin/questions/${id}/approve`, { method: 'PATCH' }); fetchQuestions()
@@ -104,18 +116,69 @@ export default function AdminPage() {
 
         {/* ─── 問題管理 ─── */}
         {tab === 'questions' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {questions.length === 0 && <p style={{ color:'var(--muted)', textAlign:'center', padding:32 }}>承認待ちの問題はありません</p>}
-            {questions.map(q => (
-              <div key={q.id} style={{ background:'var(--surface)', borderRadius:12, padding:'16px 18px', border:'1px solid var(--border)' }}>
-                <p style={{ fontWeight:600, marginBottom:6 }}>{q.text}</p>
-                <p style={{ fontSize:13, color:'var(--muted)', marginBottom:12 }}>答え: {q.displayAnswer}（{q.answer}）</p>
-                <div style={{ display:'flex', gap:8 }}>
-                  <button onClick={() => approve(q.id)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--correct)', color:'#fff' }}>承認</button>
-                  <button onClick={() => deleteQ(q.id)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'rgba(239,68,68,0.1)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>削除</button>
-                </div>
-              </div>
-            ))}
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ display:'flex', background:'var(--surface)', borderRadius:10, padding:3, gap:3 }}>
+              {(['pending','approved'] as const).map(t => (
+                <button key={t} onClick={() => setQTab(t)}
+                  style={{ flex:1, padding:'8px', borderRadius:8, fontSize:13, fontWeight:700,
+                    background: qTab===t ? 'var(--accent)' : 'transparent',
+                    color: qTab===t ? '#fff' : 'var(--muted)' }}>
+                  {t==='pending' ? `承認待ち (${questions.length})` : `承認済み (${allQuestions.filter(q=>(q as any).approved).length})`}
+                </button>
+              ))}
+            </div>
+
+            {qTab === 'pending' && (
+              <>
+                {questions.length === 0 && <p style={{ color:'var(--muted)', textAlign:'center', padding:32 }}>承認待ちの問題はありません</p>}
+                {questions.map(q => (
+                  <div key={q.id} style={{ background:'var(--surface)', borderRadius:12, padding:'16px 18px', border:'1px solid var(--border)' }}>
+                    <p style={{ fontWeight:600, marginBottom:6 }}>{q.text}</p>
+                    <p style={{ fontSize:13, color:'var(--muted)', marginBottom:12 }}>答え: {q.displayAnswer}（{q.answer}）</p>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button onClick={() => approve(q.id)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--correct)', color:'#fff' }}>承認</button>
+                      <button onClick={() => deleteQ(q.id)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'rgba(239,68,68,0.1)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>削除</button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {qTab === 'approved' && (
+              <>
+                {allQuestions.filter((q:any) => q.approved).map(q => (
+                  <div key={q.id} style={{ background:'var(--surface)', borderRadius:12, padding:'16px 18px', border:'1px solid var(--border)' }}>
+                    {editingQ?.id === q.id ? (
+                      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                        <input value={editingQ.text} onChange={e => setEditingQ({...editingQ, text:e.target.value})}
+                          style={inp2} placeholder="問題文" />
+                        <div style={{ display:'flex', gap:8 }}>
+                          <input value={editingQ.answer} onChange={e => setEditingQ({...editingQ, answer:e.target.value})}
+                            style={{...inp2, flex:1}} placeholder="答え（ひらがな）" />
+                          <input value={editingQ.displayAnswer} onChange={e => setEditingQ({...editingQ, displayAnswer:e.target.value})}
+                            style={{...inp2, flex:1}} placeholder="表示用の答え（漢字）" />
+                        </div>
+                        <div style={{ display:'flex', gap:8 }}>
+                          <button onClick={() => saveEdit(editingQ)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--accent)', color:'#fff' }}>保存</button>
+                          <button onClick={() => setEditingQ(null)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--surface2)', color:'var(--muted)' }}>キャンセル</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p style={{ fontWeight:600, marginBottom:4, fontSize:14 }}>{q.text}</p>
+                        <p style={{ fontSize:13, color:'var(--muted)', marginBottom:10 }}>
+                          表示: <span style={{ color:'var(--text)', fontWeight:700 }}>{q.displayAnswer}</span>　読み: {q.answer}
+                        </p>
+                        <div style={{ display:'flex', gap:8 }}>
+                          <button onClick={() => setEditingQ(q)} style={{ padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'var(--surface2)', color:'var(--text)' }}>編集</button>
+                          <button onClick={() => deleteQ(q.id)} style={{ padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'rgba(239,68,68,0.1)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>削除</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -265,4 +328,5 @@ export default function AdminPage() {
   )
 }
 
+const inp2: React.CSSProperties = { width:'100%', padding:'9px 12px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, fontSize:13, color:'var(--text)' }
 const inp: React.CSSProperties = { width:'100%', padding:'11px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:9, fontSize:14, color:'var(--text)' }
