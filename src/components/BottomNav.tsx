@@ -6,6 +6,7 @@ const TABS: { path: string; icon: string; label: string; badge?: string }[] = [
   { path: '/',        icon: '🏠', label: 'ホーム' },
   { path: '/match',   icon: '⚔️', label: '対戦' },
   { path: '/search',  icon: '🔍', label: '検索' },
+  { path: '',         icon: '',   label: '' },
   { path: '/chat',    icon: '💬', label: 'チャット', badge: 'msg' },
   { path: '/notifications', icon: '🔔', label: '通知', badge: 'note' },
   { path: '/profile', icon: '👤', label: 'マイページ' },
@@ -42,7 +43,15 @@ export default function BottomNav() {
       display: 'flex',
       paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
-      {TABS.map(t => {
+      {TABS.map((t, i) => {
+        if (t.path === '') return (
+          <div key="fab" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <button onClick={() => navigate('/submit')}
+              style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 26, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', transform: 'translateY(-8px)' }}>
+              ＋
+            </button>
+          </div>
+        )
         const active = t.path === '/' ? pathname === '/' : pathname.startsWith(t.path)
         return (
           <button key={t.path} onClick={() => navigate(t.path)}
