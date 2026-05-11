@@ -85,7 +85,7 @@ export default function LobbyPage() {
         </button>
       </header>
 
-      <div style={{ flex:1, overflowY:'auto', padding:'20px 16px 60px' }}>
+      <div style={{ flex:1, overflowY:'auto', padding:'20px 16px 100px' }}>
         {/* PC: 2カラム / SP: 1カラム */}
         <div style={{ maxWidth:900, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))', gap:16, alignItems:'start' }}>
 
@@ -214,25 +214,31 @@ export default function LobbyPage() {
               </Row>
             </div>
 
-            {/* スタート */}
-            {isHost ? (
-              <button onClick={startGame}
-                onKeyDown={e=>e.key==='Enter'&&startGame()}
-                style={{ padding:'18px', background:'linear-gradient(135deg,var(--buzz),var(--buzz2))',
-                  color:'#fff', borderRadius:14, fontSize:17, fontWeight:900,
-                  boxShadow:'0 4px 24px rgba(239,68,68,0.4)', letterSpacing:1 }}>
-                ▶ ゲームスタート
-              </button>
-            ) : (
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'16px',
-                background:'var(--surface)', borderRadius:14, color:'var(--muted)', fontSize:14, border:'1px solid var(--border)' }}>
-                <span style={{ width:8, height:8, borderRadius:'50%', background:'var(--correct)',
-                  boxShadow:'0 0 8px var(--correct)', display:'inline-block' }}/>
-                ホストの開始を待っています
-              </div>
-            )}
+
           </div>
         </div>
+      </div>
+      {/* 固定スタートバー */}
+      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:100,
+        padding:'10px 16px', paddingBottom:'calc(10px + env(safe-area-inset-bottom))',
+        background:'var(--surface)', borderTop:'1px solid var(--border)',
+        display:'flex', gap:10, alignItems:'center' }}>
+        {isHost ? (
+          <button onClick={startGame}
+            style={{ flex:1, padding:'16px', background:'linear-gradient(135deg,var(--buzz),var(--buzz2))',
+              color:'#fff', borderRadius:14, fontSize:17, fontWeight:900,
+              boxShadow:'0 4px 20px rgba(239,68,68,0.35)', letterSpacing:1 }}>
+            ▶ ゲームスタート
+          </button>
+        ) : (
+          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            padding:'14px', background:'var(--surface2)', borderRadius:14,
+            color:'var(--muted)', fontSize:14, border:'1px solid var(--border)' }}>
+            <span style={{ width:8, height:8, borderRadius:'50%', background:'var(--correct)',
+              boxShadow:'0 0 8px var(--correct)', display:'inline-block', animation:'pulse 1.5s ease infinite' }}/>
+            ホストの開始を待っています
+          </div>
+        )}
       </div>
       {roomState && <RoomChat myId={myId} />}
     </div>

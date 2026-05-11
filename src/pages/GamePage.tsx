@@ -273,7 +273,8 @@ export default function GamePage() {
   /* ゲーム */
   return (
     <div style={{ minHeight:'100vh',display:'flex',flexDirection:'column',
-      animation: screenFlash ? `${screenFlash==='correct'?'correctFlash':'wrongFlash'} 0.6s ease` : undefined }}>
+      animation: screenFlash ? `${screenFlash==='correct'?'correctFlash':'wrongFlash'} 0.6s ease` : undefined,
+      paddingBottom: phase==='question' ? 160 : 0 }}>
       {/* ヘッダー */}
       <div style={{ background:'var(--surface)',borderBottom:'1px solid var(--border)' }}>
         <div style={{ height:3,background:'var(--border)',overflow:'hidden' }}>
@@ -310,22 +311,26 @@ export default function GamePage() {
           <p style={{ fontSize:20,lineHeight:1.8,fontWeight:500 }}>{shownText||'\u00A0'}</p>
         </div>
 
-        {/* 早押し */}
+        {/* 早押し：画面下部固定 */}
         {phase==='question' && (
-          <button onClick={handleBuzz}
-            style={{ padding:'0',
-              background:'linear-gradient(135deg,var(--buzz),#f97316)',
-              color:'#fff',borderRadius:20,fontSize:28,fontWeight:900,
-              boxShadow:'0 8px 32px rgba(244,63,94,0.5)',
-              letterSpacing:2,width:'100%',height:140,
-              animation: buzzAnim ? 'buzzPop 0.35s cubic-bezier(.34,1.56,.64,1)' : undefined,
-              transition:'box-shadow 0.15s,transform 0.1s',
-              transform: 'translateZ(0)',
-              WebkitTapHighlightColor:'transparent',
-              userSelect:'none',
-            }}>
-            ⚡ 早押し！
-          </button>
+          <div style={{ position:'fixed', bottom:0, left:0, right:0, padding:'12px 16px',
+            paddingBottom:'calc(12px + env(safe-area-inset-bottom))',
+            background:'linear-gradient(to top, var(--bg) 80%, transparent)',
+            zIndex:100 }}>
+            <button onClick={handleBuzz}
+              style={{ width:'100%', height:120,
+                background:'linear-gradient(135deg,var(--buzz),#f97316)',
+                color:'#fff',borderRadius:20,fontSize:28,fontWeight:900,
+                boxShadow:'0 8px 32px rgba(244,63,94,0.5)',
+                letterSpacing:2,
+                animation: buzzAnim ? 'buzzPop 0.35s cubic-bezier(.34,1.56,.64,1)' : undefined,
+                transition:'box-shadow 0.15s,transform 0.1s',
+                WebkitTapHighlightColor:'transparent',
+                userSelect:'none',
+              }}>
+              ⚡ 早押し！
+            </button>
+          </div>
         )}
 
         {/* 回答 */}
@@ -333,7 +338,9 @@ export default function GamePage() {
           <div style={{ background:'var(--surface)',borderRadius:14,padding:'18px 20px',
             animation:'slideUp 0.3s ease both',
             border: isBuzzed ? '2px solid var(--accent)' : '1px solid var(--border)',
-            boxShadow: isBuzzed ? '0 0 20px rgba(99,102,241,0.25)' : undefined }}>
+            boxShadow: isBuzzed ? '0 0 20px rgba(99,102,241,0.25)' : undefined,
+            position: isBuzzed ? 'sticky' : undefined,
+            bottom: isBuzzed ? 8 : undefined }}>
             <p style={{ fontWeight:700,fontSize:15,marginBottom:isBuzzed?14:0,color:isBuzzed?'var(--accent)':'var(--muted)' }}>
               {isBuzzed?'⚡ あなたの番！':`⏳ ${buzzedPlayerName} が回答中...`}
             </p>
