@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import AppHeader from '../components/AppHeader'
 import ProfileTab from '../components/profile/ProfileTab'
 import SetsTab from '../components/profile/SetsTab'
@@ -10,7 +11,8 @@ import { useState } from 'react'
 type Tab = 'profile' | 'sets' | 'records'
 
 export default function ProfilePage() {
-  const { user, authLoading, toggleTheme, theme } = useAuth()
+  const { user, authLoading } = useAuth()
+  const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('profile')
 
