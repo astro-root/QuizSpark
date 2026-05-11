@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
+import RoomChat from '../components/RoomChat'
 import type { Player } from '../types'
 
 /* ─── サウンド ─── */
@@ -272,6 +273,7 @@ export default function GamePage() {
 
   /* ゲーム */
   return (
+    <>
     <div style={{ minHeight:'100vh',display:'flex',flexDirection:'column',
       animation: screenFlash ? `${screenFlash==='correct'?'correctFlash':'wrongFlash'} 0.6s ease` : undefined,
       paddingBottom: phase==='question' ? 160 : 0 }}>
@@ -401,6 +403,8 @@ export default function GamePage() {
         </div>
       </div>
     </div>
+    <RoomChat myId={myId} />
+    </>
   )
 }
 
