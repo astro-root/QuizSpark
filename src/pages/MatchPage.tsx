@@ -46,7 +46,7 @@ export default function MatchPage() {
           <span style={{ fontSize: 28 }}>🎲</span>
           <div style={{ textAlign: 'left' }}>
             <p style={{ fontSize: 18, fontWeight: 900 }}>ランダムマッチ</p>
-            <p style={{ fontSize: 12, fontWeight: 400, opacity: 0.85, marginTop: 2 }}>5◯2× · 10問 · 自動マッチング</p>
+            <p style={{ fontSize: 12, fontWeight: 400, opacity: 0.85, marginTop: 2 }}>5◯2× · 30問 · 自動マッチング</p>
           </div>
         </button>
 
