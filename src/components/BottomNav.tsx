@@ -1,16 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
-
-const TABS: { path: string; icon: string; label: string; badge?: string }[] = [
-  { path: '/',        icon: '🏠', label: 'ホーム' },
-  { path: '/match',   icon: '⚔️', label: '対戦' },
-  { path: '/search',  icon: '🔍', label: '検索' },
-  { path: '',         icon: '',   label: '' },
-  { path: '/chat',    icon: '💬', label: 'チャット', badge: 'msg' },
-  { path: '/notifications', icon: '🔔', label: '通知', badge: 'note' },
-  { path: '/profile', icon: '👤', label: 'マイページ' },
-]
+import { Home, Swords, Search, MessageCircle, Bell, User, Plus } from 'lucide-react'
 
 export default function BottomNav() {
   const navigate = useNavigate()
@@ -35,6 +26,14 @@ export default function BottomNav() {
   if (!user) return null
   if (pathname.includes('/room/')) return null
 
+  const tabs = [
+    { path: '/',       Icon: Home,          label: 'ホーム' },
+    { path: '/search', Icon: Search,        label: '検索' },
+    { path: null,      Icon: Plus,          label: '作問', fab: true },
+    { path: '/chat',   Icon: MessageCircle, label: 'チャット', badge: unread },
+    { path: '/profile',Icon: User,          label: 'マイページ' },
+  ]
+
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
@@ -43,29 +42,44 @@ export default function BottomNav() {
       display: 'flex',
       paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
-      {TABS.map((t, i) => {
-        if (t.path === '') return (
-          <div key="fab" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {tabs.map((t, i) => {
+        if (t.fab) return (
+          <div key="fab" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <button onClick={() => navigate('/submit')}
-              style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent)', color: '#fff', border: 'none', fontSize: 26, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', transform: 'translateY(-8px)' }}>
-              ＋
+              style={{
+                width: 50, height: 50, borderRadius: '50%',
+                background: 'linear-gradient(135deg,var(--accent),var(--accent2))',
+                color: '#fff', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(56,189,248,0.45)',
+                transform: 'translateY(-10px)',
+              }}>
+              <Plus size={24} strokeWidth={2.5} />
             </button>
           </div>
         )
-        const active = t.path === '/' ? pathname === '/' : pathname.startsWith(t.path)
+
+        const active = t.path === '/' ? pathname === '/' : pathname.startsWith(t.path!)
+        const { Icon } = t
+
         return (
-          <button key={t.path} onClick={() => navigate(t.path)}
+          <button key={t.path} onClick={() => navigate(t.path!)}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '10px 0 6px', gap: 3,
+              justifyContent: 'center', padding: '10px 0 8px', gap: 4,
               background: 'none', border: 'none', cursor: 'pointer',
-              borderTop: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
             }}>
-            <span style={{ fontSize: 22, position: 'relative' }}>
-              {t.icon}
-              {((t.badge === 'msg' && unread > 0) || (t.badge === 'note' && unreadNote > 0)) && (
-                <span style={{ position: 'absolute', top: -4, right: -6, background: '#e53e3e', color: '#fff', borderRadius: 99, fontSize: 9, fontWeight: 800, padding: '1px 4px', lineHeight: 1.4 }}>
-                  {t.badge === 'msg' ? (unread > 99 ? '99+' : unread) : (unreadNote > 99 ? '99+' : unreadNote)}
+            <span style={{ position: 'relative' }}>
+              <Icon size={22} strokeWidth={active ? 2.5 : 1.8}
+                color={active ? 'var(--accent)' : 'var(--muted)'} />
+              {t.badge! > 0 && (
+                <span style={{
+                  position: 'absolute', top: -5, right: -7,
+                  background: '#e53e3e', color: '#fff',
+                  borderRadius: 99, fontSize: 9, fontWeight: 800,
+                  padding: '1px 4px', lineHeight: 1.4, minWidth: 14, textAlign: 'center'
+                }}>
+                  {t.badge! > 99 ? '99+' : t.badge}
                 </span>
               )}
             </span>
