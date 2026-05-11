@@ -32,7 +32,7 @@ function createMatch(
   gameManager.updateSettings(roomId, host.playerId, {
     ruleId: 'mon',
     ruleParams: { m: 5, n: 2 },
-    questionCount: 10,
+    questionCount: 30,
     winnerCount: 1,
     loserCount: 1,
     isPublic: false,
