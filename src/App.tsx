@@ -12,6 +12,7 @@ import SubmitPage from './pages/SubmitPage'
 import AdminPage from './pages/AdminPage'
 import ProfilePage from './pages/ProfilePage'
 import RankingPage from './pages/RankingPage'
+import UserPage from './pages/UserPage'
 import ContactPage from './pages/ContactPage'
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/ranking" element={<RankingPage />} />
+          <Route path="/user/:id" element={<UserPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

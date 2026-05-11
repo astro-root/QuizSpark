@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 
@@ -11,6 +12,7 @@ interface Entry {
 export default function RankingPage() {
   const { theme, toggle } = useTheme()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [list, setList] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -73,7 +75,7 @@ export default function RankingPage() {
             {list.map(e => {
               const isMe = e.id === user?.id
               return (
-                <div key={e.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px',
+                <div key={e.id} onClick={() => navigate(`/user/${e.id}`)} style={{ cursor:'pointer', display:'flex', alignItems:'center', gap:12, padding:'12px 16px',
                   background: isMe ? 'rgba(56,189,248,0.1)' : 'var(--surface)',
                   borderRadius:12,
                   border: `1px solid ${isMe ? 'var(--accent)' : 'var(--border)'}` }}>

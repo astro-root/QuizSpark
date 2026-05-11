@@ -7,6 +7,7 @@ import adminRouter from './routes/admin'
 import questionSetsRouter from './routes/questionSets'
 import recordsRouter from './routes/records'
 import rankingRouter from './routes/ranking'
+import followRouter from './routes/follow'
 import roomsRouter from './routes/rooms'
 import contactRouter from './routes/contact'
 import questionsRouter from './routes/questions'
@@ -29,6 +30,7 @@ export function createApp() {
   app.use('/api/question-sets', questionSetsRouter)
   app.use('/api/records', recordsRouter)
 app.use('/api/ranking', rankingRouter)
+app.use('/api/follow', followRouter)
   app.use('/api/rooms', roomsRouter)
   app.use('/api/contact', contactRouter)
   app.get('/api/announcements', async (_req, res) => { const { prisma } = await import('./lib/prisma'); res.json(await prisma.announcement.findMany({ where: { active: true }, orderBy: { createdAt: 'desc' } })) })

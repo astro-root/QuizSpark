@@ -19,6 +19,8 @@ model User {
   passwordAuth PasswordAuth?
   questionSets QuestionSet[]
   battleRecords BattleRecord[]
+  following     Follow[]       @relation("follower")
+  followers     Follow[]       @relation("following")
 }
 
 model PasswordAuth {
@@ -104,4 +106,15 @@ model Contact {
   body      String
   status    String   @default("open")
   createdAt DateTime @default(now())
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("follower",  fields: [followerId],  references: [id], onDelete: Cascade)
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
 }
