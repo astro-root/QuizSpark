@@ -1,8 +1,8 @@
+import AppHeader from '../components/AppHeader'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
 import RoomChat from '../components/RoomChat'
-import { useTheme } from '../context/ThemeContext'
 import type { GameSettings, RuleId } from '../types'
 
 const RULE_DEFS = [
@@ -31,7 +31,6 @@ function buildDefaultParams(ruleId: RuleId) {
 export default function LobbyPage() {
   const { roomId } = useParams<{ roomId:string }>()
   const { roomState, myId, startGame, updateSettings, syncState } = useSocketContext()
-  const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [local, setLocal] = useState<GameSettings>({ ruleId:'mon', ruleParams:{m:5,n:2}, questionCount:10, winnerCount:1, loserCount:0, isPublic:false, questionSetId:null })
   const [synced, setSynced] = useState(false)
@@ -80,14 +79,7 @@ export default function LobbyPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column' }}>
-      {/* ヘッダー */}
-      <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 20px', borderBottom:'1px solid var(--border)', background:'var(--surface)' }}>
-        <button onClick={() => navigate('/')} style={{ background:'none', color:'var(--muted)', fontSize:13, padding:0 }}>← 戻る</button>
-        <span style={{ fontFamily:'Orbitron,sans-serif', fontWeight:900, fontSize:15, color:'var(--accent)' }}>QuizSpark</span>
-        <button onClick={toggleTheme} style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'5px 9px', fontSize:14, color:'var(--sub)' }}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-      </header>
+      <AppHeader />
 
       <div style={{ flex:1, overflowY:'auto', padding:'20px 16px 100px' }}>
         {/* PC: 2カラム / SP: 1カラム */}
