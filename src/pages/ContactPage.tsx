@@ -10,7 +10,6 @@ export default function ContactPage() {
   const { user } = useAuth()
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
-  const [email, setEmail] = useState(user?.email ?? '')
   const [category, setCategory] = useState(CATEGORIES[0])
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
@@ -19,11 +18,10 @@ export default function ContactPage() {
 
   async function submit() {
     if (!body.trim()) { setError('内容を入力してください'); return }
-    if (!email.trim()) { setError('メールアドレスを入力してください'); return }
     setSending(true); setError('')
     const r = await fetch('/api/contact', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, category, body })
+      body: JSON.stringify({ category, body })
     })
     setSending(false)
     if (r.ok) setDone(true)
@@ -50,11 +48,13 @@ export default function ContactPage() {
               <div>
                 <p style={{ fontWeight:900, fontSize:18, marginBottom:4 }}>お問い合わせ</p>
                 <p style={{ color:'var(--muted)', fontSize:13 }}>ご意見・バグ報告などをお寄せください</p>
-              </div>
-
-              <div>
-                <p style={lbl}>メールアドレス</p>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" style={inp} />
+                {user && (
+                  <div style={{ marginTop:10, padding:'8px 12px', background:'var(--surface2)', borderRadius:8, fontSize:12, color:'var(--muted)', border:'1px solid var(--border)' }}>
+                    送信者: <span style={{ color:'var(--text)', fontWeight:700 }}>{user.name}</span>
+                    {' '}・{' '}
+                    <span>{user.email}</span>
+                  </div>
+                )}
               </div>
 
               <div>

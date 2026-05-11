@@ -4,14 +4,18 @@ import { prisma } from '../lib/prisma'
 const router = Router()
 
 router.post('/', async (req, res) => {
-  const { email, category, body } = req.body
-  if (!email || !category || !body?.trim()) {
+  const { category, body } = req.body
+  if (!category || !body?.trim()) {
     res.status(400).json({ error: '必須項目が不足しています' }); return
   }
+  const u = req.user as any
+  const email = u?.email ?? ''
   await prisma.contact.create({
     data: {
-      userId: (req.user as any)?.id ?? null,
-      email, category, body: body.trim(),
+      userId: u?.id ?? null,
+      email,
+      category,
+      body: body.trim(),
     }
   })
   res.json({ ok: true })
