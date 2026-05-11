@@ -1,7 +1,6 @@
 import AppHeader from '../components/AppHeader'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 
 interface Entry {
@@ -11,7 +10,6 @@ interface Entry {
 }
 
 export default function RankingPage() {
-  const { theme, toggle } = useTheme()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [list, setList] = useState<Entry[]>([])

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import AppHeader from '../components/AppHeader'
+import { User, BookOpen, Trophy } from 'lucide-react'
 import ProfileTab from '../components/profile/ProfileTab'
 import SetsTab from '../components/profile/SetsTab'
 import RecordsTab from '../components/profile/RecordsTab'
@@ -23,10 +24,10 @@ export default function ProfilePage() {
 
   if (!user) return null
 
-  const tabs: { key: Tab; icon: string; label: string }[] = [
-    { key: 'profile', icon: '👤', label: 'プロフィール' },
-    { key: 'sets',    icon: '📚', label: '問題セット' },
-    { key: 'records', icon: '🏆', label: '戦績' },
+  const tabs = [
+    { key: 'profile' as Tab, Icon: User,     label: 'プロフィール' },
+    { key: 'sets'    as Tab, Icon: BookOpen, label: '問題セット' },
+    { key: 'records' as Tab, Icon: Trophy,   label: '戦績' },
   ]
 
   return (
@@ -51,11 +52,11 @@ export default function ProfilePage() {
       <div style={{ display:'flex', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            style={{ flex:1, padding:'12px 8px', fontSize:13, fontWeight:700, background:'none',
+            style={{ flex:1, padding:'12px 8px', fontSize:13, fontWeight:700, background:'none', border:'none', cursor:'pointer',
               color: tab===t.key ? 'var(--accent)' : 'var(--muted)',
               borderBottom: `2px solid ${tab===t.key ? 'var(--accent)' : 'transparent'}`,
               transition:'all .2s', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-            <span style={{ fontSize:18 }}>{t.icon}</span>
+            <t.Icon size={18} strokeWidth={tab===t.key ? 2.5 : 1.8} />
             <span style={{ fontSize:11 }}>{t.label}</span>
           </button>
         ))}
