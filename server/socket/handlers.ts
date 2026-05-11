@@ -13,8 +13,18 @@ import { joinQueue, leaveQueue, setOnMatch } from '../game/MatchmakingManager'
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 type IoSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 
+function sanitizeState(state: RoomState): RoomState {
+  if (!state.currentQuestion) return state
+  return {
+    ...state,
+    currentQuestion: state.phase === 'question' || state.phase === 'answering'
+      ? { ...state.currentQuestion, answer: '', answers: [] }
+      : state.currentQuestion
+  }
+}
+
 function broadcast(io: IoServer, roomId: string, state: RoomState) {
-  io.to(roomId).emit('room-update', state)
+  io.to(roomId).emit('room-update', sanitizeState(state))
 }
 
 // socketId → DB userId
@@ -61,16 +71,19 @@ gameManager.setOnFinish(async (state) => {
     })
     if (data.length > 0) {
       await prisma.battleRecord.createMany({ data, skipDuplicates: true })
-      // レート更新
-      for (const d of data) {
-        if (!d.userId) continue
-        const delta = d.result === 'WIN' ? 30 : d.result === 'LOSE' ? -20 : 0
-        if (delta === 0) continue
-        const user = await prisma.user.findUnique({ where: { id: d.userId }, select: { rate: true } })
-        if (!user) continue
-        await prisma.user.update({
-          where: { id: d.userId },
-          data: { rate: Math.max(0, user.rate + delta) }
+      // レート更新（transaction で競合回避）
+      const rateTargets = data.filter(d => d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
+      if (rateTargets.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          for (const d of rateTargets) {
+            const delta = d.result === 'WIN' ? 30 : -20
+            const user = await tx.user.findUnique({ where: { id: d.userId! }, select: { rate: true } })
+            if (!user) continue
+            await tx.user.update({
+              where: { id: d.userId! },
+              data: { rate: Math.max(0, user.rate + delta) }
+            })
+          }
         })
       }
     }

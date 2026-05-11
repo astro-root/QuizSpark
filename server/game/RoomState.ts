@@ -78,16 +78,17 @@ function shuffle(arr: number[]): number[] {
 
 export function advanceQuestion(state: RoomState, customQuestions?: import('../../src/types').Question[]): RoomState {
   const nextIndex = state.currentQuestionIndex + 1
-  const count = Math.min(state.settings.questionCount, getQuizData().length)
+  const sourceQuestions = customQuestions ?? getQuizData()
+  const count = Math.min(state.settings.questionCount, sourceQuestions.length)
   const order = state.questionOrder.length === count
     ? state.questionOrder
-    : shuffle(getQuizData().map((_, i) => i)).slice(0, count)
+    : shuffle(sourceQuestions.map((_, i) => i)).slice(0, count)
 
   // 問題数終了 or 全員WIN/LOSEならfinished
   if (nextIndex >= order.length || checkGameEnd(state)) {
     return { ...state, phase: 'finished', currentQuestion: null, timerEndsAt: null, questionOrder: order }
   }
-  const question = getQuizData()[order[nextIndex]]
+  const question = (customQuestions ?? getQuizData())[order[nextIndex]]
   const typewriterMs = question.text.length * TYPEWRITER_SPEED_MS
   return {
     ...state,

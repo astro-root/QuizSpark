@@ -11,15 +11,17 @@ const storage = multer.diskStorage({
     fs.mkdirSync(dir, { recursive: true })
     cb(null, dir)
   },
-  filename: (req, _file, cb) => {
-    cb(null, `${(req.user as any)?.id ?? 'unknown'}_${Date.now()}.webp`)
+  filename: (req, file, cb) => {
+    const ext = { 'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif' }[file.mimetype] ?? '.jpg'
+    cb(null, `${(req.user as any)?.id ?? 'unknown'}_${Date.now()}${ext}`)
   },
 })
 const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    cb(null, file.mimetype.startsWith('image/'))
+    const allowed = ['image/jpeg','image/png','image/webp','image/gif']
+    cb(null, allowed.includes(file.mimetype))
   },
 })
 

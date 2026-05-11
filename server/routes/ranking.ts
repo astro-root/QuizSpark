@@ -18,21 +18,17 @@ router.get('/', async (_req, res) => {
     select: {
       id: true, name: true, username: true, avatarUrl: true, rate: true,
       _count: { select: { battleRecords: true } },
-      battleRecords: { select: { result: true }, orderBy: { playedAt: 'desc' }, take: 100 }
+      // 勝利数だけ集計（全件取得をやめる）
+      battleRecords: { where: { result: 'WIN' }, select: { id: true } }
     }
   })
   const result = users.map((u, i) => {
-    const wins = u.battleRecords.filter(r => r.result === 'WIN').length
+    const wins = u.battleRecords.length
     const total = u._count.battleRecords
     return {
       rank: i + 1,
-      id: u.id,
-      name: u.name,
-      username: u.username,
-      avatarUrl: u.avatarUrl,
-      rate: u.rate,
-      total,
-      wins,
+      id: u.id, name: u.name, username: u.username,
+      avatarUrl: u.avatarUrl, rate: u.rate, total, wins,
       winRate: total ? Math.round(wins / total * 100) : 0,
       ...getRankLabel(u.rate)
     }
