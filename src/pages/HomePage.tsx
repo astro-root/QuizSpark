@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { Shuffle, Users, Sun, Moon, Settings } from 'lucide-react'
 import MatchmakingModal from '../components/MatchmakingModal'
+import AppHeader from '../components/AppHeader'
 
 export default function HomePage() {
   const { joinRoom } = useSocketContext()
@@ -18,10 +20,8 @@ export default function HomePage() {
   const [authName, setAuthName] = useState('')
   const [authError, setAuthError] = useState('')
   const [showMatchmaking, setShowMatchmaking] = useState(false)
-
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
   const [publicRooms, setPublicRooms] = useState<{id:string;playerCount:number;hostName:string;ruleId:string;questionCount:number}[]>([])
-  const [joinName] = useState(user?.name ?? '')
 
   useEffect(() => {
     fetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
@@ -46,8 +46,7 @@ export default function HomePage() {
 
   async function quickJoin(roomId: string) {
     if (!user) { setShowAuth(true); return }
-    const n = user.name
-    const err = await joinRoom(roomId, n)
+    const err = await joinRoom(roomId, user.name)
     if (!err) navigate('/room/' + roomId)
   }
 
@@ -55,49 +54,49 @@ export default function HomePage() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--muted)' }}>読み込み中...</div>
   )
 
+  const headerRight = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      {(user as any)?.isAdmin && (
+        <button onClick={() => navigate('/admin')}
+          style={{ background: 'none', border: 'none', padding: 8, color: 'var(--accent)', display: 'flex' }}>
+          <Settings size={18} />
+        </button>
+      )}
+      <button onClick={toggleTheme}
+        style={{ background: 'none', border: 'none', padding: 8, color: 'var(--muted)', display: 'flex' }}>
+        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+    </div>
+  )
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
-      {/* ヘッダー */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <div style={{ fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 20 }}>
-          <span style={{ color: 'var(--accent)' }}>Quiz</span><span>Spark</span><span style={{ marginLeft: 4 }}>⚡</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {(user as any)?.isAdmin && (
-            <a href="/admin" style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, padding: '6px 10px', background: 'rgba(56,189,248,0.1)', borderRadius: 8 }}>⚙</a>
-          )}
-          <button onClick={toggleTheme} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', fontSize: 15 }}>
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
-        </div>
-      </header>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
+      <AppHeader right={headerRight} />
 
-      <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480, width: '100%', margin: '0 auto' }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* ユーザー情報 */}
+        {/* ユーザーカード */}
         {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px', background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,var(--accent),var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 900, color: '#fff', flexShrink: 0 }}>
-              {user.avatarUrl
-                ? <img src={user.avatarUrl} style={{ width: 48, height: 48, borderRadius: '50%' }} alt="" />
-                : user.name[0]}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,var(--accent),var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#fff', flexShrink: 0, overflow: 'hidden' }}>
+              {user.avatarUrl ? <img src={user.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : user.name[0]}
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: 16 }}>{user.name}</p>
+              <p style={{ fontWeight: 800, fontSize: 15 }}>{user.name}</p>
               <p style={{ fontSize: 12, color: 'var(--muted)' }}>QuizSpark プレイヤー</p>
             </div>
           </div>
         )}
 
-        {/* クイック対戦ボタン */}
+        {/* ランダムマッチ */}
         <button onClick={() => user ? setShowMatchmaking(true) : setShowAuth(true)}
-          style={{ width: '100%', padding: '22px', borderRadius: 18, fontSize: 18, fontWeight: 900,
+          style={{ width: '100%', padding: '20px 24px', borderRadius: 18, fontSize: 16, fontWeight: 900,
             background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff',
-            boxShadow: '0 6px 24px rgba(124,58,237,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          <span style={{ fontSize: 28 }}>🎲</span>
+            boxShadow: '0 6px 24px rgba(124,58,237,0.35)',
+            display: 'flex', alignItems: 'center', gap: 14, border: 'none', cursor: 'pointer' }}>
+          <Shuffle size={28} strokeWidth={2.5} />
           <div style={{ textAlign: 'left' }}>
-            <p style={{ fontSize: 18, fontWeight: 900 }}>ランダムマッチ</p>
+            <p style={{ fontSize: 17, fontWeight: 900 }}>ランダムマッチ</p>
             <p style={{ fontSize: 12, fontWeight: 400, opacity: 0.85, marginTop: 2 }}>今すぐ対戦開始</p>
           </div>
         </button>
@@ -105,9 +104,9 @@ export default function HomePage() {
         {/* お知らせ */}
         {announcements.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: 1 }}>📢 お知らせ</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: 1, textTransform: 'uppercase' }}>📢 お知らせ</p>
             {announcements.map(a => (
-              <div key={a.id} style={{ padding: '12px 14px', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12 }}>
+              <div key={a.id} style={{ padding: '12px 14px', background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 12 }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>{a.title}</p>
                 <p style={{ fontSize: 12, color: 'var(--sub)' }}>{a.body}</p>
               </div>
@@ -118,7 +117,10 @@ export default function HomePage() {
         {/* 公開ルーム */}
         {publicRooms.length > 0 && (
           <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '16px', border: '1px solid var(--border)' }}>
-            <p style={{ fontWeight: 800, fontSize: 14, marginBottom: 12 }}>🌐 参加できるルーム</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Users size={15} color="var(--muted)" />
+              <p style={{ fontWeight: 800, fontSize: 14 }}>参加できるルーム</p>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {publicRooms.map(room => (
                 <div key={room.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 10 }}>
@@ -127,7 +129,7 @@ export default function HomePage() {
                     <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{room.ruleId.toUpperCase()} · {room.questionCount}問 · {room.playerCount}人</p>
                   </div>
                   <button onClick={() => quickJoin(room.id)}
-                    style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, background: 'var(--buzz)', color: '#fff', flexShrink: 0 }}>
+                    style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, background: 'var(--buzz)', color: '#fff', flexShrink: 0, border: 'none', cursor: 'pointer' }}>
                     参加
                   </button>
                 </div>
@@ -136,18 +138,16 @@ export default function HomePage() {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 12 }}>
-          <a href="/contact" style={{ flex: 1, textAlign: 'center', padding: '12px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>
-            📬 お問い合わせ
-          </a>
-        </div>
+        <a href="/contact" style={{ textAlign: 'center', padding: '12px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', fontSize: 13, color: 'var(--muted)', fontWeight: 600, textDecoration: 'none' }}>
+          📬 お問い合わせ
+        </a>
       </div>
 
       {/* Auth Modal */}
       {showAuth && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 }}
           onClick={e => { if (e.target === e.currentTarget && user) setShowAuth(false) }}>
-          <div style={{ width: '100%', maxWidth: 380, background: 'var(--surface)', borderRadius: 18, padding: '28px 24px' }}>
+          <div style={{ width: '100%', maxWidth: 380, background: 'var(--surface)', borderRadius: 20, padding: '28px 24px' }}>
             <p style={{ fontWeight: 900, fontSize: 17, marginBottom: 4 }}>QuizSparkへようこそ</p>
             <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20 }}>ゲームに参加するにはアカウントが必要です</p>
             <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 10, padding: 4, gap: 4, marginBottom: 20 }}>
@@ -155,7 +155,7 @@ export default function HomePage() {
                 <button key={t} onClick={() => { setAuthTab(t); setAuthError('') }}
                   style={{ flex: 1, padding: '9px', borderRadius: 8, fontSize: 14, fontWeight: 700,
                     background: authTab === t ? 'var(--accent)' : 'transparent',
-                    color: authTab === t ? '#fff' : 'var(--muted)' }}>
+                    color: authTab === t ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer' }}>
                   {t === 'login' ? 'ログイン' : '新規登録'}
                 </button>
               ))}
@@ -177,12 +177,12 @@ export default function HomePage() {
             {authError && <p style={{ color: 'var(--wrong)', fontSize: 13, marginBottom: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 8 }}>{authError}</p>}
             <button onClick={handleAuth}
               style={{ width: '100%', padding: '14px', borderRadius: 10, fontSize: 15, fontWeight: 900,
-                background: 'linear-gradient(135deg,var(--accent),var(--accent2))', color: '#fff', marginBottom: 10 }}>
+                background: 'linear-gradient(135deg,var(--accent),var(--accent2))', color: '#fff', marginBottom: 10, border: 'none', cursor: 'pointer' }}>
               {authTab === 'login' ? 'ログイン' : '登録する'}
             </button>
             <button onClick={loginWithGoogle}
               style={{ width: '100%', padding: '12px', borderRadius: 10, fontSize: 14, fontWeight: 700,
-                background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
               🔑 Googleでログイン
             </button>
           </div>
