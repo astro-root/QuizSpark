@@ -38,14 +38,6 @@ function ensureMatchCallback(io: IoServer) {
     }
     const state = gameManager.getRoom(roomId)
     if (state) io.to(roomId).emit('room-update', state)
-
-    // 3秒後に自動スタート＋broadcast
-    setTimeout(() => {
-      if (gameManager.startGame(roomId)) {
-        const next = gameManager.getRoom(roomId)
-        if (next) io.to(roomId).emit('room-update', next)
-      }
-    }, 3000)
   })
 }
 

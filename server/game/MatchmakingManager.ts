@@ -9,16 +9,14 @@ export function setOnMatch(fn: OnMatchFn) {
   onMatchCallback = fn
 }
 
-export function joinQueue(playerId: string, playerName: string): number {
+export function joinQueue(playerId: string, playerName: string) {
   const idx = queue.findIndex(e => e.playerId === playerId)
   if (idx >= 0) queue.splice(idx, 1)
   queue.push({ playerId, playerName })
   if (queue.length >= 2) {
     const [host, guest] = queue.splice(0, 2)
     createMatch(host, guest)
-    return -1
   }
-  return queue.findIndex(e => e.playerId === playerId)
 }
 
 export function leaveQueue(playerId: string) {
@@ -26,7 +24,10 @@ export function leaveQueue(playerId: string) {
   if (idx >= 0) queue.splice(idx, 1)
 }
 
-function createMatch(host: { playerId: string; playerName: string }, guest: { playerId: string; playerName: string }) {
+function createMatch(
+  host: { playerId: string; playerName: string },
+  guest: { playerId: string; playerName: string }
+) {
   const roomId = gameManager.createRoom(host.playerId, host.playerName)
   gameManager.updateSettings(roomId, host.playerId, {
     ruleId: 'mon',
@@ -40,8 +41,8 @@ function createMatch(host: { playerId: string; playerName: string }, guest: { pl
   const err = gameManager.joinRoom(roomId, guest.playerId, guest.playerName)
   if (err) { console.error('[Matchmaking] join failed:', err); return }
 
-  const state = gameManager.getRoom(roomId)
-  if (state) gameManager['rooms'].set(roomId, { ...state, isMatchmaking: true })
+  // ゲームを先に開始してから通知する
+  gameManager.startGame(roomId)
 
   if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId])
 }
