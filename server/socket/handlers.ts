@@ -27,7 +27,6 @@ function ensureMatchCallback(io: IoServer) {
   matchCallbackSet = true
   setOnMatch((roomId, playerIds) => {
     for (const pid of playerIds) {
-      // そのsocketを探してルームに参加させる
       io.sockets.sockets.forEach(s => {
         if (s.id === pid) {
           s.data.roomId = roomId
@@ -37,8 +36,16 @@ function ensureMatchCallback(io: IoServer) {
         }
       })
     }
-    const state = require('../game/GameManager').gameManager.getRoom(roomId)
+    const state = gameManager.getRoom(roomId)
     if (state) io.to(roomId).emit('room-update', state)
+
+    // 3秒後に自動スタート＋broadcast
+    setTimeout(() => {
+      if (gameManager.startGame(roomId)) {
+        const next = gameManager.getRoom(roomId)
+        if (next) io.to(roomId).emit('room-update', next)
+      }
+    }, 3000)
   })
 }
 

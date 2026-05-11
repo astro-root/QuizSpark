@@ -44,6 +44,4 @@ function createMatch(host: { playerId: string; playerName: string }, guest: { pl
   if (state) gameManager['rooms'].set(roomId, { ...state, isMatchmaking: true })
 
   if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId])
-
-  setTimeout(() => { gameManager.startGame(roomId) }, 3000)
 }
