@@ -151,10 +151,9 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
   })
 
-  socket.on('join-queue', (ruleId, questionCount) => {
+  socket.on('join-queue', () => {
     const name = (socket.request as any).user?.name ?? 'プレイヤー'
-    const pos = joinQueue({ playerId: socket.id, playerName: name, ruleId, questionCount })
-    if (pos >= 0) socket.emit('queue-status', pos + 1)
+    joinQueue(socket.id, name)
   })
 
   socket.on('leave-queue', () => {

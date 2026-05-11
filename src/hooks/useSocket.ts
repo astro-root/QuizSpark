@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { socket } from '../lib/socket'
-import type { RoomState, GameSettings, RuleId } from '../types'
+import type { RoomState, GameSettings } from '../types'
 
 export function useSocket() {
   const [roomState, setRoomState] = useState<RoomState | null>(null)
@@ -83,7 +83,7 @@ export function useSocket() {
   const startGame = useCallback(() => { socket.emit('start-game') }, [])
   const buzz = useCallback(() => { socket.emit('buzz') }, [])
   const submitAnswer = useCallback((answer: string) => { socket.emit('submit-answer', answer) }, [])
-  const joinQueue = useCallback((ruleId: RuleId, questionCount: number) => { socket.emit('join-queue', ruleId, questionCount) }, [])
+  const joinQueue = useCallback(() => { socket.emit('join-queue') }, [])
   const sendChat = useCallback((text: string) => { socket.emit('send-chat', text) }, [])
   const leaveQueue = useCallback(() => { socket.emit('leave-queue') }, [])
 

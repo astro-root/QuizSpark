@@ -74,7 +74,7 @@ export interface ClientToServerEvents {
   'join-room': (roomId: string, name: string, callback: (error: string | null) => void) => void
   'update-settings': (settings: GameSettings) => void
   'reset-game': () => void
-  'join-queue': (ruleId: RuleId, questionCount: number) => void
+  'join-queue': () => void
   'leave-queue': () => void
   'send-chat': (text: string) => void
   'start-game': () => void

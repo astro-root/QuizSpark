@@ -1,8 +1,6 @@
-import type { RuleId, MatchmakingEntry } from '../../src/types'
 import { gameManager } from './GameManager'
 
-// ruleId → キュー（問題数は問わない）
-const queues = new Map<RuleId, MatchmakingEntry[]>()
+const queue: { playerId: string; playerName: string }[] = []
 
 type OnMatchFn = (roomId: string, playerIds: string[]) => void
 let onMatchCallback: OnMatchFn | null = null
@@ -11,45 +9,36 @@ export function setOnMatch(fn: OnMatchFn) {
   onMatchCallback = fn
 }
 
-export function joinQueue(entry: MatchmakingEntry): number {
-  const q = queues.get(entry.ruleId) ?? []
-  // 既存エントリを更新
-  const idx = q.findIndex(e => e.playerId === entry.playerId)
-  if (idx >= 0) q.splice(idx, 1)
-  q.push(entry)
-  queues.set(entry.ruleId, q)
-
-  if (q.length >= 2) {
-    const matched = q.splice(0, 2)
-    queues.set(entry.ruleId, q)
-    createMatch(matched)
+export function joinQueue(playerId: string, playerName: string): number {
+  const idx = queue.findIndex(e => e.playerId === playerId)
+  if (idx >= 0) queue.splice(idx, 1)
+  queue.push({ playerId, playerName })
+  if (queue.length >= 2) {
+    const [host, guest] = queue.splice(0, 2)
+    createMatch(host, guest)
     return -1
   }
-  return q.findIndex(e => e.playerId === entry.playerId)
+  return queue.findIndex(e => e.playerId === playerId)
 }
 
 export function leaveQueue(playerId: string) {
-  for (const [key, q] of queues.entries()) {
-    const idx = q.findIndex(e => e.playerId === playerId)
-    if (idx >= 0) { q.splice(idx, 1); queues.set(key, q); return }
-  }
+  const idx = queue.findIndex(e => e.playerId === playerId)
+  if (idx >= 0) queue.splice(idx, 1)
 }
 
-function createMatch(entries: MatchmakingEntry[]) {
-  const host = entries[0]
-  const guest = entries[1]
+function createMatch(host: { playerId: string; playerName: string }, guest: { playerId: string; playerName: string }) {
   const roomId = gameManager.createRoom(host.playerId, host.playerName)
   gameManager.updateSettings(roomId, host.playerId, {
-    ruleId: host.ruleId,
+    ruleId: 'mon',
     ruleParams: { m: 5, n: 2 },
-    questionCount: host.questionCount,
+    questionCount: 10,
     winnerCount: 1,
-    loserCount: 0,
+    loserCount: 1,
     isPublic: false,
     questionSetId: null,
   })
-  const joinErr = gameManager.joinRoom(roomId, guest.playerId, guest.playerName)
-  if (joinErr) { console.error('[Matchmaking] join failed:', joinErr); return }
+  const err = gameManager.joinRoom(roomId, guest.playerId, guest.playerName)
+  if (err) { console.error('[Matchmaking] join failed:', err); return }
 
   const state = gameManager.getRoom(roomId)
   if (state) gameManager['rooms'].set(roomId, { ...state, isMatchmaking: true })
