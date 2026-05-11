@@ -1,4 +1,5 @@
 import AppHeader from '../components/AppHeader'
+import { User, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -55,7 +56,10 @@ export default function SearchPage() {
             style={{ flex: 1, padding: '12px', fontSize: 13, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer',
               color: tab === t ? 'var(--accent)' : 'var(--muted)',
               borderBottom: `2px solid ${tab === t ? 'var(--accent)' : 'transparent'}` }}>
-            {t === 'users' ? `👤 ユーザー${users.length > 0 ? ` (${users.length})` : ''}` : `📚 問題セット${sets.length > 0 ? ` (${sets.length})` : ''}`}
+            <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+              {t === 'users' ? <User size={14} /> : <BookOpen size={14} />}
+              {t === 'users' ? `ユーザー${users.length > 0 ? ` (${users.length})` : ''}` : `問題セット${sets.length > 0 ? ` (${sets.length})` : ''}`}
+            </span>
           </button>
         ))}
       </div>

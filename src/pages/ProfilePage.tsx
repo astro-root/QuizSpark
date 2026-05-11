@@ -34,18 +34,18 @@ export default function ProfilePage() {
     <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', paddingBottom:80 }}>
       <AppHeader title="マイページ" />
 
-      <div style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', padding:'20px', display:'flex', alignItems:'center', gap:16 }}>
-        <div style={{ width:52, height:52, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.4)',
-          background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:22, fontWeight:900, color:'#fff', overflow:'hidden', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
+        <div style={{ width:48, height:48, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize:20, fontWeight:900, color:'#fff', overflow:'hidden', flexShrink:0 }}>
           {user.avatarUrl
-            ? <img src={user.avatarUrl} style={{ width:52, height:52, objectFit:'cover' }} alt="" />
+            ? <img src={user.avatarUrl} style={{ width:48, height:48, objectFit:'cover' }} alt="" />
             : user.name[0]}
         </div>
         <div>
-          <p style={{ fontWeight:900, fontSize:18, color:'#fff' }}>{user.name}</p>
-          {(user as any).username && <p style={{ fontSize:12, color:'rgba(255,255,255,0.75)', marginTop:2 }}>@{(user as any).username}</p>}
-          <p style={{ fontSize:11, color:'rgba(255,255,255,0.6)', marginTop:2 }}>{user.email}</p>
+          <p style={{ fontWeight:900, fontSize:16 }}>{user.name}</p>
+          {(user as any).username && <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>@{(user as any).username}</p>}
+          {!(user as any).username && <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{user.email}</p>}
         </div>
       </div>
 
