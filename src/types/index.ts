@@ -77,6 +77,7 @@ export interface ClientToServerEvents {
   'join-queue': () => void
   'leave-queue': () => void
   'send-chat': (text: string) => void
+  'sync-state': (roomId: string) => void
   'start-game': () => void
   buzz: () => void
   'submit-answer': (answer: string) => void

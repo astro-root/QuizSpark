@@ -160,6 +160,15 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     leaveQueue(socket.id)
   })
 
+  socket.on('sync-state', (roomId: string) => {
+    const state = gameManager.getRoom(roomId)
+    if (state) {
+      socket.data.roomId = roomId
+      socket.join(roomId)
+      socket.emit('room-update', state)
+    }
+  })
+
   socket.on('send-chat', (text) => {
     const roomId = socket.data.roomId
     if (!roomId || !text?.trim()) return

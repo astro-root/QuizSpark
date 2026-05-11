@@ -4,12 +4,17 @@ import { useSocketContext } from '../context/SocketContext'
 import type { Player } from '../types'
 
 /* ─── サウンド ─── */
-function createAudioCtx() {
-  return new (window.AudioContext || (window as any).webkitAudioContext)()
+let _actx: AudioContext | null = null
+function getCtx(): AudioContext {
+  if (!_actx || _actx.state === 'closed') {
+    _actx = new (window.AudioContext || (window as any).webkitAudioContext)()
+  }
+  if (_actx.state === 'suspended') _actx.resume()
+  return _actx
 }
 function playTone(freq: number, type: OscillatorType, duration: number, gain = 0.3, delay = 0) {
   try {
-    const ctx = createAudioCtx()
+    const ctx = getCtx()
     const osc = ctx.createOscillator()
     const g = ctx.createGain()
     osc.connect(g); g.connect(ctx.destination)
@@ -18,18 +23,17 @@ function playTone(freq: number, type: OscillatorType, duration: number, gain = 0
     g.gain.setValueAtTime(gain, t)
     g.gain.exponentialRampToValueAtTime(0.001, t + duration)
     osc.start(t); osc.stop(t + duration)
-    setTimeout(() => ctx.close(), (delay + duration + 0.2) * 1000)
   } catch {}
 }
 const SFX = {
-  buzz:    () => { playTone(220, 'sawtooth', 0.08, 0.4); playTone(330, 'square', 0.08, 0.2, 0.05) },
-  correct: () => { [523,659,784,1047].forEach((f,i) => playTone(f,'sine',0.3,0.3,i*0.1)) },
-  wrong:   () => { playTone(180,'sawtooth',0.4,0.3); playTone(120,'sawtooth',0.3,0.25,0.15) },
-  skip:    () => { playTone(400,'sine',0.15,0.2); playTone(300,'sine',0.15,0.15,0.15) },
-  qstart:  () => { playTone(880,'sine',0.1,0.15); playTone(1100,'sine',0.08,0.1,0.1) },
-  tick:    () => playTone(800,'sine',0.06,0.08),
-  urgent:  () => { playTone(900,'square',0.12,0.06); playTone(700,'square',0.1,0.05,0.07) },
-  win:     () => { [523,659,784,880,1047,1319].forEach((f,i) => playTone(f,'sine',0.5,0.4,i*0.08)) },
+  buzz:    () => { playTone(150,'sawtooth',0.05,0.5); playTone(300,'square',0.06,0.35,0.03); playTone(450,'sine',0.08,0.2,0.06) },
+  correct: () => { [523,659,784,1047].forEach((f,i) => playTone(f,'sine',0.25,0.35,i*0.09)) },
+  wrong:   () => { playTone(200,'sawtooth',0.35,0.4); playTone(140,'sawtooth',0.3,0.3,0.12); playTone(100,'square',0.2,0.2,0.25) },
+  skip:    () => { playTone(440,'sine',0.12,0.18); playTone(330,'sine',0.1,0.15,0.13) },
+  qstart:  () => { playTone(660,'sine',0.08,0.18); playTone(880,'sine',0.07,0.14,0.09); playTone(1100,'sine',0.06,0.1,0.18) },
+  tick:    () => playTone(880,'sine',0.04,0.07),
+  urgent:  () => { playTone(960,'square',0.1,0.07); playTone(720,'square',0.08,0.06,0.06) },
+  win:     () => { [523,659,784,880,1047,1319,1568].forEach((f,i) => playTone(f,'sine',0.6,0.4,i*0.07)) },
 }
 
 /* ─── CSS animations ─── */
@@ -101,9 +105,10 @@ function scoreLabel(p: Player, ruleId: string): string {
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId:string }>()
-  const { roomState, myId, buzz, submitAnswer, resetGame, isHost } = useSocketContext()
+  const { roomState, myId, buzz, submitAnswer, resetGame, isHost, syncState } = useSocketContext()
   const navigate = useNavigate()
   const [answer, setAnswer] = useState('')
+  useEffect(() => { if (roomId) syncState(roomId) }, [roomId])
   const inputRef = useRef<HTMLInputElement>(null)
   const countdown = useCountdown(roomState?.timerEndsAt ?? null)
 
@@ -308,14 +313,16 @@ export default function GamePage() {
         {/* 早押し */}
         {phase==='question' && (
           <button onClick={handleBuzz}
-            style={{ padding:'36px 28px',
+            style={{ padding:'0',
               background:'linear-gradient(135deg,var(--buzz),#f97316)',
-              color:'#fff',borderRadius:16,fontSize:26,fontWeight:900,
-              boxShadow:'0 6px 28px rgba(244,63,94,0.45)',
-              letterSpacing:2,width:'100%',
-              animation: buzzAnim ? 'buzzPop 0.4s ease' : undefined,
-              transition:'box-shadow 0.2s,transform 0.1s',
+              color:'#fff',borderRadius:20,fontSize:28,fontWeight:900,
+              boxShadow:'0 8px 32px rgba(244,63,94,0.5)',
+              letterSpacing:2,width:'100%',height:140,
+              animation: buzzAnim ? 'buzzPop 0.35s cubic-bezier(.34,1.56,.64,1)' : undefined,
+              transition:'box-shadow 0.15s,transform 0.1s',
               transform: 'translateZ(0)',
+              WebkitTapHighlightColor:'transparent',
+              userSelect:'none',
             }}>
             ⚡ 早押し！
           </button>
@@ -331,12 +338,19 @@ export default function GamePage() {
               {isBuzzed?'⚡ あなたの番！':`⏳ ${buzzedPlayerName} が回答中...`}
             </p>
             {isBuzzed && (
-              <div style={{ display:'flex',gap:8,animation:'shake 0.3s ease' }}>
+              <div style={{ display:'flex',flexDirection:'column',gap:10,animation:'shake 0.3s ease' }}>
                 <input ref={inputRef} value={answer} onChange={e=>setAnswer(e.target.value)}
                   onKeyDown={e=>{ if(e.key==='Enter'&&!e.nativeEvent.isComposing) submit() }}
                   placeholder="ひらがなで入力"
-                  style={{ flex:1,padding:'12px 14px',background:'var(--surface2)',border:'2px solid var(--accent)',borderRadius:10,fontSize:16,color:'var(--text)' }}/>
-                <button onClick={submit} style={{ padding:'12px 18px',background:'linear-gradient(135deg,var(--accent),var(--accent2))',color:'#fff',borderRadius:10,fontSize:15,fontWeight:800 }}>送信</button>
+                  autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false}
+                  style={{ width:'100%',padding:'14px 16px',background:'var(--surface2)',border:'2px solid var(--accent)',borderRadius:12,fontSize:18,color:'var(--text)',boxSizing:'border-box' }}/>
+                <button onClick={submit}
+                  style={{ width:'100%',padding:'16px',background:'linear-gradient(135deg,var(--accent),var(--accent2))',
+                    color:'#fff',borderRadius:12,fontSize:18,fontWeight:900,
+                    boxShadow:'0 4px 20px rgba(99,102,241,0.4)',
+                    WebkitTapHighlightColor:'transparent' }}>
+                  送信 →
+                </button>
               </div>
             )}
           </div>

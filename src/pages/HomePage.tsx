@@ -104,7 +104,7 @@ export default function HomePage() {
                   ? <img src={user.avatarUrl} style={{ width:22, height:22, borderRadius:'50%' }} alt="" />
                   : <span style={{ width:22, height:22, borderRadius:'50%', background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#fff' }}>{user.name[0]}</span>
                 }
-                <span style={{ fontSize:13, fontWeight:600 }}>{user.name}</span>
+
               </button>
               <button onClick={logout} style={{ fontSize:12, color:'var(--muted)', background:'none', padding:'6px' }}>ログアウト</button>
             </>
