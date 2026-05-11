@@ -164,7 +164,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
 
   socket.on('join-queue', () => {
     const name = (socket.request as any).user?.name ?? 'プレイヤー'
-    joinQueue(socket.id, name)
+    joinQueue(socket.id, name, userIdMap.get(socket.id))
   })
 
   socket.on('leave-queue', () => {
