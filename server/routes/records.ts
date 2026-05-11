@@ -18,4 +18,10 @@ router.get('/me', async (req, res) => {
   res.json({ records, stats: { total, wins, winRate: total ? Math.round(wins/total*100) : 0, totalCorrect, totalWrong } })
 })
 
+router.delete('/me', async (req, res) => {
+  if (!req.user) { res.status(401).json({ error: '未ログイン' }); return }
+  const uid = (req.user as any).id
+  await prisma.battleRecord.deleteMany({ where: { userId: uid } })
+  res.json({ ok: true })
+})
 export default router

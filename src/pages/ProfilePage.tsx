@@ -372,6 +372,14 @@ export default function ProfilePage() {
                     {records.length === 0 && <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:16 }}>対戦履歴がありません</p>}
                   </div>
                 </div>
+                <button onClick={async () => {
+                  if (!confirm('戦績をすべてリセットしますか？この操作は取り消せません')) return
+                  await fetch('/api/records/me', { method: 'DELETE' })
+                  fetchRecords()
+                }} style={{ padding:'13px', borderRadius:12, fontSize:13, fontWeight:700,
+                  background:'rgba(239,68,68,0.08)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>
+                  🗑 戦績をリセット
+                </button>
               </>
             ) : (
               <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:32 }}>読み込み中...</p>
