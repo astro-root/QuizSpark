@@ -10,6 +10,8 @@ import rankingRouter from './routes/ranking'
 import followRouter from './routes/follow'
 import roomsRouter from './routes/rooms'
 import contactRouter from './routes/contact'
+import messagesRouter from './routes/messages'
+import notificationsRouter from './routes/notifications'
 import questionsRouter from './routes/questions'
 import path from 'path'
 
@@ -33,6 +35,8 @@ app.use('/api/ranking', rankingRouter)
 app.use('/api/follow', followRouter)
   app.use('/api/rooms', roomsRouter)
   app.use('/api/contact', contactRouter)
+  app.use('/api/messages', messagesRouter)
+  app.use('/api/notifications', notificationsRouter)
   app.get('/api/announcements', async (_req, res) => { const { prisma } = await import('./lib/prisma'); res.json(await prisma.announcement.findMany({ where: { active: true }, orderBy: { createdAt: 'desc' } })) })
 
   if (process.env.NODE_ENV === 'production') {

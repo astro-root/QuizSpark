@@ -19,8 +19,11 @@ model User {
   passwordAuth PasswordAuth?
   questionSets QuestionSet[]
   battleRecords BattleRecord[]
-  following     Follow[]       @relation("follower")
-  followers     Follow[]       @relation("following")
+  following        Follow[]        @relation("follower")
+  followers        Follow[]        @relation("following")
+  sentMessages     DirectMessage[] @relation("dmFrom")
+  receivedMessages DirectMessage[] @relation("dmTo")
+  notifications    Notification[]
 }
 
 model PasswordAuth {
@@ -117,4 +120,26 @@ model Follow {
   following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
+}
+
+model DirectMessage {
+  id        String   @id @default(cuid())
+  fromId    String
+  toId      String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  from      User     @relation("dmFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to        User     @relation("dmTo",   fields: [toId],   references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  fromId    String?
+  data      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

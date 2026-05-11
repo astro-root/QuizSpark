@@ -14,6 +14,7 @@ import ProfilePage from './pages/ProfilePage'
 import RankingPage from './pages/RankingPage'
 import UserPage from './pages/UserPage'
 import ContactPage from './pages/ContactPage'
+import ChatPage from './pages/ChatPage'
 
 export default function App() {
   return (
@@ -33,6 +34,8 @@ export default function App() {
           <Route path="/ranking" element={<RankingPage />} />
           <Route path="/user/:id" element={<UserPage />} />
           <Route path="/contact" element={<ContactPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat/:userId" element={<ChatPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <BottomNav />
