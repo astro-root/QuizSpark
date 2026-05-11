@@ -1,3 +1,4 @@
+import AppHeader from '../components/AppHeader'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
@@ -31,9 +32,7 @@ export default function MatchPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
-      <header style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <p style={{ fontWeight: 900, fontSize: 18 }}>⚔️ 対戦</p>
-      </header>
+      <AppHeader title="対戦" />
 
       <div style={{ flex: 1, padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480, width: '100%', margin: '0 auto' }}>
 

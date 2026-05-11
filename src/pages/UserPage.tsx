@@ -1,3 +1,4 @@
+import AppHeader from '../components/AppHeader'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -59,10 +60,7 @@ export default function UserPage() {
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', paddingBottom:80 }}>
       {/* ヘッダー */}
-      <header style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 20px', borderBottom:'1px solid var(--border)', background:'var(--surface)' }}>
-        <button onClick={() => navigate(-1)} style={{ background:'none', fontSize:20, color:'var(--muted)', padding:0 }}>←</button>
-        <p style={{ fontWeight:900, fontSize:17 }}>{profile.name}</p>
-      </header>
+      <AppHeader back />
 
       {/* バナー */}
       <div style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', padding:'28px 20px 20px', display:'flex', alignItems:'center', gap:16 }}>

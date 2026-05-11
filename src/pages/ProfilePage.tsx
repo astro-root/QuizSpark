@@ -31,14 +31,7 @@ export default function ProfilePage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', paddingBottom:80 }}>
-      <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-        padding:'14px 20px', borderBottom:'1px solid var(--border)', background:'var(--surface)' }}>
-        <p style={{ fontWeight:900, fontSize:18 }}>マイページ</p>
-        <button onClick={toggleTheme}
-          style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', fontSize:15 }}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-      </header>
+      <AppHeader title="マイページ" />
 
       <div style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', padding:'20px', display:'flex', alignItems:'center', gap:16 }}>
         <div style={{ width:52, height:52, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.4)',

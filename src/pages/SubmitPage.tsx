@@ -1,3 +1,4 @@
+import AppHeader from '../components/AppHeader'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -58,14 +59,7 @@ export default function SubmitPage() {
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', paddingBottom:80 }}>
       {/* ヘッダー */}
-      <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-        padding:'14px 20px', borderBottom:'1px solid var(--border)', background:'var(--surface)' }}>
-        <p style={{ fontWeight:900, fontSize:18 }}>✏️ 問題を投稿</p>
-        <button onClick={toggle}
-          style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', fontSize:15 }}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-      </header>
+      <AppHeader title="問題セットを作る" back />
 
       <div style={{ flex:1, maxWidth:520, width:'100%', margin:'0 auto', padding:'20px 16px', display:'flex', flexDirection:'column', gap:14 }}>
 

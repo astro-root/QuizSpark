@@ -1,3 +1,4 @@
+import AppHeader from '../components/AppHeader'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
@@ -24,13 +25,7 @@ export default function RankingPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', paddingBottom:80 }}>
-      <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-        padding:'14px 20px', borderBottom:'1px solid var(--border)', background:'var(--surface)' }}>
-        <p style={{ fontWeight:900, fontSize:18 }}>🏆 ランキング</p>
-        <button onClick={toggle} style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', fontSize:15 }}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-      </header>
+      <AppHeader title="ランキング" />
 
       <div style={{ flex:1, maxWidth:600, width:'100%', margin:'0 auto', padding:'16px' }}>
 
