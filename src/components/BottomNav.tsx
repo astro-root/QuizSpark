@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 const TABS: { path: string; icon: string; label: string; badge?: string }[] = [
   { path: '/',        icon: '🏠', label: 'ホーム' },
   { path: '/match',   icon: '⚔️', label: '対戦' },
-  { path: '/ranking', icon: '🏆', label: 'ランキング' },
+  { path: '/search',  icon: '🔍', label: '検索' },
   { path: '/chat',    icon: '💬', label: 'チャット', badge: 'msg' },
   { path: '/notifications', icon: '🔔', label: '通知', badge: 'note' },
   { path: '/profile', icon: '👤', label: 'マイページ' },
