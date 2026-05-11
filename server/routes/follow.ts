@@ -29,6 +29,9 @@ router.post('/:id', async (req, res) => {
   if (!myId) { res.status(401).json({ error: '未ログイン' }); return }
   const { id } = req.params
   if (myId === id) { res.status(400).json({ error: '自分はフォローできません' }); return }
+  await prisma.notification.create({
+    data: { userId: id, type: 'follow', fromId: myId }
+  }).catch(() => {})
   await prisma.follow.upsert({
     where: { followerId_followingId: { followerId: myId, followingId: id } },
     create: { followerId: myId, followingId: id },

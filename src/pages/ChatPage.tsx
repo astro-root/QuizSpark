@@ -22,8 +22,12 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!userId) return
-    fetch(`/api/messages/messages/${userId}`, { credentials: 'include' })
-      .then(r => r.json()).then(data => { setMsgs(Array.isArray(data) ? data : []) }).catch(() => {})
+    const load = () =>
+      fetch(`/api/messages/messages/${userId}`, { credentials: 'include' })
+        .then(r => r.json()).then(data => { setMsgs(Array.isArray(data) ? data : []) }).catch(() => {})
+    load()
+    const t = setInterval(load, 5000)
+    return () => clearInterval(t)
   }, [userId])
 
   useEffect(() => {
@@ -113,13 +117,7 @@ export default function ChatPage() {
             </button>
           </div>
         </div>
-      ) : (
-        userId === undefined && window.innerWidth > 600 && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 14 }}>
-            会話を選んでください
-          </div>
-        )
-      )}
+      ) : null}
     </div>
   )
 }

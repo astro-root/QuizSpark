@@ -79,6 +79,12 @@ export default function UserPage() {
           </div>
         </div>
         {!isMe && me && (
+          <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+          <button onClick={() => navigate(`/chat/${id}`)}
+            style={{ padding:'10px 14px', borderRadius:20, fontSize:14, fontWeight:700,
+              background:'rgba(255,255,255,0.2)', color:'#fff', border:'1px solid rgba(255,255,255,0.4)' }}>
+            💬
+          </button>
           <button onClick={toggleFollow}
             style={{ padding:'10px 20px', borderRadius:20, fontSize:14, fontWeight:700, flexShrink:0,
               background: profile.isFollowing ? 'rgba(255,255,255,0.2)' : '#fff',
@@ -86,6 +92,7 @@ export default function UserPage() {
               border: profile.isFollowing ? '1px solid rgba(255,255,255,0.4)' : 'none' }}>
             {profile.isFollowing ? 'フォロー中' : 'フォロー'}
           </button>
+          </div>
         )}
       </div>
 
