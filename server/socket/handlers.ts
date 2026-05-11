@@ -28,10 +28,10 @@ function broadcast(io: IoServer, roomId: string, state: RoomState) {
 }
 
 // socketId → DB userId
-const userIdMap = new Map<string, string>()
 
 // マッチメイキング成立時の処理（一度だけ設定）
 let matchCallbackSet = false
+let finishCallbackSet = false
 function ensureMatchCallback(io: IoServer) {
   if (matchCallbackSet) return
   matchCallbackSet = true
@@ -51,24 +51,28 @@ function ensureMatchCallback(io: IoServer) {
   })
 }
 
-// ゲーム終了時に戦績を保存
-gameManager.setOnFinish(async (state) => {
-  try {
-    const data = state.players.flatMap(p => {
-      const userId = userIdMap.get(p.id)
-      if (!userId) return []
-      return [{
-        id: `${state.id}-${userId}`,
-        userId,
-        roomId: state.id,
-        ruleId: state.settings?.ruleId ?? 'free',
-        result: p.status === 'WIN' ? 'WIN' : p.status === 'LOSE' ? 'LOSE' : 'ACTIVE',
-        correct: (p.ruleState?.correct as number) ?? 0,
-        wrong: (p.ruleState?.wrong as number) ?? 0,
-        score: p.score,
-        playerCount: state.players.length,
-      }]
-    })
+// ゲーム終了時に戦績を保存（registerHandlers内で呼ぶため一旦削除し、下部で再定義）
+function setupFinishHandler(io: IoServer) {
+  if (finishCallbackSet) return
+  finishCallbackSet = true
+  gameManager.setOnFinish(async (state) => {
+    try {
+      const data = state.players.flatMap(p => {
+        const pSocket = io.sockets.sockets.get(p.id)
+        const userId = pSocket?.data?.dbUserId ?? null
+        if (!userId) return []
+        return [{
+          id: `${state.id}-${userId}`,
+          userId,
+          roomId: state.id,
+          ruleId: state.settings?.ruleId ?? 'free',
+          result: p.status === 'WIN' ? 'WIN' : p.status === 'LOSE' ? 'LOSE' : 'ACTIVE',
+          correct: (p.ruleState?.correct as number) ?? 0,
+          wrong: (p.ruleState?.wrong as number) ?? 0,
+          score: p.score,
+          playerCount: state.players.length,
+        }]
+      })
     if (data.length > 0) {
       await prisma.battleRecord.createMany({ data, skipDuplicates: true })
       // レート更新（transaction で競合回避）
@@ -90,14 +94,16 @@ gameManager.setOnFinish(async (state) => {
   } catch (e) {
     console.error('[Records] save failed:', e)
   }
-})
+  })
+}
 
 export function registerHandlers(io: IoServer, socket: IoSocket) {
   ensureMatchCallback(io)
+  setupFinishHandler(io)
 
   // DB userIdをsocketに紐付け
   const dbUserId = (socket.request as any).user?.id
-  if (dbUserId) userIdMap.set(socket.id, dbUserId)
+  if (dbUserId) socket.data.dbUserId = dbUserId
 
   socket.on('create-room', (name, callback) => {
     const roomId = gameManager.createRoom(socket.id, name)
@@ -177,7 +183,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
 
   socket.on('join-queue', () => {
     const name = (socket.request as any).user?.name ?? 'プレイヤー'
-    joinQueue(socket.id, name, userIdMap.get(socket.id))
+    joinQueue(socket.id, name, socket.data.dbUserId)
   })
 
   socket.on('leave-queue', () => {
@@ -206,10 +212,10 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
 
   socket.on('disconnect', () => {
     leaveQueue(socket.id)
-    userIdMap.delete(socket.id)
     const affectedRoomId = gameManager.leaveRoom(socket.id)
     if (!affectedRoomId) return
     const state = gameManager.getRoom(affectedRoomId)
     if (state) broadcast(io, affectedRoomId, state)
   })
+
 }

@@ -18,9 +18,9 @@ export function useSocket() {
       setMyId(socket.id ?? '')
       setReconnecting(false)
 
-      // 再接続時: 前のルームに自動復帰を試みる
-      if (savedRoomId.current && savedName.current) {
-        socket.emit('join-room', savedRoomId.current!, savedName.current!, (_err: string | null) => {})
+      // 再接続時: sync-stateで状態復元（ゲーム中でも機能する）
+      if (savedRoomId.current) {
+        socket.emit('sync-state', savedRoomId.current)
       }
     }
     function onDisconnect() {

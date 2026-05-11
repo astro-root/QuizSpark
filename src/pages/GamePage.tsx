@@ -2,30 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
 import RoomChat from '../components/RoomChat'
+import Board from '../components/Board'
+import { SFX } from '../utils/sfx'
+import { useCountdown } from '../hooks/useCountdown'
+import { useTypewriter } from '../hooks/useTypewriter'
+import { scoreLabel } from '../utils/scoreLabel'
 import type { Player } from '../types'
 
-/* ─── サウンド ─── */
-let _actx: AudioContext | null = null
-function getCtx(): AudioContext {
-  if (!_actx || _actx.state === 'closed') {
-    _actx = new (window.AudioContext || (window as any).webkitAudioContext)()
-  }
-  if (_actx.state === 'suspended') _actx.resume()
-  return _actx
-}
-function playTone(freq: number, type: OscillatorType, duration: number, gain = 0.3, delay = 0) {
-  try {
-    const ctx = getCtx()
-    const osc = ctx.createOscillator()
-    const g = ctx.createGain()
-    osc.connect(g); g.connect(ctx.destination)
-    osc.type = type; osc.frequency.value = freq
-    const t = ctx.currentTime + delay
-    g.gain.setValueAtTime(gain, t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + duration)
-    osc.start(t); osc.stop(t + duration)
-  } catch {}
-}
 const SFX = {
   buzz:    () => { playTone(150,'sawtooth',0.05,0.5); playTone(300,'square',0.06,0.35,0.03); playTone(450,'sine',0.08,0.2,0.06) },
   correct: () => { [523,659,784,1047].forEach((f,i) => playTone(f,'sine',0.25,0.35,i*0.09)) },
@@ -51,16 +34,6 @@ const STYLES = `
 @keyframes progressBar{0%{background-position:0% 50%}100%{background-position:200% 50%}}
 `
 
-/* ─── hooks ─── */
-function useCountdown(timerEndsAt: number | null) {
-  const [remaining, setRemaining] = useState(0)
-  useEffect(() => {
-    if (!timerEndsAt) { setRemaining(0); return }
-    const update = () => setRemaining(Math.max(0, Math.floor((timerEndsAt - Date.now()) / 1000)))
-    update(); const id = setInterval(update, 200); return () => clearInterval(id)
-  }, [timerEndsAt])
-  return remaining
-}
 
 function useTypewriter(text: string, active: boolean, speed = 120, startedAt?: number) {
   const [displayed, setDisplayed] = useState('')
@@ -84,25 +57,6 @@ function useTypewriter(text: string, active: boolean, speed = 120, startedAt?: n
   return { displayed, done }
 }
 
-function scoreLabel(p: Player, ruleId: string): string {
-  const s = p.ruleState
-  switch(ruleId) {
-    case 'free':     return `${s.correct??0}◯  ${s.wrong??0}×`
-    case 'mon':      return `${s.correct??0}◯  ${s.wrong??0}×`
-    case 'newyork':  return `${s.score??0}pt`
-    case 'updown':   return `${s.score??0}pt`
-    case 'by':       return `積${(s.correct as number??0)*((s.wrong as number??0))}`
-    case 'freeze':   return `${s.score??0}◯  休${s.rest??0}`
-    case 'mon_rest': return `${s.score??0}◯  休${s.rest??0}`
-    case 'swedish':  return `${s.correct??0}◯  P${s.penalty??0}`
-    case 'divide':   return `${s.score??0}pt`
-    case 'lucky':    return `${s.score??0}pt`
-    case 'rensei':   return `${s.score??0}pt${s.hasRight?' ⚡':''}`
-    case 'rengou':   return `${s.correct??0}◯  ${s.wrong??0}×`
-    case 'combo':    return `${s.score??0}pt 🔥${s.combo??0}`
-    default:         return `${p.score}`
-  }
-}
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId:string }>()
@@ -408,32 +362,3 @@ export default function GamePage() {
   )
 }
 
-function Board({players,myId,ruleId}:{players:Player[];myId:string;ruleId:string}) {
-  return (
-    <div style={{ width:'100%',maxWidth:400,display:'flex',flexDirection:'column',gap:6 }}>
-      {players.map((p,i)=>{
-        const win=p.status==='WIN', lose=p.status==='LOSE'
-        return (
-          <div key={p.id} style={{ display:'flex',alignItems:'center',gap:10,padding:'11px 16px',
-            background:p.id===myId?'rgba(99,102,241,0.1)':win?'rgba(16,185,129,0.07)':lose?'rgba(244,63,94,0.07)':'var(--surface)',
-            borderRadius:12,border:`1px solid ${p.id===myId?'rgba(99,102,241,0.3)':win?'rgba(16,185,129,0.2)':lose?'rgba(244,63,94,0.2)':'var(--border)'}`,
-            transition:'all 0.3s ease',
-            boxShadow: win ? '0 0 12px rgba(16,185,129,0.2)' : undefined }}>
-            <span style={{ fontFamily:'Orbitron,sans-serif',fontSize:11,color:i===0?'var(--gold)':'var(--muted)',width:18,textAlign:'center' }}>
-              {i===0?'▲':`${i+1}`}
-            </span>
-            <span style={{ flex:1,fontSize:14,fontWeight:p.id===myId?800:400,
-              color:win?'var(--correct)':lose?'var(--wrong)':'var(--text)',
-              textDecoration:lose?'line-through':undefined }}>
-              {p.name}{p.isHost?' 👑':''}
-            </span>
-            {(win||lose)&&<span style={{ fontSize:11,fontWeight:700,color:win?'var(--correct)':'var(--wrong)' }}>{win?'勝抜':'失格'}</span>}
-            <span style={{ fontFamily:'Orbitron,sans-serif',fontSize:12,fontWeight:700,color:'var(--accent)' }}>
-              {scoreLabel(p,ruleId)}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}

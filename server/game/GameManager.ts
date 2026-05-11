@@ -1,4 +1,5 @@
 import type { RoomState } from '../../src/types'
+import { getRuleDef } from './rules'
 import {
   createRoom, addPlayer, removePlayer,
   advanceQuestion, skipQuestion, acceptBuzz, applyAnswer, reassignHost, updateSettings,
@@ -151,7 +152,7 @@ class GameManager {
     if (!state || state.hostId !== playerId || state.phase !== 'finished') return false
     this.clearTimer(roomId)
     this.customQuestionsMap.delete(roomId)
-    const rule = require('./rules').getRuleDef(state.settings.ruleId)
+    const rule = getRuleDef(state.settings.ruleId)
     const players = state.players.map((p: import('../../src/types').Player) => ({
       ...p,
       score: 0,

@@ -89,4 +89,5 @@ export interface InterServerEvents {}
 export interface SocketData {
   roomId: string
   playerId: string
+  dbUserId?: string
 }
