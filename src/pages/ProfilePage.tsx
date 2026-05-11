@@ -225,6 +225,15 @@ export default function ProfilePage() {
               style={{ padding:'14px', borderRadius:12, fontSize:14, fontWeight:700, background:'rgba(239,68,68,0.08)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>
               ログアウト
             </button>
+            <button onClick={async () => {
+              if (!confirm('アカウントを削除しますか？\nこの操作は取り消せません。すべてのデータが削除されます。')) return
+              if (!confirm('本当に削除しますか？')) return
+              await fetch('/auth/account', { method: 'DELETE' })
+              window.location.href = '/'
+            }}
+              style={{ padding:'14px', borderRadius:12, fontSize:13, fontWeight:700, background:'none', color:'var(--muted)', border:'1px solid var(--border)' }}>
+              アカウントを削除する
+            </button>
           </div>
         )}
 

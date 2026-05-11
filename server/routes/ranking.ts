@@ -14,7 +14,7 @@ export function getRankLabel(rate: number) {
 router.get('/', async (_req, res) => {
   const users = await prisma.user.findMany({
     orderBy: { rate: 'desc' },
-    take: 100,
+    take: 10,
     select: {
       id: true, name: true, username: true, avatarUrl: true, rate: true,
       _count: { select: { battleRecords: true } },

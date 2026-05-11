@@ -71,6 +71,16 @@ router.patch('/profile', async (req, res) => {
   }
 })
 
+router.delete('/account', async (req, res, next) => {
+  if (!req.user) { res.status(401).json({ error: '未ログイン' }); return }
+  const id = (req.user as any).id
+  req.logout(async err => {
+    if (err) return next(err)
+    await prisma.user.delete({ where: { id } })
+    res.json({ ok: true })
+  })
+})
+
 router.post('/logout', (req, res, next) => {
   req.logout(err => {
     if (err) return next(err)
