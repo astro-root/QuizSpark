@@ -1,3 +1,4 @@
+import AppHeader from '../components/AppHeader'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -36,15 +37,14 @@ export default function SearchPage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
-      {/* ヘッダー */}
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text)' }}>←</button>
+      <AppHeader back title="検索" />
+      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         <input
           autoFocus
           value={q}
           onChange={e => setQ(e.target.value)}
           placeholder="ユーザー・問題セットを検索…"
-          style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '8px 16px', fontSize: 14, color: 'var(--text)', outline: 'none' }}
+          style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '9px 16px', fontSize: 14, color: 'var(--text)', outline: 'none' }}
         />
       </div>
 

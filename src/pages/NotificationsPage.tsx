@@ -1,3 +1,4 @@
+import AppHeader from '../components/AppHeader'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -33,10 +34,7 @@ export default function NotificationsPage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
-      <div style={{ padding: '16px 16px 12px', fontWeight: 800, fontSize: 17, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text)' }}>←</button>
-        通知
-      </div>
+      <AppHeader title="通知" back />
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
         {notes.length === 0 && (
           <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 48, fontSize: 14 }}>通知はありません</p>
