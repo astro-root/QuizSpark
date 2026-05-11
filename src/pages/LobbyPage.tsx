@@ -30,12 +30,16 @@ function buildDefaultParams(ruleId: RuleId) {
 
 export default function LobbyPage() {
   const { roomId } = useParams<{ roomId:string }>()
-  const { roomState, myId, startGame, updateSettings } = useSocketContext()
+  const { roomState, myId, startGame, updateSettings, syncState } = useSocketContext()
   const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [local, setLocal] = useState<GameSettings>({ ruleId:'mon', ruleParams:{m:5,n:2}, questionCount:10, winnerCount:1, loserCount:0, isPublic:false, questionSetId:null })
   const [synced, setSynced] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (roomId) syncState(roomId)
+  }, [roomId])
 
   useEffect(() => {
     if (roomState?.settings && !synced) { setLocal(roomState.settings); setSynced(true) }

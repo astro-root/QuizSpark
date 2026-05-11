@@ -22,16 +22,19 @@ export default function RoomChat({ myId }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const counter = useRef(0)
 
+  const openRef = useRef(false)
+  useEffect(() => { openRef.current = open }, [open])
+
   useEffect(() => {
     if (!socket) return
     const handler = (playerId: string, playerName: string, text: string, ts: number) => {
       const msg = { id: counter.current++, playerId, playerName, text, ts }
       setMsgs(prev => [...prev.slice(-99), msg])
-      if (!open) setUnread(u => u + 1)
+      if (!openRef.current) setUnread(u => u + 1)
     }
     socket.on('chat-message', handler)
     return () => { socket.off('chat-message', handler) }
-  }, [socket, open])
+  }, [socket])
 
   useEffect(() => {
     if (open) {
@@ -51,7 +54,7 @@ export default function RoomChat({ myId }: Props) {
     <>
       {/* チャットトグルボタン */}
       <button onClick={() => setOpen(o => !o)}
-        style={{ position:'fixed', bottom:24, right:24, width:52, height:52, borderRadius:'50%',
+        style={{ position:'fixed', bottom:88, right:20, width:52, height:52, borderRadius:'50%',
           background:'linear-gradient(135deg,var(--accent),var(--accent2))',
           boxShadow:'0 4px 16px rgba(56,189,248,0.4)',
           color:'#fff', fontSize:22, display:'flex', alignItems:'center', justifyContent:'center', zIndex:500 }}>
@@ -67,7 +70,7 @@ export default function RoomChat({ myId }: Props) {
 
       {/* チャットパネル */}
       {open && (
-        <div style={{ position:'fixed', bottom:88, right:24, width:300, maxHeight:400,
+        <div style={{ position:'fixed', bottom:148, right:20, width:300, maxHeight:400,
           background:'var(--surface)', borderRadius:16, border:'1px solid var(--border)',
           boxShadow:'0 8px 32px rgba(0,0,0,0.4)', display:'flex', flexDirection:'column', zIndex:500 }}>
           <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
