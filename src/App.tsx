@@ -11,6 +11,7 @@ import GamePage from './pages/GamePage'
 import SubmitPage from './pages/SubmitPage'
 import AdminPage from './pages/AdminPage'
 import ProfilePage from './pages/ProfilePage'
+import RankingPage from './pages/RankingPage'
 import ContactPage from './pages/ContactPage'
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/submit" element={<SubmitPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/ranking" element={<RankingPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

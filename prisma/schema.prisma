@@ -11,6 +11,7 @@ model User {
   username     String?   @unique  // @から始まるユニークID
   name         String
   bio          String?
+  rate         Int       @default(1000)
   email        String?   @unique
   avatarUrl    String?
   isAdmin      Boolean   @default(false)

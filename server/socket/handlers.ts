@@ -61,6 +61,18 @@ gameManager.setOnFinish(async (state) => {
     })
     if (data.length > 0) {
       await prisma.battleRecord.createMany({ data, skipDuplicates: true })
+      // レート更新
+      for (const d of data) {
+        if (!d.userId) continue
+        const delta = d.result === 'WIN' ? 30 : d.result === 'LOSE' ? -20 : 0
+        if (delta === 0) continue
+        const user = await prisma.user.findUnique({ where: { id: d.userId }, select: { rate: true } })
+        if (!user) continue
+        await prisma.user.update({
+          where: { id: d.userId },
+          data: { rate: Math.max(0, user.rate + delta) }
+        })
+      }
     }
   } catch (e) {
     console.error('[Records] save failed:', e)

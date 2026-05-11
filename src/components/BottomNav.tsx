@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 const TABS = [
   { path: '/',        icon: '🏠', label: 'ホーム' },
   { path: '/match',   icon: '⚔️', label: '対戦' },
+  { path: '/ranking', icon: '🏆', label: 'ランキング' },
   { path: '/submit',  icon: '✏️', label: '作問' },
   { path: '/profile', icon: '👤', label: 'マイページ' },
 ]
