@@ -3,7 +3,9 @@ import { SocketProvider } from './context/SocketContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ConnectionBanner from './components/ConnectionBanner'
+import BottomNav from './components/BottomNav'
 import HomePage from './pages/HomePage'
+import MatchPage from './pages/MatchPage'
 import LobbyPage from './pages/LobbyPage'
 import GamePage from './pages/GamePage'
 import SubmitPage from './pages/SubmitPage'
@@ -16,10 +18,11 @@ export default function App() {
     <ThemeProvider>
     <AuthProvider>
     <SocketProvider>
-      <ConnectionBanner />
       <BrowserRouter>
+        <ConnectionBanner />
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/match" element={<MatchPage />} />
           <Route path="/room/:roomId" element={<LobbyPage />} />
           <Route path="/room/:roomId/game" element={<GamePage />} />
           <Route path="/submit" element={<SubmitPage />} />
@@ -28,6 +31,7 @@ export default function App() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <BottomNav />
       </BrowserRouter>
     </SocketProvider>
     </AuthProvider>

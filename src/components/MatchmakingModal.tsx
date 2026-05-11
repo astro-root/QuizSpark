@@ -14,7 +14,7 @@ export default function MatchmakingModal({ onClose }: Props) {
     socket.emit('join-queue')
     const onMatchFound = (roomId: string) => {
       onClose()
-      navigate(`/game/${roomId}`)
+      navigate(`/room/${roomId}/game`)
     }
     socket.on('match-found', onMatchFound)
     return () => {
