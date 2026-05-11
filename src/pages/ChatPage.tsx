@@ -1,3 +1,4 @@
+import AppHeader from '../components/AppHeader'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -57,10 +58,7 @@ export default function ChatPage() {
       {/* 会話リスト */}
       {(!userId || window.innerWidth > 600) && (
         <div style={{ width: userId ? 220 : '100%', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 16px 12px', fontWeight: 800, fontSize: 17, borderBottom: '1px solid var(--border)' }}>
-            <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: 18, marginRight: 8, cursor: 'pointer', color: 'var(--text)' }}>←</button>
-            チャット
-          </div>
+          <AppHeader title="チャット" back />
           {convs.length === 0 && (
             <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 32 }}>
               フォロー中のユーザーが<br />いません
@@ -89,10 +87,7 @@ export default function ChatPage() {
       {/* メッセージペイン */}
       {userId ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => navigate('/chat')} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text)' }}>←</button>
-            {selectedUser?.name ?? '...'}
-          </div>
+          <AppHeader title={selectedUser?.name ?? '...'} back="/chat" />
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {msgs.map(m => {
               const mine = m.fromId === user?.id
