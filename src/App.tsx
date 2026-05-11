@@ -17,6 +17,7 @@ import ContactPage from './pages/ContactPage'
 import ChatPage from './pages/ChatPage'
 import NotificationsPage from './pages/NotificationsPage'
 import SearchPage from './pages/SearchPage'
+import QuestionSetPage from './pages/QuestionSetPage'
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/chat/:userId" element={<ChatPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/sets/:id" element={<QuestionSetPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <BottomNav />
