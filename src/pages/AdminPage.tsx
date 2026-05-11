@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import AppHeader from '../components/AppHeader'
@@ -35,6 +35,9 @@ export default function AdminPage() {
   const [newTitle, setNewTitle] = useState('')
   const [newBody, setNewBody] = useState('')
   const [userSearch, setUserSearch] = useState('')
+  const [csvStatus, setCsvStatus] = useState<'idle'|'ok'|'err'>('idle')
+  const [csvMsg, setCsvMsg] = useState('')
+  const csvRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (!loading && !(user as any)?.isAdmin) navigate('/') }, [user, loading])
 
@@ -86,6 +89,31 @@ export default function AdminPage() {
     await fetch(`/api/admin/contacts/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); fetchContacts()
   }
 
+  async function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    const text = await file.text()
+    const lines = text.trim().split('\n').filter(Boolean)
+    // ヘッダー行をスキップ（idから始まる行 or 問題文から始まる行）
+    const dataLines = lines.filter(l => !l.startsWith('id,') && !l.startsWith('問題文,'))
+    const rows = dataLines.map(line => {
+      const cols = line.split(',').map(s => s.trim().replace(/^"|"$/g, '').replace(/""/g, '"'))
+      const [_id, text, answer, displayAnswer, genre, altsRaw] = cols
+      if (!text || !answer) return null
+      const alts = altsRaw ? altsRaw.split('|').filter(Boolean) : []
+      return { text, answer, displayAnswer: displayAnswer || answer, genre: genre || 'ノンジャンル', answers: [answer, ...alts] }
+    }).filter(Boolean)
+    if (rows.length === 0) { setCsvStatus('err'); setCsvMsg('有効な行がありません'); return }
+    const r = await fetch('/api/questions/import', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows })
+    })
+    const d = await r.json()
+    if (r.ok) { setCsvStatus('ok'); setCsvMsg(`${d.imported}問インポートしました`); fetchAllQuestions() }
+    else { setCsvStatus('err'); setCsvMsg(d.error) }
+    setTimeout(() => setCsvStatus('idle'), 4000)
+    e.target.value = ''
+  }
+
   const filteredUsers = users.filter(u =>
     u.name.includes(userSearch) || u.email?.includes(userSearch) || u.username?.includes(userSearch)
   )
@@ -117,6 +145,24 @@ export default function AdminPage() {
         {/* ─── 問題管理 ─── */}
         {tab === 'questions' && (
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {/* CSV操作 */}
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <a href="/api/questions/export.csv" download
+                style={{ padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700,
+                  background:'var(--surface2)', color:'var(--text)', border:'1px solid var(--border)',
+                  textDecoration:'none', display:'inline-flex', alignItems:'center', gap:6 }}>
+                📤 CSVエクスポート
+              </a>
+              <button onClick={() => csvRef.current?.click()}
+                style={{ padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700,
+                  background:'var(--accent)', color:'#fff' }}>
+                📥 CSVインポート
+              </button>
+              <input ref={csvRef} type="file" accept=".csv" style={{ display:'none' }} onChange={handleCsvImport} />
+            </div>
+            {csvStatus === 'ok' && <p style={{ fontSize:13, color:'var(--correct)', padding:'8px 12px', background:'rgba(34,197,94,0.1)', borderRadius:8 }}>✓ {csvMsg}</p>}
+            {csvStatus === 'err' && <p style={{ fontSize:13, color:'var(--wrong)', padding:'8px 12px', background:'rgba(239,68,68,0.1)', borderRadius:8 }}>❌ {csvMsg}</p>}
+
             <div style={{ display:'flex', background:'var(--surface)', borderRadius:10, padding:3, gap:3 }}>
               {(['pending','approved'] as const).map(t => (
                 <button key={t} onClick={() => setQTab(t)}

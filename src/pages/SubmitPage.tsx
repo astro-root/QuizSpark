@@ -23,6 +23,7 @@ export default function SubmitPage() {
   const [answer, setAnswer] = useState('')
   const [altAnswers, setAltAnswers] = useState('')
   const [displayAnswer, setDisplayAnswer] = useState('')
+  const [genre, setGenre] = useState('ノンジャンル')
   const [status, setStatus] = useState<'idle'|'sending'|'ok'|'err'>('idle')
   const [showPreview, setShowPreview] = useState(false)
 
@@ -35,7 +36,7 @@ export default function SubmitPage() {
     const res = await fetch('/api/questions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, answer, answers: [answer, ...alts], displayAnswer }),
+      body: JSON.stringify({ text, answer, answers: [answer, ...alts], displayAnswer, genre }),
     })
     if (res.ok) {
       setStatus('ok')
@@ -94,6 +95,22 @@ export default function SubmitPage() {
 
         {/* 入力フォーム */}
         <div style={{ background:'var(--surface)', borderRadius:18, padding:'20px', border:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:18 }}>
+          {/* ジャンル */}
+          <div>
+            <p style={{ fontSize:11, fontWeight:700, color:'var(--muted)', letterSpacing:1, textTransform:'uppercase', marginBottom:8 }}>ジャンル</p>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+              {['文学','歴史','地理','公民','自然科学','言葉','芸能','スポーツ','漫アゲ','音楽','生活','ノンジャンル'].map(g => (
+                <button key={g} onClick={() => setGenre(g)}
+                  style={{ padding:'6px 14px', borderRadius:20, fontSize:13, fontWeight:600,
+                    background: genre===g ? 'var(--accent)' : 'var(--surface2)',
+                    color: genre===g ? '#fff' : 'var(--muted)',
+                    border: genre===g ? 'none' : '1px solid var(--border)' }}>
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {fields.map((f, i) => (
             <div key={f.key}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>

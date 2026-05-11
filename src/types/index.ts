@@ -32,6 +32,7 @@ export interface Question {
   answer: string
   answers?: string[]
   displayAnswer: string
+  genre?: string
 }
 
 export interface RoomState {

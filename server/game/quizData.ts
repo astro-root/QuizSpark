@@ -11,6 +11,7 @@ export async function loadQuizData(): Promise<void> {
     answer: r.answer,
     answers: r.answers,
     displayAnswer: r.displayAnswer,
+    genre: r.genre,
   }))
   console.log(`[QuizData] ${cache.length}問をDBから読み込みました`)
 }

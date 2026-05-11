@@ -44,6 +44,7 @@ model Question {
   answers       String[]
   displayAnswer String
   authorId      String?
+  genre         String   @default("ノンジャンル")
   approved      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -69,6 +70,7 @@ model QuestionSetItem {
   answer        String
   answers       String[]
   displayAnswer String
+  genre         String   @default("ノンジャンル")
   order         Int         @default(0)
 }
 
