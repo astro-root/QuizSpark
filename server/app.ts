@@ -34,6 +34,7 @@ export function createApp() {
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(process.cwd(), 'dist')
     app.use(express.static(distPath))
+app.use('/avatars', require('express').static(require('path').join(process.cwd(), 'public/avatars')))
     app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'))
     })

@@ -1,6 +1,27 @@
 import { Router } from 'express'
 import passport from './passport'
 import { prisma } from '../lib/prisma'
+import multer from 'multer'
+import path from 'path'
+import fs from 'fs'
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(process.cwd(), 'public/avatars')
+    fs.mkdirSync(dir, { recursive: true })
+    cb(null, dir)
+  },
+  filename: (req, _file, cb) => {
+    cb(null, `${(req.user as any)?.id ?? 'unknown'}_${Date.now()}.webp`)
+  },
+})
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    cb(null, file.mimetype.startsWith('image/'))
+  },
+})
 
 const router = Router()
 
@@ -18,6 +39,17 @@ router.get('/me', (req, res) => {
     const u = req.user as any
     res.json({ id: u.id, name: u.name, avatarUrl: u.avatarUrl, isAdmin: u.isAdmin, bio: u.bio, username: u.username })
   } else res.status(401).json(null)
+})
+
+router.post('/avatar', upload.single('avatar'), async (req, res) => {
+  if (!req.user) { res.status(401).json({ error: '未ログイン' }); return }
+  if (!req.file) { res.status(400).json({ error: 'ファイルがありません' }); return }
+  const avatarUrl = `/avatars/${req.file.filename}`
+  const user = await prisma.user.update({
+    where: { id: (req.user as any).id },
+    data: { avatarUrl },
+  })
+  res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin })
 })
 
 router.patch('/profile', async (req, res) => {

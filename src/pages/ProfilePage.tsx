@@ -9,7 +9,7 @@ interface Stats { total: number; wins: number; winRate: number; totalCorrect: nu
 interface Record { id: string; ruleId: string; result: string; correct: number; wrong: number; score: number; playerCount: number; playedAt: string }
 
 export default function ProfilePage() {
-  const { user, loading: authLoading, updateProfile, logout } = useAuth()
+  const { user, loading: authLoading, updateProfile, updateAvatar, logout } = useAuth()
   const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [tab, setTab] = useState<'profile'|'sets'|'records'>('profile')
@@ -19,6 +19,8 @@ export default function ProfilePage() {
   const [username, setUsername] = useState('')
   const [profileError, setProfileError] = useState('')
   const [profileOk, setProfileOk] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const avatarRef = useRef<HTMLInputElement>(null)
 
   const [sets, setSets] = useState<QSet[]>([])
   const [newSetName, setNewSetName] = useState('')
@@ -142,17 +144,34 @@ export default function ProfilePage() {
 
       {/* アバターバナー */}
       <div style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', padding:'28px 20px 20px', display:'flex', alignItems:'center', gap:16 }}>
-        <div style={{ width:64, height:64, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.4)',
-          background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:28, fontWeight:900, color:'#fff', flexShrink:0, overflow:'hidden' }}>
-          {user.avatarUrl
-            ? <img src={user.avatarUrl} style={{ width:64, height:64, borderRadius:'50%' }} alt="" />
-            : user.name[0]}
+        <div style={{ position:'relative', flexShrink:0 }} onClick={() => avatarRef.current?.click()}>
+          <div style={{ width:72, height:72, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.4)',
+            background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:28, fontWeight:900, color:'#fff', overflow:'hidden', cursor:'pointer' }}>
+            {avatarUploading
+              ? <span style={{ fontSize:20 }}>⏳</span>
+              : user.avatarUrl
+                ? <img src={user.avatarUrl} style={{ width:72, height:72, borderRadius:'50%', objectFit:'cover' }} alt="" />
+                : user.name[0]}
+          </div>
+          <div style={{ position:'absolute', bottom:0, right:0, width:22, height:22, borderRadius:'50%',
+            background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }}>
+            📷
+          </div>
         </div>
+        <input ref={avatarRef} type="file" accept="image/*" style={{ display:'none' }}
+          onChange={async e => {
+            const file = e.target.files?.[0]; if (!file) return
+            setAvatarUploading(true)
+            await updateAvatar(file)
+            setAvatarUploading(false)
+            e.target.value = ''
+          }} />
         <div>
           <p style={{ fontWeight:900, fontSize:20, color:'#fff' }}>{user.name}</p>
           {user.username && <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', marginTop:2 }}>@{user.username}</p>}
           <p style={{ fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:2 }}>{user.email}</p>
+          <p style={{ fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:4 }}>アイコンをタップして変更</p>
         </div>
       </div>
 

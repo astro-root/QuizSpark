@@ -9,6 +9,7 @@ interface AuthCtx {
   loginWithPassword: (email: string, password: string) => Promise<string | null>
   register: (name: string, email: string, password: string) => Promise<string | null>
   updateProfile: (name: string, bio?: string, username?: string) => Promise<string | null>
+  updateAvatar: (file: File) => Promise<string | null>
   logout: () => void
 }
 
@@ -48,9 +49,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data); return null
   }
 
+  const updateAvatar = async (file: File) => {
+    const form = new FormData()
+    form.append('avatar', file)
+    const r = await fetch('/auth/avatar', { method: 'POST', body: form })
+    const data = await r.json()
+    if (!r.ok) return data.error as string
+    setUser(data); return null
+  }
   const logout = () => fetch('/auth/logout', { method: 'POST' }).then(() => setUser(null))
 
-  return <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithPassword, register, updateProfile, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithPassword, register, updateProfile, updateAvatar, logout }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
