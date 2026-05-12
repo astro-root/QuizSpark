@@ -4,40 +4,57 @@ import { prisma } from '../lib/prisma'
 
 const router = Router()
 
-// 新規登録
+function validateEmail(e: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
+}
+
 router.post('/register', async (req, res) => {
-  const { name, email, password } = req.body
-  if (!name || !email || !password) { res.status(400).json({ error: '全項目必須です' }); return }
-  if (password.length < 8) { res.status(400).json({ error: 'パスワードは8文字以上' }); return }
+  const { name, email, password } = req.body ?? {}
+  if (!name?.trim() || name.trim().length > 30)
+    { res.status(400).json({ error: '名前は1〜30文字で入力してください' }); return }
+  if (!email || !validateEmail(email) || email.length > 200)
+    { res.status(400).json({ error: '有効なメールアドレスを入力してください' }); return }
+  if (!password || password.length < 8 || password.length > 100)
+    { res.status(400).json({ error: 'パスワードは8〜100文字で入力してください' }); return }
 
   const exists = await prisma.user.findUnique({ where: { email } })
-  if (exists) { res.status(400).json({ error: 'このメールアドレスは登録済みです' }); return }
+  if (exists) { res.status(400).json({ error: 'このメールアドレスは既に使用されています' }); return }
 
-  const hash = await bcrypt.hash(password, 12)
+  const hash = await bcrypt.hash(password, 10)
   const user = await prisma.user.create({
-    data: { name, email, passwordAuth: { create: { passwordHash: hash } } }
+    data: {
+      name: name.trim(),
+      email,
+      passwordAuth: { create: { passwordHash: hash } },
+    },
   })
-
-  req.login(user, err => {
-    if (err) { res.status(500).json({ error: '登録後のログインに失敗しました' }); return }
-    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl })
+  req.login(user, (err) => {
+    if (err) { res.status(500).json({ error: 'ログインに失敗しました' }); return }
+    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, isAdmin: user.isAdmin, bio: user.bio, username: user.username })
   })
 })
 
-// ログイン
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body
-  if (!email || !password) { res.status(400).json({ error: '全項目必須です' }); return }
+  const { email, password } = req.body ?? {}
+  if (!email || !password)
+    { res.status(400).json({ error: 'メールアドレスとパスワードを入力してください' }); return }
+  if (email.length > 200 || password.length > 100)
+    { res.status(400).json({ error: '入力値が不正です' }); return }
 
-  const user = await prisma.user.findUnique({ where: { email }, include: { passwordAuth: true } })
-  if (!user?.passwordAuth) { res.status(401).json({ error: 'メールアドレスまたはパスワードが違います' }); return }
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { passwordAuth: true },
+  })
+  if (!user?.passwordAuth)
+    { res.status(401).json({ error: 'メールアドレスまたはパスワードが正しくありません' }); return }
 
   const ok = await bcrypt.compare(password, user.passwordAuth.passwordHash)
-  if (!ok) { res.status(401).json({ error: 'メールアドレスまたはパスワードが違います' }); return }
+  if (!ok)
+    { res.status(401).json({ error: 'メールアドレスまたはパスワードが正しくありません' }); return }
 
-  req.login(user, err => {
+  req.login(user, (err) => {
     if (err) { res.status(500).json({ error: 'ログインに失敗しました' }); return }
-    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl })
+    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, isAdmin: user.isAdmin, bio: user.bio, username: user.username })
   })
 })
 
