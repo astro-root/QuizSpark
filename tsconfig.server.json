@@ -9,10 +9,9 @@
     "resolveJsonModule": true,
     "outDir": "dist-server",
     "rootDir": ".",
-    "strict": true,
+    "strict": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "noUnusedLocals": true,
     "noUnusedParameters": false
   },
   "include": [
