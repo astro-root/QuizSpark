@@ -20,16 +20,13 @@ const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg','image/png','image/webp','image/gif']
-    cb(null, allowed.includes(file.mimetype))
+    cb(null, ['image/jpeg','image/png','image/webp','image/gif'].includes(file.mimetype))
   },
 })
 
 const router = Router()
 
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-)
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }))
 
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/?auth=failed' }),
@@ -37,27 +34,28 @@ router.get('/google/callback',
 )
 
 router.get('/me', (req, res) => {
-  if (req.user) {
-    const u = req.user as any
-    res.json({ id: u.id, name: u.name, avatarUrl: u.avatarUrl, isAdmin: u.isAdmin, bio: u.bio, username: u.username })
-  } else res.status(401).json(null)
+  if (!req.user) { res.status(401).json(null); return }
+  const u = req.user as any
+  res.json({ id: u.id, name: u.name, avatarUrl: u.avatarUrl, isAdmin: u.isAdmin, bio: u.bio, username: u.username })
 })
 
 router.post('/avatar', upload.single('avatar'), async (req, res) => {
   if (!req.user) { res.status(401).json({ error: '未ログイン' }); return }
   if (!req.file) { res.status(400).json({ error: 'ファイルがありません' }); return }
-  const avatarUrl = `/avatars/${req.file.filename}`
-  const user = await prisma.user.update({
-    where: { id: (req.user as any).id },
-    data: { avatarUrl },
-  })
-  res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin })
+  try {
+    const user = await prisma.user.update({
+      where: { id: (req.user as any).id },
+      data: { avatarUrl: `/avatars/${req.file.filename}` },
+    })
+    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin })
+  } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 
 router.patch('/profile', async (req, res) => {
   if (!req.user) { res.status(401).json({ error: '未ログイン' }); return }
-  const { name, bio, username } = req.body
-  if (!name?.trim()) { res.status(400).json({ error: '名前は必須です' }); return }
+  const { name, bio, username } = req.body ?? {}
+  if (!name?.trim() || name.trim().length > 30) { res.status(400).json({ error: '名前は1〜30文字で入力してください' }); return }
+  if (bio && bio.length > 200) { res.status(400).json({ error: '自己紹介は200文字以内です' }); return }
   if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
     res.status(400).json({ error: 'ユーザーIDは3〜20文字の英数字・アンダースコアのみです' }); return
   }
@@ -69,7 +67,7 @@ router.patch('/profile', async (req, res) => {
     res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin })
   } catch (e: any) {
     if (e.code === 'P2002') { res.status(400).json({ error: 'そのユーザーIDは既に使われています' }); return }
-    throw e
+    res.status(500).json({ error: 'サーバーエラー' })
   }
 })
 
@@ -78,18 +76,10 @@ router.delete('/account', async (req, res, next) => {
   const id = (req.user as any).id
   req.logout(async err => {
     if (err) return next(err)
-    await prisma.user.delete({ where: { id } })
-    res.json({ ok: true })
-  })
-})
-
-router.delete('/account', async (req, res, next) => {
-  if (!req.user) { res.status(401).json({ error: '未ログイン' }); return }
-  const id = (req.user as any).id
-  req.logout(async err => {
-    if (err) return next(err)
-    await prisma.user.delete({ where: { id } })
-    res.json({ ok: true })
+    try {
+      await prisma.user.delete({ where: { id } })
+      res.json({ ok: true })
+    } catch { res.status(500).json({ error: 'サーバーエラー' }) }
   })
 })
 
