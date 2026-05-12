@@ -16,7 +16,8 @@ export function initSocketIO(httpServer: HttpServer) {
     httpServer,
     {
       cors: {
-        origin: process.env.NODE_ENV === 'production' ? false : true,
+        origin: ['https://quizspark-akh.pages.dev', 'http://localhost:5173'],
+        credentials: true,
         methods: ['GET', 'POST'],
       },
     }
