@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => setLoading(false))
   }, [])
 
-  const loginWithGoogle = () => { window.location.href = '/auth/google' }
+  const loginWithGoogle = () => { window.location.href = `${import.meta.env.VITE_API_URL}/auth/google` }
 
   const loginWithPassword = async (email: string, password: string) => {
     const r = await apiFetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
