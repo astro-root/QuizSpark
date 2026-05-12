@@ -30,7 +30,7 @@ router.get('/google', passport.authenticate('google', { scope: ['profile', 'emai
 
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/?auth=failed' }),
-  (_req, res) => res.redirect('/')
+  (_req, res) => res.redirect(process.env.FRONTEND_URL ?? '/')
 )
 
 router.get('/me', (req, res) => {
