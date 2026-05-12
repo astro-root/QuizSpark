@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import AppHeader from '../components/AppHeader'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
@@ -34,7 +35,7 @@ export default function SubmitPage() {
     if (!canSubmit || status === 'sending') return
     setStatus('sending')
     const alts = altAnswers.trim() ? altAnswers.split('、').map(s => s.trim()).filter(Boolean) : []
-    const res = await fetch('/api/questions', {
+    const res = await apiFetch('/api/questions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, answer, answers: [answer, ...alts], displayAnswer, genre }),

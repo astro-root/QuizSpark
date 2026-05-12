@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -48,11 +49,11 @@ export default function AdminPage() {
     else if (tab === 'contacts') fetchContacts()
   }, [tab])
 
-  async function fetchQuestions() { const r = await fetch('/api/admin/questions'); if (r.ok) setQuestions(await r.json()) }
-  async function fetchAllQuestions() { const r = await fetch('/api/admin/questions/all'); if (r.ok) setAllQuestions(await r.json()) }
-  async function fetchAnnouncements() { const r = await fetch('/api/admin/announcements'); if (r.ok) setAnnouncements(await r.json()) }
-  async function fetchUsers() { const r = await fetch('/api/admin/users'); if (r.ok) setUsers(await r.json()) }
-  async function fetchContacts() { const r = await fetch('/api/admin/contacts'); if (r.ok) setContacts(await r.json()) }
+  async function fetchQuestions() { const r = await apiFetch('/api/admin/questions'); if (r.ok) setQuestions(await r.json()) }
+  async function fetchAllQuestions() { const r = await apiFetch('/api/admin/questions/all'); if (r.ok) setAllQuestions(await r.json()) }
+  async function fetchAnnouncements() { const r = await apiFetch('/api/admin/announcements'); if (r.ok) setAnnouncements(await r.json()) }
+  async function fetchUsers() { const r = await apiFetch('/api/admin/users'); if (r.ok) setUsers(await r.json()) }
+  async function fetchContacts() { const r = await apiFetch('/api/admin/contacts'); if (r.ok) setContacts(await r.json()) }
 
   async function saveEdit(q: Question) {
     await fetch(`/api/admin/questions/${q.id}`, {
@@ -71,7 +72,7 @@ export default function AdminPage() {
   }
   async function addAnnouncement() {
     if (!newTitle.trim() || !newBody.trim()) return
-    await fetch('/api/admin/announcements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: newTitle, body: newBody }) })
+    await apiFetch('/api/admin/announcements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: newTitle, body: newBody }) })
     setNewTitle(''); setNewBody(''); fetchAnnouncements()
   }
   async function toggleAnnouncement(id: number, active: boolean) {
@@ -103,7 +104,7 @@ export default function AdminPage() {
       return { text, answer, displayAnswer: displayAnswer || answer, genre: genre || 'ノンジャンル', answers: [answer, ...alts] }
     }).filter(Boolean)
     if (rows.length === 0) { setCsvStatus('err'); setCsvMsg('有効な行がありません'); return }
-    const r = await fetch('/api/questions/import', {
+    const r = await apiFetch('/api/questions/import', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rows })
     })

@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import AppHeader from '../components/AppHeader'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -17,7 +18,7 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetch('/api/messages/conversations', { credentials: 'include' })
+    apiFetch('/api/messages/conversations', { credentials: 'include' })
       .then(r => r.json()).then(setConvs).catch(() => {})
   }, [userId])
 

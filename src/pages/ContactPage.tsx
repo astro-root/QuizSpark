@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
@@ -19,7 +20,7 @@ export default function ContactPage() {
   async function submit() {
     if (!body.trim()) { setError('内容を入力してください'); return }
     setSending(true); setError('')
-    const r = await fetch('/api/contact', {
+    const r = await apiFetch('/api/contact', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category, body })
     })

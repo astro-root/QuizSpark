@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
@@ -13,9 +14,9 @@ export default function BottomNav() {
   useEffect(() => {
     if (!user) return
     const fetch_ = () => {
-      fetch('/api/messages/unread', { credentials: 'include' })
+      apiFetch('/api/messages/unread', { credentials: 'include' })
         .then(r => r.json()).then(d => setUnread(d.count ?? 0)).catch(() => {})
-      fetch('/api/notifications/unread', { credentials: 'include' })
+      apiFetch('/api/notifications/unread', { credentials: 'include' })
         .then(r => r.json()).then(d => setUnreadNote(d.count ?? 0)).catch(() => {})
     }
     fetch_()

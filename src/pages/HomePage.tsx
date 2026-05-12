@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
@@ -23,7 +24,7 @@ export default function HomePage() {
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
 
   useEffect(() => {
-    fetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
+    apiFetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
   }, [])
 
   useEffect(() => {

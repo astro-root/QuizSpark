@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import AppHeader from '../components/AppHeader'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -20,7 +21,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (!user) return
-    fetch('/api/notifications', { credentials: 'include' })
+    apiFetch('/api/notifications', { credentials: 'include' })
       .then(r => r.json()).then(async (data: Note[]) => {
         setNotes(data)
         const ids = [...new Set(data.map(n => n.fromId).filter(Boolean))] as string[]
@@ -28,7 +29,7 @@ export default function NotificationsPage() {
           fetch(`/api/follow/user/${id}`).then(r => r.json()).then(u => [id, u])
         ))
         setUsers(Object.fromEntries(entries))
-        fetch('/api/notifications/read-all', { method: 'POST', credentials: 'include' })
+        apiFetch('/api/notifications/read-all', { method: 'POST', credentials: 'include' })
       })
   }, [user])
 

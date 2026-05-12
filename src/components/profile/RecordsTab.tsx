@@ -1,3 +1,4 @@
+import { apiFetch } from '../../lib/api'
 import { useState, useEffect } from 'react'
 
 interface Stats { total: number; wins: number; winRate: number; totalCorrect: number; totalWrong: number }
@@ -10,7 +11,7 @@ export default function RecordsTab() {
   useEffect(() => { fetchRecords() }, [])
 
   async function fetchRecords() {
-    const r = await fetch('/api/records/me')
+    const r = await apiFetch('/api/records/me')
     if (r.ok) { const d = await r.json(); setStats(d.stats); setRecords(d.records) }
   }
 
@@ -76,7 +77,7 @@ export default function RecordsTab() {
 
       <button onClick={async () => {
         if (!confirm('戦績をすべてリセットしますか？この操作は取り消せません')) return
-        await fetch('/api/records/me', { method: 'DELETE' })
+        await apiFetch('/api/records/me', { method: 'DELETE' })
         fetchRecords()
       }} style={{ padding:'13px', borderRadius:12, fontSize:13, fontWeight:700,
         background:'rgba(239,68,68,0.08)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>

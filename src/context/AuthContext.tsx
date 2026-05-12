@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 
 interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string }
@@ -20,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/auth/me')
+    apiFetch('/auth/me')
       .then(r => r.ok ? r.json() : null)
       .then(u => { setUser(u); setLoading(false) })
       .catch(() => setLoading(false))
@@ -29,21 +30,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = () => { window.location.href = '/auth/google' }
 
   const loginWithPassword = async (email: string, password: string) => {
-    const r = await fetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
+    const r = await apiFetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
     const data = await r.json()
     if (!r.ok) return data.error as string
     setUser(data); return null
   }
 
   const register = async (name: string, email: string, password: string) => {
-    const r = await fetch('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) })
+    const r = await apiFetch('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) })
     const data = await r.json()
     if (!r.ok) return data.error as string
     setUser(data); return null
   }
 
   const updateProfile = async (name: string, bio?: string, username?: string) => {
-    const r = await fetch('/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, bio, username }) })
+    const r = await apiFetch('/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, bio, username }) })
     const data = await r.json()
     if (!r.ok) return data.error as string
     setUser(data); return null
@@ -52,12 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateAvatar = async (file: File) => {
     const form = new FormData()
     form.append('avatar', file)
-    const r = await fetch('/auth/avatar', { method: 'POST', body: form })
+    const r = await apiFetch('/auth/avatar', { method: 'POST', body: form })
     const data = await r.json()
     if (!r.ok) return data.error as string
     setUser(data); return null
   }
-  const logout = () => fetch('/auth/logout', { method: 'POST' }).then(() => setUser(null))
+  const logout = () => apiFetch('/auth/logout', { method: 'POST' }).then(() => setUser(null))
 
   return <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithPassword, register, updateProfile, updateAvatar, logout }}>{children}</AuthContext.Provider>
 }

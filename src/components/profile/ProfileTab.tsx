@@ -1,3 +1,4 @@
+import { apiFetch } from '../../lib/api'
 import { useState, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
@@ -82,7 +83,7 @@ export default function ProfileTab() {
       <button onClick={async () => {
         if (!confirm('アカウントを削除しますか？\nこの操作は取り消せません。すべてのデータが削除されます。')) return
         if (!confirm('本当に削除しますか？')) return
-        await fetch('/auth/account', { method: 'DELETE' })
+        await apiFetch('/auth/account', { method: 'DELETE' })
         window.location.href = '/'
       }} style={{ padding:'14px', borderRadius:12, fontSize:13, fontWeight:700, background:'none', color:'var(--muted)', border:'1px solid var(--border)' }}>
         アカウントを削除する

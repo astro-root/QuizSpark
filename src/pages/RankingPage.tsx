@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import AppHeader from '../components/AppHeader'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -16,7 +17,7 @@ export default function RankingPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/ranking').then(r => r.json()).then(d => { setList(d); setLoading(false) })
+    apiFetch('/api/ranking').then(r => r.json()).then(d => { setList(d); setLoading(false) })
   }, [])
 
   const myEntry = list.find(e => e.id === user?.id)

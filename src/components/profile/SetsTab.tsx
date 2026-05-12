@@ -1,3 +1,4 @@
+import { apiFetch } from '../../lib/api'
 import { useState, useRef, useEffect } from 'react'
 
 interface QSet { id: string; name: string; description: string | null; isPublic: boolean; _count: { items: number } }
@@ -19,7 +20,7 @@ export default function SetsTab() {
   useEffect(() => { fetchSets() }, [])
 
   async function fetchSets() {
-    const r = await fetch('/api/question-sets/mine')
+    const r = await apiFetch('/api/question-sets/mine')
     if (r.ok) setSets(await r.json())
   }
   async function fetchItems(id: string) {
@@ -28,7 +29,7 @@ export default function SetsTab() {
   }
   async function createSet() {
     if (!newSetName.trim()) return
-    const r = await fetch('/api/question-sets', {
+    const r = await apiFetch('/api/question-sets', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newSetName, description: newSetDesc, isPublic: newSetPublic })
     })
