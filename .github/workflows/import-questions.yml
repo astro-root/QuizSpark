@@ -1,0 +1,20 @@
+name: Import Questions from CSV
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prisma/questions.csv'
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: npx ts-node --project tsconfig.server.json prisma/import-csv.ts prisma/questions.csv
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
