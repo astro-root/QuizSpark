@@ -7,3 +7,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATABASE_URL
+        value: postgresql://postgres.kdllhmmwqagwpbkkglbn:teno_teno_oenguin@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres
+      - key: SESSION_SECRET
+        generateValue: true
