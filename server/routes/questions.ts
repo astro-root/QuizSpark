@@ -1,15 +1,16 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma'
-const router = Router()
 
+const router = Router()
 const GENRES = ['文学','歴史','地理','公民','自然科学','言葉','芸能','スポーツ','漫アゲ','音楽','生活','ノンジャンル']
 
 router.get('/', async (_req, res) => {
-  const questions = await prisma.question.findMany({ where: { approved: true }, orderBy: { createdAt: 'desc' } })
-  res.json(questions)
+  try {
+    const questions = await prisma.question.findMany({ where: { approved: true }, orderBy: { createdAt: 'desc' } })
+    res.json(questions)
+  } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 
-// CSVエクスポート
 router.get('/export.csv', async (req, res) => {
   if (!(req.user as any)?.isAdmin) { res.status(403).end(); return }
   const questions = await prisma.question.findMany({ orderBy: { id: 'asc' } })
@@ -23,7 +24,6 @@ router.get('/export.csv', async (req, res) => {
   res.send('\uFEFF' + [header, ...rows].join('\n'))
 })
 
-// CSVインポート
 router.post('/import', async (req, res) => {
   if (!(req.user as any)?.isAdmin) { res.status(403).end(); return }
   const { rows } = req.body as { rows: { text:string; answer:string; displayAnswer:string; genre?:string; answers?:string[] }[] }
@@ -42,24 +42,39 @@ router.post('/import', async (req, res) => {
 })
 
 router.post('/', async (req, res) => {
-  const { text, answer, answers, displayAnswer, genre } = req.body
-  const g = GENRES.includes(genre) ? genre : 'ノンジャンル'
-  const q = await prisma.question.create({
-    data: { text, answer, answers: answers ?? [answer], displayAnswer, genre: g, authorId: (req.user as any)?.id ?? null }
-  })
-  res.json(q)
+  if (!req.user) { res.status(401).json({ error: 'ログインが必要です' }); return }
+  const { text, answer, answers, displayAnswer, genre } = req.body ?? {}
+  if (!text?.trim() || text.trim().length > 500)
+    { res.status(400).json({ error: '問題文は1〜500文字で入力してください' }); return }
+  if (!answer?.trim() || answer.trim().length > 100)
+    { res.status(400).json({ error: '答えは1〜100文字で入力してください' }); return }
+  try {
+    const g = GENRES.includes(genre) ? genre : 'ノンジャンル'
+    const q = await prisma.question.create({
+      data: { text: text.trim(), answer: answer.trim(), answers: answers ?? [answer.trim()], displayAnswer: displayAnswer?.trim() || answer.trim(), genre: g, authorId: (req.user as any).id }
+    })
+    res.json(q)
+  } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 
 router.patch('/:id/approve', async (req, res) => {
+  if (!(req.user as any)?.isAdmin) { res.status(403).end(); return }
   const id = Number(req.params.id)
-  const q = await prisma.question.update({ where: { id }, data: { approved: true } })
-  res.json(q)
+  if (!Number.isInteger(id)) { res.status(400).end(); return }
+  try {
+    const q = await prisma.question.update({ where: { id }, data: { approved: true } })
+    res.json(q)
+  } catch { res.status(404).json({ error: '問題が見つかりません' }) }
 })
 
 router.delete('/:id', async (req, res) => {
+  if (!(req.user as any)?.isAdmin) { res.status(403).end(); return }
   const id = Number(req.params.id)
-  await prisma.question.delete({ where: { id } })
-  res.json({ ok: true })
+  if (!Number.isInteger(id)) { res.status(400).end(); return }
+  try {
+    await prisma.question.delete({ where: { id } })
+    res.json({ ok: true })
+  } catch { res.status(404).json({ error: '問題が見つかりません' }) }
 })
 
 export default router
