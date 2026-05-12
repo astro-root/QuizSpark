@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma'
+
 const router = Router()
 
 export function getRankLabel(rate: number) {
@@ -12,27 +13,29 @@ export function getRankLabel(rate: number) {
 }
 
 router.get('/', async (_req, res) => {
-  const users = await prisma.user.findMany({
-    orderBy: { rate: 'desc' },
-    take: 10,
-    select: {
-      id: true, name: true, username: true, avatarUrl: true, rate: true,
-      _count: { select: { battleRecords: true } },
-      // 勝利数だけ集計（全件取得をやめる）
-      battleRecords: { where: { result: 'WIN' }, select: { id: true } }
-    }
-  })
-  const result = users.map((u, i) => {
-    const wins = u.battleRecords.length
-    const total = u._count.battleRecords
-    return {
-      rank: i + 1,
-      id: u.id, name: u.name, username: u.username,
-      avatarUrl: u.avatarUrl, rate: u.rate, total, wins,
-      winRate: total ? Math.round(wins / total * 100) : 0,
-      ...getRankLabel(u.rate)
-    }
-  })
-  res.json(result)
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { rate: 'desc' },
+      take: 10,
+      select: {
+        id: true, name: true, username: true, avatarUrl: true, rate: true,
+        _count: { select: { battleRecords: true } },
+        battleRecords: { where: { result: 'WIN' }, select: { id: true } }
+      }
+    })
+    const result = users.map((u, i) => {
+      const wins = u.battleRecords.length
+      const total = u._count.battleRecords
+      return {
+        rank: i + 1,
+        id: u.id, name: u.name, username: u.username,
+        avatarUrl: u.avatarUrl, rate: u.rate, total, wins,
+        winRate: total ? Math.round(wins / total * 100) : 0,
+        ...getRankLabel(u.rate)
+      }
+    })
+    res.json(result)
+  } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
+
 export default router
