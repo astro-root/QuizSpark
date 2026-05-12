@@ -29,7 +29,7 @@ const authLimiter = rateLimit({
 export function createApp() {
   const app = express()
   app.set('trust proxy', 1)
-  app.use(cors({ origin: ['https://quizspark-akh.pages.dev', 'http://localhost:5173'], credentials: true }))
+  app.use(cors({ origin: ['https://quiz.astro-root.com', 'http://localhost:5173'], credentials: true }))
   app.use(express.json())
   app.use(sessionMiddleware)
   app.use(passport.initialize())
