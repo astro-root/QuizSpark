@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { socket } from '../lib/socket'
-import type { RoomState, GameSettings } from '../types'
+import type { RoomState, GameSettings, PublicRoom } from '../types'
 
 export function useSocket() {
   const [roomState, setRoomState] = useState<RoomState | null>(null)
   const [myId, setMyId] = useState<string>('')
   const [connected, setConnected] = useState(false)
   const [reconnecting, setReconnecting] = useState(false)
+  const [publicRooms, setPublicRooms] = useState<PublicRoom[]>([])
 
-  // 再接続後のルーム復元用
   const savedRoomId = useRef<string | null>(null)
   const savedName = useRef<string | null>(null)
 
@@ -17,21 +17,14 @@ export function useSocket() {
       setConnected(true)
       setMyId(socket.id ?? '')
       setReconnecting(false)
-
-      // 再接続時: sync-stateで状態復元（ゲーム中でも機能する）
       if (savedRoomId.current) {
         socket.emit('sync-state', savedRoomId.current)
       }
     }
-    function onDisconnect() {
-      setConnected(false)
-    }
-    function onReconnectAttempt() {
-      setReconnecting(true)
-    }
+    function onDisconnect() { setConnected(false) }
+    function onReconnectAttempt() { setReconnecting(true) }
     function onRoomUpdate(state: RoomState) {
       setRoomState(state)
-      // ルームIDと名前を保存しておく
       if (state && socket.id) {
         const me = state.players.find(p => p.id === socket.id)
         if (me) {
@@ -40,11 +33,15 @@ export function useSocket() {
         }
       }
     }
+    function onPublicRooms(rooms: PublicRoom[]) {
+      setPublicRooms(rooms)
+    }
 
     socket.on('connect', onConnect)
     socket.on('disconnect', onDisconnect)
     socket.on('reconnect_attempt', onReconnectAttempt)
     socket.on('room-update', onRoomUpdate)
+    socket.on('public-rooms', onPublicRooms)
 
     if (!socket.connected) socket.connect()
 
@@ -53,6 +50,7 @@ export function useSocket() {
       socket.off('disconnect', onDisconnect)
       socket.off('reconnect_attempt', onReconnectAttempt)
       socket.off('room-update', onRoomUpdate)
+      socket.off('public-rooms', onPublicRooms)
     }
   }, [])
 
@@ -91,7 +89,7 @@ export function useSocket() {
   const isHost = roomState?.hostId === myId
 
   return {
-    roomState, myId, connected, reconnecting, isHost,
+    roomState, myId, connected, reconnecting, isHost, publicRooms,
     createRoom, joinRoom, updateSettings, resetGame, startGame, buzz, submitAnswer,
     joinQueue, leaveQueue, sendChat, syncState, socket,
   }

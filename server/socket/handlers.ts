@@ -1,10 +1,7 @@
 import type { Server, Socket } from 'socket.io'
 import type {
-  ServerToClientEvents,
-  ClientToServerEvents,
-  InterServerEvents,
-  SocketData,
-  RoomState,
+  ServerToClientEvents, ClientToServerEvents,
+  InterServerEvents, SocketData, RoomState,
 } from '../../src/types'
 import { gameManager } from '../game/GameManager'
 import { prisma } from '../lib/prisma'
@@ -27,11 +24,13 @@ function broadcast(io: IoServer, roomId: string, state: RoomState) {
   io.to(roomId).emit('room-update', sanitizeState(state))
 }
 
-// socketId → DB userId
+function broadcastPublicRooms(io: IoServer) {
+  io.emit('public-rooms', gameManager.getPublicRooms())
+}
 
-// マッチメイキング成立時の処理（一度だけ設定）
 let matchCallbackSet = false
 let finishCallbackSet = false
+
 function ensureMatchCallback(io: IoServer) {
   if (matchCallbackSet) return
   matchCallbackSet = true
@@ -51,7 +50,6 @@ function ensureMatchCallback(io: IoServer) {
   })
 }
 
-// ゲーム終了時に戦績を保存（registerHandlers内で呼ぶため一旦削除し、下部で再定義）
 function setupFinishHandler(io: IoServer) {
   if (finishCallbackSet) return
   finishCallbackSet = true
@@ -73,27 +71,26 @@ function setupFinishHandler(io: IoServer) {
           playerCount: state.players.length,
         }]
       })
-    if (data.length > 0) {
-      await prisma.battleRecord.createMany({ data, skipDuplicates: true })
-      // レート更新（transaction で競合回避）
-      const rateTargets = data.filter(d => d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
-      if (rateTargets.length > 0) {
-        await prisma.$transaction(async (tx) => {
-          for (const d of rateTargets) {
-            const delta = d.result === 'WIN' ? 30 : -20
-            const user = await tx.user.findUnique({ where: { id: d.userId! }, select: { rate: true } })
-            if (!user) continue
-            await tx.user.update({
-              where: { id: d.userId! },
-              data: { rate: Math.max(0, user.rate + delta) }
-            })
-          }
-        })
+      if (data.length > 0) {
+        await prisma.battleRecord.createMany({ data, skipDuplicates: true })
+        const rateTargets = data.filter(d => d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
+        if (rateTargets.length > 0) {
+          await prisma.$transaction(async (tx) => {
+            for (const d of rateTargets) {
+              const delta = d.result === 'WIN' ? 30 : -20
+              const user = await tx.user.findUnique({ where: { id: d.userId! }, select: { rate: true } })
+              if (!user) continue
+              await tx.user.update({
+                where: { id: d.userId! },
+                data: { rate: Math.max(0, user.rate + delta) }
+              })
+            }
+          })
+        }
       }
+    } catch (e) {
+      console.error('[Records] save failed:', e)
     }
-  } catch (e) {
-    console.error('[Records] save failed:', e)
-  }
   })
 }
 
@@ -101,7 +98,6 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
   ensureMatchCallback(io)
   setupFinishHandler(io)
 
-  // DB userIdをsocketに紐付け
   const dbUserId = (socket.request as any).user?.id
   if (dbUserId) socket.data.dbUserId = dbUserId
 
@@ -111,6 +107,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     socket.data.playerId = socket.id
     socket.join(roomId)
     broadcast(io, roomId, gameManager.getRoom(roomId)!)
+    broadcastPublicRooms(io)
     callback(roomId)
   })
 
@@ -121,6 +118,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     socket.data.playerId = socket.id
     socket.join(roomId)
     broadcast(io, roomId, gameManager.getRoom(roomId)!)
+    broadcastPublicRooms(io)
     callback(null)
   })
 
@@ -136,7 +134,6 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (!roomId) return
     const state = gameManager.getRoom(roomId)
     if (!state || state.hostId !== socket.id) return
-    // 問題セットが指定されていればDB読み込み
     if (state.settings.questionSetId) {
       try {
         const items = await prisma.questionSetItem.findMany({
@@ -155,8 +152,10 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
         console.error('[StartGame] failed to load question set:', e)
       }
     }
-    if (gameManager.startGame(roomId))
+    if (gameManager.startGame(roomId)) {
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
+      broadcastPublicRooms(io)
+    }
   })
 
   socket.on('buzz', () => {
@@ -186,9 +185,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     joinQueue(socket.id, name, socket.data.dbUserId)
   })
 
-  socket.on('leave-queue', () => {
-    leaveQueue(socket.id)
-  })
+  socket.on('leave-queue', () => { leaveQueue(socket.id) })
 
   socket.on('sync-state', (roomId: string) => {
     const state = gameManager.getRoom(roomId)
@@ -216,6 +213,6 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (!affectedRoomId) return
     const state = gameManager.getRoom(affectedRoomId)
     if (state) broadcast(io, affectedRoomId, state)
+    broadcastPublicRooms(io)
   })
-
 }

@@ -8,7 +8,7 @@ import MatchmakingModal from '../components/MatchmakingModal'
 import AppHeader from '../components/AppHeader'
 
 export default function HomePage() {
-  const { joinRoom } = useSocketContext()
+  const { joinRoom, publicRooms } = useSocketContext()
   const { user, loading: authLoading, loginWithGoogle, loginWithPassword, register } = useAuth()
   const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
@@ -21,14 +21,9 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
   const [showMatchmaking, setShowMatchmaking] = useState(false)
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
-  const [publicRooms, setPublicRooms] = useState<{id:string;playerCount:number;hostName:string;ruleId:string;questionCount:number}[]>([])
 
   useEffect(() => {
     fetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
-    const fetchRooms = () => fetch('/api/rooms/public').then(r => r.ok ? r.json() : []).then(setPublicRooms).catch(() => {})
-    fetchRooms()
-    const t = setInterval(fetchRooms, 5000)
-    return () => clearInterval(t)
   }, [])
 
   useEffect(() => {

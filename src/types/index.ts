@@ -54,6 +54,14 @@ export interface RoomState {
   questionStartedAt?: number
 }
 
+export interface PublicRoom {
+  id: string
+  playerCount: number
+  hostName: string
+  ruleId: string
+  questionCount: number
+}
+
 export interface ServerToClientEvents {
   'room-update': (state: RoomState) => void
   'match-found': (roomId: string) => void
@@ -61,6 +69,7 @@ export interface ServerToClientEvents {
   'chat-message': (playerId: string, playerName: string, text: string, ts: number) => void
   'buzz-accepted': (playerId: string, playerName: string) => void
   error: (message: string) => void
+  'public-rooms': (rooms: PublicRoom[]) => void
 }
 
 export interface MatchmakingEntry {
