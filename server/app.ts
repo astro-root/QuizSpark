@@ -51,13 +51,6 @@ export function createApp() {
     res.json(await prisma.announcement.findMany({ where: { active: true }, orderBy: { createdAt: 'desc' } }))
   })
 
-  if (process.env.NODE_ENV === 'production') {
-    const distPath = path.resolve(process.cwd(), 'dist')
-    app.use(express.static(distPath))
-    app.use('/avatars', express.static(path.join(process.cwd(), 'public/avatars')))
-    app.get('*', (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'))
-    })
-  }
+  app.use('/avatars', express.static(path.join(process.cwd(), 'public/avatars')))
   return app
 }
