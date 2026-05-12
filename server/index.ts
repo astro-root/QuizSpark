@@ -2,13 +2,11 @@ import http from 'http'
 import { createApp } from './app'
 import { loadQuizData } from './game/quizData'
 import { initSocketIO } from './socket'
-import { Pool } from 'pg'
+import { pool } from './lib/pool'
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10)
 
 async function main() {
-  // sessionテーブルをdb pushで消されても起動時に再作成
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
   await pool.query(`
     CREATE TABLE IF NOT EXISTS "session" (
       "sid"    varchar      NOT NULL COLLATE "default",
@@ -18,7 +16,6 @@ async function main() {
     )
   `).catch(() => {})
   await pool.query('CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")').catch(() => {})
-  await pool.end()
   await loadQuizData()
   const app = createApp()
   const httpServer = http.createServer(app)
