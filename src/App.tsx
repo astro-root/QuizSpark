@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { SocketProvider } from './context/SocketContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -23,6 +23,36 @@ const QuestionSetPage  = lazy(() => import('./pages/QuestionSetPage'))
 const FreeLobbyPage    = lazy(() => import('./pages/FreeLobbyPage'))
 const CreatePage       = lazy(() => import('./pages/CreatePage'))
 
+
+const TITLES: Record<string, string> = {
+  '/':             'QuizSpark ⚡',
+  '/lobby':        'フリーマッチ | QuizSpark',
+  '/create':       '作問 | QuizSpark',
+  '/ranking':      'ランキング | QuizSpark',
+  '/profile':      'マイページ | QuizSpark',
+  '/chat':         'チャット | QuizSpark',
+  '/notifications':'通知 | QuizSpark',
+  '/search':       'ユーザー検索 | QuizSpark',
+  '/submit':       '問題投稿 | QuizSpark',
+  '/admin':        '管理 | QuizSpark',
+  '/match':        'マッチング | QuizSpark',
+}
+
+function TitleUpdater() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    const exact = TITLES[pathname]
+    if (exact) { document.title = exact; return }
+    if (pathname.startsWith('/room/') && pathname.endsWith('/game')) { document.title = '対戦中 | QuizSpark'; return }
+    if (pathname.startsWith('/room/'))   { document.title = '待機室 | QuizSpark'; return }
+    if (pathname.startsWith('/chat/'))   { document.title = 'チャット | QuizSpark'; return }
+    if (pathname.startsWith('/user/'))   { document.title = 'ユーザー | QuizSpark'; return }
+    if (pathname.startsWith('/sets/'))   { document.title = '問題セット | QuizSpark'; return }
+    document.title = 'QuizSpark ⚡'
+  }, [pathname])
+  return null
+}
+
 function Fallback() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
@@ -37,6 +67,7 @@ export default function App() {
     <AuthProvider>
     <SocketProvider>
       <BrowserRouter>
+        <TitleUpdater />
         <ConnectionBanner />
         <Suspense fallback={<Fallback />}>
           <Routes>
