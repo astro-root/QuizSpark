@@ -32,7 +32,7 @@ export default function ProfilePage() {
     <div className='page' style={{ display:'flex', flexDirection:'column' }}>
       <AppHeader title="マイページ" />
 
-      <div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
+      <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)' }}><div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', maxWidth:'var(--w)', margin:'0 auto' }}>
         <div style={{ width:48, height:48, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))',
           display:'flex', alignItems:'center', justifyContent:'center',
           fontSize:20, fontWeight:900, color:'#fff', overflow:'hidden', flexShrink:0 }}>
@@ -44,10 +44,9 @@ export default function ProfilePage() {
           <p style={{ fontWeight:900, fontSize:16 }}>{user.name}</p>
           {(user as any).username && <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>@{(user as any).username}</p>}
           {!(user as any).username && <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{user.email}</p>}
-        </div>
-      </div>
+        </div></div></div>
 
-      <div style={{ display:'flex', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
+      <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)' }}><div style={{ display:'flex', maxWidth:'var(--w)', margin:'0 auto' }}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             style={{ flex:1, padding:'12px 8px', fontSize:13, fontWeight:700, background:'none', border:'none', cursor:'pointer',
@@ -58,7 +57,7 @@ export default function ProfilePage() {
             <span style={{ fontSize:11 }}>{t.label}</span>
           </button>
         ))}
-      </div>
+      </div></div>
 
       <div className='inner'>
         {tab === 'profile' && <ProfileTab />}

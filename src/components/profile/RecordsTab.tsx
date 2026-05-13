@@ -5,17 +5,19 @@ interface Stats { total: number; wins: number; winRate: number; totalCorrect: nu
 interface Record { id: string; result: string; ruleId: string; playerCount: number; playedAt: string; correct: number; wrong: number }
 
 export default function RecordsTab() {
-  const [stats, setStats] = useState<Stats | null>(null)
+  const [stats, setStats] = useState<Stats>({ total:0, wins:0, winRate:0, totalCorrect:0, totalWrong:0 })
   const [records, setRecords] = useState<Record[]>([])
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => { fetchRecords() }, [])
 
   async function fetchRecords() {
     const r = await apiFetch('/api/records/me')
     if (r.ok) { const d = await r.json(); setStats(d.stats); setRecords(d.records) }
+    setLoaded(true)
   }
 
-  if (!stats) return <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:32 }}>読み込み中...</p>
+  if (!loaded) return <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:32 }}>読み込み中...</p>
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
