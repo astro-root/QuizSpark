@@ -118,7 +118,7 @@ export default function ChatPage() {
       {/* 会話リスト */}
       {(!userId || window.innerWidth > 600) && (
         <div style={{ width: userId ? 220 : '100%', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-          <AppHeader title="チャット" back right={
+          <AppHeader title="チャット" right={
             <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 4 }}>
               <Search size={20} />
             </button>

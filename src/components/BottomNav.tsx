@@ -2,7 +2,7 @@ import { apiFetch } from '../lib/api'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
-import { Home, Search, Trophy, MessageCircle, User, Plus } from 'lucide-react'
+import { Home, Search, Trophy, MessageCircle, User, PenLine } from 'lucide-react'
 
 export default function BottomNav() {
   const navigate = useNavigate()
@@ -30,7 +30,7 @@ export default function BottomNav() {
   const tabs = [
     { path: '/',       Icon: Home,          label: 'ホーム' },
     { path: '/ranking', Icon: Trophy,        label: 'ランキング' },
-    { path: null,      Icon: Plus,          label: '作問', fab: true },
+    { path: null,      Icon: PenLine,       label: '作問', fab: true },
     { path: '/chat',   Icon: MessageCircle, label: 'チャット', badge: unread },
     { path: '/profile',Icon: User,          label: 'マイページ' },
   ]
@@ -46,6 +46,7 @@ export default function BottomNav() {
       {tabs.map((t, i) => {
         if (t.fab) return (
           <div key="fab" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
             <button onClick={() => navigate('/create')}
               style={{
                 width: 50, height: 50, borderRadius: '50%',
@@ -55,8 +56,10 @@ export default function BottomNav() {
                 boxShadow: '0 4px 14px rgba(56,189,248,0.45)',
                 transform: 'translateY(-10px)',
               }}>
-              <Plus size={24} strokeWidth={2.5} />
+              <PenLine size={22} strokeWidth={2.5} />
             </button>
+            <span style={{ fontSize:10, fontWeight:700, color:'var(--muted)', marginTop:-6 }}>作問</span>
+          </div>
           </div>
         )
 
