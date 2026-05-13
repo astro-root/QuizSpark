@@ -6,7 +6,7 @@ const lbl: React.CSSProperties = { fontSize:11, fontWeight:700, color:'var(--mut
 const inp: React.CSSProperties = { width:'100%', padding:'13px 16px', background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:10, fontSize:15, color:'var(--text)' }
 
 export default function ProfileTab() {
-  const { user, updateProfile, updateAvatar, logout } = useAuth()
+  const { user, updateProfile, updateAvatar, deleteAvatar, logout } = useAuth()
   const avatarRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(user?.name ?? '')
   const [bio, setBio] = useState((user as any)?.bio ?? '')
@@ -40,6 +40,12 @@ export default function ProfileTab() {
           📷
         </div>
       </div>
+      {user.avatarUrl && (
+        <button onClick={async () => { if (confirm('アバターを削除しますか？')) await deleteAvatar() }}
+          style={{ alignSelf:'center', background:'none', border:'none', color:'var(--muted)', fontSize:12, cursor:'pointer', marginTop:-8 }}>
+          🗑 アバターを削除
+        </button>
+      )}
       <input ref={avatarRef} type="file" accept="image/*" style={{ display:'none' }}
         onChange={async e => {
           const file = e.target.files?.[0]; if (!file) return

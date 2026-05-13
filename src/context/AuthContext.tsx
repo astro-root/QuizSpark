@@ -11,6 +11,7 @@ interface AuthCtx {
   register: (name: string, email: string, password: string) => Promise<string | null>
   updateProfile: (name: string, bio?: string, username?: string) => Promise<string | null>
   updateAvatar: (file: File) => Promise<string | null>
+  deleteAvatar: () => Promise<void>
   logout: () => void
 }
 
@@ -60,7 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   const logout = () => apiFetch('/auth/logout', { method: 'POST' }).then(() => setUser(null))
 
-  return <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithPassword, register, updateProfile, updateAvatar, logout }}>{children}</AuthContext.Provider>
+  const deleteAvatar = async () => {
+    const r = await apiFetch('/auth/avatar', { method: 'DELETE' })
+    if (r.ok) { const u = await r.json(); setUser(u) }
+  }
+
+  return <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithPassword, register, updateProfile, updateAvatar, deleteAvatar, logout }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
