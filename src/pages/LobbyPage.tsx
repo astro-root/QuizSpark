@@ -292,8 +292,6 @@ function Row({label,children}: {label:string;children:React.ReactNode}) {
   )
 }
 
-  )
-}
 function Badge({color,bg,children}: {color:string;bg:string;children:React.ReactNode}) {
   return <span style={{ fontSize:10, fontWeight:700, color, background:bg, borderRadius:4, padding:'2px 7px' }}>{children}</span>
 }
