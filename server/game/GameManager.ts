@@ -22,6 +22,7 @@ class GameManager {
   private broadcastFn?: BroadcastFn
   private customQuestionsMap = new Map<string, import('../../src/types').Question[]>()
   private finishFn?: (state: import('../../src/types').RoomState) => void
+  private answerLogs = new Map<string, Map<string, Array<{text:string,answer:string,userAnswer:string,isCorrect:boolean}>>>()
 
   setBroadcast(fn: BroadcastFn) { this.broadcastFn = fn }
   setOnFinish(fn: (state: import('../../src/types').RoomState) => void) { this.finishFn = fn }
@@ -141,6 +142,15 @@ class GameManager {
     if (state.buzzedPlayerId !== playerId) return
     this.clearTimer(roomId)
     const { nextState } = applyAnswer(state, playerId, rawAnswer)
+    if (state.currentQuestion) {
+      if (!this.answerLogs.has(roomId)) this.answerLogs.set(roomId, new Map())
+      const roomLog = this.answerLogs.get(roomId)!
+      if (!roomLog.has(playerId)) roomLog.set(playerId, [])
+      const playerLog = roomLog.get(playerId)!
+      const isCorrect = (nextState.lastJudgement as any)?.correct ?? false
+      playerLog.push({ text: state.currentQuestion.text, answer: (state.currentQuestion as any).displayAnswer || state.currentQuestion.answer, userAnswer: rawAnswer, isCorrect })
+      if (playerLog.length > 10) playerLog.shift()
+    }
     this.rooms.set(roomId, nextState)
     this.broadcast(roomId)
     this.startResultTimer(roomId)
@@ -152,6 +162,7 @@ class GameManager {
     if (!state || state.hostId !== playerId || state.phase !== 'finished') return false
     this.clearTimer(roomId)
     this.customQuestionsMap.delete(roomId)
+    this.answerLogs.delete(roomId)
     const rule = getRuleDef(state.settings.ruleId)
     const players = state.players.map((p: import('../../src/types').Player) => ({
       ...p,
@@ -184,6 +195,7 @@ class GameManager {
       .map(r => ({ id: r.id, playerCount: r.players.length, hostName: r.players.find(p => p.id === r.hostId)?.name ?? '?', ruleId: r.settings.ruleId, questionCount: r.settings.questionCount }))
   }
   getRoomIdByPlayer(playerId: string): string | undefined { return this.playerRoomMap.get(playerId) }
+  getAnswerLogs(roomId: string) { return this.answerLogs.get(roomId) }
 }
 
 export const gameManager = new GameManager()
