@@ -264,6 +264,21 @@ export default function LobbyPage() {
         )}
       </div>
       {roomState && <RoomChat myId={myId} />}
+      {showPublicWarn && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:400, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={e => { if (e.target===e.currentTarget) setShowPublicWarn(false) }}>
+          <div style={{ background:'var(--surface)', borderRadius:20, padding:'24px 20px', width:'100%', maxWidth:380, display:'flex', flexDirection:'column', gap:16 }}>
+            <p style={{ fontWeight:900, fontSize:16 }}>⚠️ 公開ルームにしますか？</p>
+            <p style={{ fontSize:13, color:'var(--muted)', lineHeight:1.7 }}>誰でも参加できる状態になります。見知らぬユーザーが参加する可能性があります。</p>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setShowPublicWarn(false)}
+                style={{ flex:1, padding:'12px', borderRadius:10, fontSize:14, fontWeight:700, background:'var(--surface2)', color:'var(--text)', border:'none', cursor:'pointer' }}>キャンセル</button>
+              <button onClick={() => { emit({...local, isPublic:true}); setShowPublicWarn(false) }}
+                style={{ flex:1, padding:'12px', borderRadius:10, fontSize:14, fontWeight:700, background:'var(--wrong)', color:'#fff', border:'none', cursor:'pointer' }}>公開にする</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -274,29 +289,9 @@ function Row({label,children}: {label:string;children:React.ReactNode}) {
       <span style={{ fontSize:13, color:'var(--sub)', flexShrink:0 }}>{label}</span>
       <div style={{ minWidth:120 }}>{children}</div>
     </div>
-      {showPublicWarn && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:400, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-          onClick={e => { if (e.target===e.currentTarget) setShowPublicWarn(false) }}>
-          <div style={{ background:'var(--surface)', borderRadius:20, padding:'24px 20px', width:'100%', maxWidth:380, display:'flex', flexDirection:'column', gap:16 }}>
-            <p style={{ fontWeight:900, fontSize:16 }}>⚠️ 公開ルームにしますか？</p>
-            <p style={{ fontSize:13, color:'var(--muted)', lineHeight:1.7 }}>
-              誰でも参加できる状態になります。見知らぬユーザーが参加する可能性があります。
-            </p>
-            <div style={{ display:'flex', gap:8 }}>
-              <button onClick={() => setShowPublicWarn(false)}
-                style={{ flex:1, padding:'12px', borderRadius:10, fontSize:14, fontWeight:700,
-                  background:'var(--surface2)', color:'var(--text)', border:'none', cursor:'pointer' }}>
-                キャンセル
-              </button>
-              <button onClick={() => { emit({...local, isPublic:true}); setShowPublicWarn(false) }}
-                style={{ flex:1, padding:'12px', borderRadius:10, fontSize:14, fontWeight:700,
-                  background:'var(--wrong)', color:'#fff', border:'none', cursor:'pointer' }}>
-                公開にする
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  )
+}
+
   )
 }
 function Badge({color,bg,children}: {color:string;bg:string;children:React.ReactNode}) {
