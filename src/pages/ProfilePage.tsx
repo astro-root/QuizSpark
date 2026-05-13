@@ -7,11 +7,19 @@ import { User, Trophy } from 'lucide-react'
 import ProfileTab from '../components/profile/ProfileTab'
 import RecordsTab from '../components/profile/RecordsTab'
 import QuestionHistoryTab from '../components/profile/QuestionHistoryTab'
-import { useState } from 'react'
+import TitleSelectTab from '../components/profile/TitleSelectTab'
+import { apiFetch } from '../lib/api'
+import { useState, useEffect } from 'react'
 
 type Tab = 'profile' | 'records'
 
 export default function ProfilePage() {
+  const [stats, setStats] = useState({ rate: 0, total: 0, wins: 0, correct: 0 })
+  useEffect(() => {
+    apiFetch('/api/records/me').then(r => r.ok ? r.json() : null).then(d => {
+      if (d) setStats({ rate: 0, total: d.stats.total, wins: d.stats.wins, correct: d.stats.totalCorrect })
+    }).catch(() => {})
+  }, [])
   const { user, authLoading } = useAuth()
   const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
@@ -64,6 +72,7 @@ export default function ProfilePage() {
         {tab === 'profile' && <ProfileTab />}
         {tab === 'records' && <RecordsTab />}
         {tab === 'history' && <QuestionHistoryTab />}
+        {tab === 'title' && <TitleSelectTab stats={stats} />}
       </div>
     </div>
   )

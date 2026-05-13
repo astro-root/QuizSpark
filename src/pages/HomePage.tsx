@@ -79,7 +79,7 @@ export default function HomePage() {
             </div>
             <div>
               <p style={{ fontWeight: 800, fontSize: 15 }}>{user.name}</p>
-              <p style={{ fontSize: 12, color: 'var(--muted)' }}>QuizSpark プレイヤー</p>
+              <p style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{getTitleById((user as any)?.titleId).label}</p>
             </div>
           </div>
         )}
