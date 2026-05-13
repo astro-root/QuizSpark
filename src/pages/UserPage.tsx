@@ -51,14 +51,14 @@ export default function UserPage() {
     } : p)
   }
 
-  if (loading) return <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)' }}>読み込み中...</div>
-  if (!profile) return <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)' }}>ユーザーが見つかりません</div>
+  if (loading) return <div className='page' style={{ display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)' }}>読み込み中...</div>
+  if (!profile) return <div className='page' style={{ display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)' }}>ユーザーが見つかりません</div>
 
   const rank = getRankLabel(profile.rate)
   const isMe = me?.id === id
 
   return (
-    <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', paddingBottom:80 }}>
+    <div className='page' style={{ display:'flex', flexDirection:'column' }}>
       {/* ヘッダー */}
       <AppHeader back />
 
@@ -94,7 +94,7 @@ export default function UserPage() {
         )}
       </div>
 
-      <div style={{ flex:1, maxWidth:600, width:'100%', margin:'0 auto', padding:'16px' }}>
+      <div className='inner'>
         {/* Bio */}
         {profile.bio && (
           <div style={{ background:'var(--surface)', borderRadius:14, padding:'14px 16px', border:'1px solid var(--border)', marginBottom:12 }}>

@@ -34,9 +34,9 @@ export default function NotificationsPage() {
   }, [user])
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
+    <div className='page'>
       <AppHeader title="通知" back />
-      <div style={{ maxWidth: 600, margin: '0 auto' }}>
+      <div className='inner-sm'>
         {notes.length === 0 && (
           <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 48, fontSize: 14 }}>通知はありません</p>
         )}
