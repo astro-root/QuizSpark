@@ -73,6 +73,20 @@ function setupFinishHandler(io: IoServer) {
       })
       if (data.length > 0) {
         await prisma.battleRecord.createMany({ data, skipDuplicates: true })
+        for (const p of state.players) {
+          const pSocket = io.sockets.sockets.get(p.id)
+          const userId = pSocket?.data?.dbUserId ?? null
+          if (!userId) continue
+          const logs = gameManager.getAnswerLogs(state.id)?.get(p.id) ?? []
+          if (logs.length === 0) continue
+          await prisma.questionHistory.createMany({
+            data: logs.map(l => ({ userId, text: l.text, answer: l.answer, userAnswer: l.userAnswer, isCorrect: l.isCorrect }))
+          })
+          const all = await prisma.questionHistory.findMany({ where: { userId }, orderBy: { playedAt: 'desc' }, select: { id: true } })
+          if (all.length > 10) {
+            await prisma.questionHistory.deleteMany({ where: { id: { in: all.slice(10).map(h => h.id) } } })
+          }
+        }
         const rateTargets = data.filter(d => d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
         if (rateTargets.length > 0) {
           await prisma.$transaction(async (tx) => {

@@ -47,7 +47,21 @@ export default function LobbyPage() {
   }, [])
 
   useEffect(() => {
-    if (roomState?.settings && !synced) { setLocal(roomState.settings); setSynced(true) }
+    if (roomState?.settings && !synced) {
+      const pending = sessionStorage.getItem('pendingRoomSettings')
+      if (pending && roomState.hostId === myId) {
+        try {
+          const s = JSON.parse(pending)
+          const merged = { ...roomState.settings, ...s }
+          setLocal(merged)
+          updateSettings(roomId!, merged)
+          sessionStorage.removeItem('pendingRoomSettings')
+        } catch {}
+      } else {
+        setLocal(roomState.settings)
+      }
+      setSynced(true)
+    }
   }, [roomState?.settings, synced])
 
   useEffect(() => {

@@ -179,7 +179,7 @@ export default function ChatPage() {
             <input value={body} onChange={e => setBody(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
               placeholder="メッセージを入力…"
-              style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '8px 14px', fontSize: 14, color: 'var(--text)', outline: 'none' }} />
+              style={{ flex: 1, minWidth: 0, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '8px 14px', fontSize: 16, color: 'var(--text)', outline: 'none' }} />
             <button onClick={() => send()} disabled={sending || !body.trim()}
               style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 20, padding: '8px 16px', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: sending || !body.trim() ? 0.5 : 1 }}>
               送信

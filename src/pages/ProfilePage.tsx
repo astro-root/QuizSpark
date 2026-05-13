@@ -6,6 +6,7 @@ import AppHeader from '../components/AppHeader'
 import { User, Trophy } from 'lucide-react'
 import ProfileTab from '../components/profile/ProfileTab'
 import RecordsTab from '../components/profile/RecordsTab'
+import QuestionHistoryTab from '../components/profile/QuestionHistoryTab'
 import { useState } from 'react'
 
 type Tab = 'profile' | 'records'
@@ -62,6 +63,7 @@ export default function ProfilePage() {
       <div className='inner'>
         {tab === 'profile' && <ProfileTab />}
         {tab === 'records' && <RecordsTab />}
+        {tab === 'history' && <QuestionHistoryTab />}
       </div>
     </div>
   )

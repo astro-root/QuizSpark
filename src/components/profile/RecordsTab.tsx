@@ -20,7 +20,7 @@ export default function RecordsTab() {
   if (!loaded) return <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:32 }}>読み込み中...</p>
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:12, width:'100%' }}>
       <div style={{ background:'var(--surface)', borderRadius:16, padding:'20px', border:'1px solid var(--border)' }}>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:16 }}>
           {[
