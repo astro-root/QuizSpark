@@ -8,6 +8,7 @@ import { Swords, Search, X } from 'lucide-react'
 
 interface Msg { id: string; fromId: string; body: string; createdAt: string }
 interface Conv { user: { id: string; name: string; avatarUrl: string | null; username: string | null }; lastMessage: Msg | null; unread: number }
+interface UserResult { id: string; name: string; username: string | null; avatarUrl: string | null }
 
 function InviteCard({ roomId, onJoin }: { roomId: string; onJoin: (id: string) => void }) {
   return (
@@ -23,45 +24,6 @@ function InviteCard({ roomId, onJoin }: { roomId: string; onJoin: (id: string) =
         style={{ width: '100%', padding: '9px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: '#fff', color: '#0f766e', border: 'none', cursor: 'pointer' }}>
         参加する →
       </button>
-    </div>
-      {/* 検索ポップアップ */}
-      {showSearch && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', flexDirection: 'column', padding: '60px 0 0' }}
-          onClick={e => { if (e.target === e.currentTarget) setShowSearch(false) }}>
-          <div style={{ background: 'var(--bg)', flex: 1, borderRadius: '20px 20px 0 0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Search size={16} color="var(--muted)" />
-              <input autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                placeholder="ユーザーを検索…"
-                style={{ flex: 1, background: 'none', border: 'none', fontSize: 15, color: 'var(--text)', outline: 'none' }} />
-              <button onClick={() => { setShowSearch(false); setSearchQ(''); setSearchUsers([]) }}
-                style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 4 }}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {searchUsers.map(u => (
-                <button key={u.id} onClick={() => { navigate(`/chat/${u.id}`); setShowSearch(false); setSearchQ(''); setSearchUsers([]) }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', width: '100%', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer', textAlign: 'left' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--surface2)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                    {u.avatarUrl ? <img src={u.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : u.name[0]}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{u.name}</p>
-                    {u.username && <p style={{ fontSize: 12, color: 'var(--muted)' }}>@{u.username}</p>}
-                  </div>
-                </button>
-              ))}
-              {searchQ && searchUsers.length === 0 && (
-                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32, fontSize: 14 }}>見つかりません</p>
-              )}
-              {!searchQ && (
-                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32, fontSize: 14 }}>名前・ユーザーIDで検索</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -83,9 +45,9 @@ export default function ChatPage() {
   const [inviting, setInviting] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [searchQ, setSearchQ] = useState('')
-  const [searchUsers, setSearchUsers] = useState<{id:string;name:string;username:string|null;avatarUrl:string|null;rate:number}[]>([])
-  const searchTimer = useRef<ReturnType<typeof setTimeout>>()
+  const [searchUsers, setSearchUsers] = useState<UserResult[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     apiFetch('/api/messages/conversations', { credentials: 'include' })
@@ -152,6 +114,7 @@ export default function ChatPage() {
 
   return (
     <div style={{ display: 'flex', height: '100dvh', background: 'var(--bg)', maxWidth: 700, margin: '0 auto' }}>
+
       {/* 会話リスト */}
       {(!userId || window.innerWidth > 600) && (
         <div style={{ width: userId ? 220 : '100%', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
