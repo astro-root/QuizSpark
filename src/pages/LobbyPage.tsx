@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import AppHeader from '../components/AppHeader'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -35,10 +36,15 @@ export default function LobbyPage() {
   const [local, setLocal] = useState<GameSettings>({ ruleId:'mon', ruleParams:{m:5,n:2}, questionCount:10, winnerCount:1, loserCount:0, isPublic:false, questionSetId:null })
   const [synced, setSynced] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [sets, setSets] = useState<{id:string;name:string;_count:{items:number}}[]>([])
 
   useEffect(() => {
     if (roomId) syncState(roomId)
   }, [roomId])
+
+  useEffect(() => {
+    apiFetch('/api/question-sets').then(r => r.ok ? r.json() : []).then(setSets).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (roomState?.settings && !synced) { setLocal(roomState.settings); setSynced(true) }
@@ -201,6 +207,12 @@ export default function LobbyPage() {
                     onChange={e => emit({...local, isPublic: e.target.checked})} />
                   <span style={{ fontSize:13, color:'var(--sub)' }}>誰でも参加可能にする</span>
                 </label>
+              </Row>
+              <Row label="問題セット">
+                <select disabled={!isHost} value={local.questionSetId ?? ''} onChange={e=>emit({...local, questionSetId: e.target.value || null})} style={sel}>
+                  <option value="">全問題からランダム</option>
+                  {sets.map(s=><option key={s.id} value={s.id}>{s.name}（{s._count.items}問）</option>)}
+                </select>
               </Row>
               <Row label="失格人数で終了">
                 <select disabled={!isHost} value={local.loserCount} onChange={e=>onField('loserCount',Number(e.target.value))} style={sel}>
