@@ -35,6 +35,22 @@ const STYLES = `
 
 
 
+
+function playTone(freq: number, type: OscillatorType = 'sine', gain = 0.2, duration = 0.3, delay = 0) {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const g = ctx.createGain()
+    osc.connect(g); g.connect(ctx.destination)
+    osc.type = type; osc.frequency.value = freq
+    g.gain.setValueAtTime(0, ctx.currentTime + delay)
+    g.gain.linearRampToValueAtTime(gain, ctx.currentTime + delay + 0.01)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration)
+    osc.start(ctx.currentTime + delay)
+    osc.stop(ctx.currentTime + delay + duration)
+  } catch {}
+}
+
 export default function GamePage() {
   const { roomId } = useParams<{ roomId:string }>()
   const { roomState, myId, buzz, submitAnswer, resetGame, isHost, syncState } = useSocketContext()
