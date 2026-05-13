@@ -219,7 +219,7 @@ export default function LobbyPage() {
               <Row label="公開ルーム">
                 <label style={{ display:'flex', alignItems:'center', gap:8, cursor: isHost?'pointer':'default' }}>
                   <input type="checkbox" disabled={!isHost} checked={!!local.isPublic}
-                    onChange={e => emit({...local, isPublic: e.target.checked})} />
+                    onChange={e => { if (e.target.checked) setShowPublicWarn(true); else emit({...local, isPublic: false}) }} />
                   <span style={{ fontSize:13, color:'var(--sub)' }}>誰でも参加可能にする</span>
                 </label>
               </Row>

@@ -21,11 +21,9 @@ export default function FreeLobbyPage() {
   const [roomIdInput, setRoomIdInput] = useState('')
   const [joinError, setJoinError] = useState('')
   const [creating, setCreating] = useState(false)
-  const [showPopup, setShowPopup] = useState(false)
   const [ruleId, setRuleId] = useState('mon')
   const [questionCount, setQuestionCount] = useState(10)
   const [isPublic, setIsPublic] = useState(false)
-  const [showPublicWarn, setShowPublicWarn] = useState(false)
 
   async function handleCreate() {
     if (!user) return
@@ -116,103 +114,3 @@ export default function FreeLobbyPage() {
           </div>
         )}
       </div>
-
-      {/* ルーム作成ポップアップ */}
-      {showPopup && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 300,
-          display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-          onClick={e => { if (e.target === e.currentTarget) setShowPopup(false) }}>
-          <div style={{ background: 'var(--surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 'var(--w)',
-            padding: '24px 20px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))',
-            display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <p style={{ fontWeight: 900, fontSize: 17 }}>ルーム設定</p>
-              <button onClick={() => setShowPopup(false)}
-                style={{ background: 'none', border: 'none', padding: 6, color: 'var(--muted)', display: 'flex', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* ルール選択 */}
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', marginBottom: 10 }}>ルール</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                {RULES.map(r => (
-                  <button key={r.id} onClick={() => setRuleId(r.id)}
-                    style={{ padding: '10px 6px', borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer',
-                      background: ruleId === r.id ? 'var(--accent)' : 'var(--surface2)',
-                      color: ruleId === r.id ? '#fff' : 'var(--text)' }}>
-                    {r.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 問題数 */}
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', marginBottom: 10 }}>問題数：{questionCount}問</p>
-              <input type="range" min={5} max={30} step={5} value={questionCount}
-                onChange={e => setQuestionCount(Number(e.target.value))}
-                style={{ width: '100%', accentColor: 'var(--accent)' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                <span>5問</span><span>30問</span>
-              </div>
-            </div>
-
-            {/* 公開設定 */}
-            <div>
-              <button onClick={() => { if (!isPublic) setShowPublicWarn(true); else setIsPublic(false) }}
-                style={{ width: '100%', padding: '14px 16px', borderRadius: 12, border: `1.5px solid ${isPublic ? 'var(--accent)' : 'var(--border)'}`,
-                  background: isPublic ? 'rgba(56,189,248,0.08)' : 'var(--surface2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                <div style={{ textAlign: 'left' }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: isPublic ? 'var(--accent)' : 'var(--text)' }}>公開ルーム</p>
-                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>誰でも参加できます</p>
-                </div>
-                <div style={{ width: 44, height: 26, borderRadius: 13, background: isPublic ? 'var(--accent)' : 'var(--surface2)',
-                  border: '1.5px solid var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-                  <div style={{ position: 'absolute', top: 2, left: isPublic ? 18 : 2, width: 18, height: 18,
-                    borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
-                </div>
-              </button>
-            </div>
-
-            {/* 公開設定の警告ダイアログ */}
-            {showPublicWarn && (
-              <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '14px 16px' }}>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 12 }}>
-                  <AlertTriangle size={18} color="var(--wrong)" style={{ flexShrink: 0, marginTop: 1 }} />
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--wrong)', marginBottom: 4 }}>公開ルームにしますか？</p>
-                    <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-                      誰でも参加できる状態になります。見知らぬユーザーが参加する可能性があります。
-                    </p>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setShowPublicWarn(false)}
-                    style={{ flex: 1, padding: '10px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-                      background: 'var(--surface2)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}>
-                    キャンセル
-                  </button>
-                  <button onClick={() => { setIsPublic(true); setShowPublicWarn(false) }}
-                    style={{ flex: 1, padding: '10px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-                      background: 'var(--wrong)', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                    公開にする
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <button onClick={handleCreate} disabled={creating}
-              style={{ width: '100%', padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 900,
-                background: 'linear-gradient(135deg,#0f766e,#14b8a6)', color: '#fff',
-                border: 'none', cursor: 'pointer', opacity: creating ? 0.7 : 1 }}>
-              {creating ? '作成中...' : 'ルームを作成する'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
