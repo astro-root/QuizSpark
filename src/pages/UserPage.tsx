@@ -34,6 +34,7 @@ export default function UserPage() {
     fetch(`/api/follow/user/${id}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { setProfile(d); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [id])
 
   useEffect(() => {
