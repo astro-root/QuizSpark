@@ -11,7 +11,7 @@ import TitleSelectTab from '../components/profile/TitleSelectTab'
 import { apiFetch } from '../lib/api'
 import { useState, useEffect } from 'react'
 
-type Tab = 'profile' | 'records'
+type Tab = 'profile' | 'records' | 'history' | 'title'
 
 export default function ProfilePage() {
   const [stats, setStats] = useState({ rate: 0, total: 0, wins: 0, correct: 0 })
@@ -35,6 +35,8 @@ export default function ProfilePage() {
   const tabs = [
     { key: 'profile' as Tab, Icon: User,   label: 'プロフィール' },
     { key: 'records' as Tab, Icon: Trophy, label: '戦績' },
+    { key: 'history' as Tab, Icon: Trophy, label: '問題履歴' },
+    { key: 'title'   as Tab, Icon: Trophy, label: '称号' },
   ]
 
   return (
