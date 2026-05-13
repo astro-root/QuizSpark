@@ -50,14 +50,14 @@ export default function ChatPage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
-    apiFetch('/api/messages/conversations', { credentials: 'include' })
+    apiFetch('/api/messages/conversations')
       .then(r => r.json()).then(setConvs).catch(() => {})
   }, [userId])
 
   useEffect(() => {
     if (!userId) return
     const load = () =>
-      fetch(`/api/messages/messages/${userId}`, { credentials: 'include' })
+      apiFetch(`/api/messages/messages/${userId}`)
         .then(r => r.json()).then(data => { setMsgs(Array.isArray(data) ? data : []) }).catch(() => {})
     load()
     const t = setInterval(load, 5000)
@@ -72,7 +72,7 @@ export default function ChatPage() {
     clearTimeout(searchTimer.current)
     if (!searchQ.trim()) { setSearchUsers([]); return }
     searchTimer.current = setTimeout(() => {
-      fetch(`/api/search?q=${encodeURIComponent(searchQ)}`, { credentials: 'include' })
+      apiFetch(`/api/search?q=${encodeURIComponent(searchQ)}`)
         .then(r => r.json()).then(d => setSearchUsers(d.users ?? [])).catch(() => {})
     }, 300)
   }, [searchQ])
@@ -81,7 +81,7 @@ export default function ChatPage() {
     const text = overrideBody ?? body
     if (!text.trim() || !userId || sending) return
     setSending(true)
-    const r = await fetch(`/api/messages/messages/${userId}`, {
+    const r = await apiFetch(`/api/messages/messages/${userId}`, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: text })

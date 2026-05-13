@@ -56,7 +56,7 @@ export default function AdminPage() {
   async function fetchContacts() { const r = await apiFetch('/api/admin/contacts'); if (r.ok) setContacts(await r.json()) }
 
   async function saveEdit(q: Question) {
-    await fetch(`/api/admin/questions/${q.id}`, {
+    await apiFetch(`/api/admin/questions/${q.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: q.text, answer: q.answer, answers: [q.answer], displayAnswer: q.displayAnswer })
     })
@@ -64,11 +64,11 @@ export default function AdminPage() {
   }
 
   async function approve(id: number) {
-    await fetch(`/api/admin/questions/${id}/approve`, { method: 'PATCH' }); fetchQuestions()
+    await apiFetch(`/api/admin/questions/${id}/approve`, { method: 'PATCH' }); fetchQuestions()
   }
   async function deleteQ(id: number) {
     if (!confirm('削除しますか？')) return
-    await fetch(`/api/admin/questions/${id}`, { method: 'DELETE' }); fetchQuestions()
+    await apiFetch(`/api/admin/questions/${id}`, { method: 'DELETE' }); fetchQuestions()
   }
   async function addAnnouncement() {
     if (!newTitle.trim() || !newBody.trim()) return
@@ -76,18 +76,18 @@ export default function AdminPage() {
     setNewTitle(''); setNewBody(''); fetchAnnouncements()
   }
   async function toggleAnnouncement(id: number, active: boolean) {
-    await fetch(`/api/admin/announcements/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active }) }); fetchAnnouncements()
+    await apiFetch(`/api/admin/announcements/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active }) }); fetchAnnouncements()
   }
   async function fetchUserDetail(id: string) {
-    const r = await fetch(`/api/admin/users/${id}`); if (r.ok) setSelectedUser(await r.json())
+    const r = await apiFetch(`/api/admin/users/${id}`); if (r.ok) setSelectedUser(await r.json())
   }
   async function toggleAdmin(id: string, isAdmin: boolean) {
     if (!confirm(`管理者権限を${isAdmin ? '付与' : '剥奪'}しますか？`)) return
-    await fetch(`/api/admin/users/${id}/admin`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isAdmin }) })
+    await apiFetch(`/api/admin/users/${id}/admin`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isAdmin }) })
     fetchUsers(); if (selectedUser?.id === id) fetchUserDetail(id)
   }
   async function updateContactStatus(id: string, status: string) {
-    await fetch(`/api/admin/contacts/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); fetchContacts()
+    await apiFetch(`/api/admin/contacts/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); fetchContacts()
   }
 
   async function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {

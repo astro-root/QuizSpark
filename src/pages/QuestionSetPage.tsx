@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -19,7 +20,7 @@ export default function QuestionSetPage() {
 
   useEffect(() => {
     if (!id) return
-    fetch(`/api/question-sets/${id}`, { credentials: 'include' })
+    apiFetch(`/api/question-sets/${id}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { setSet(d); setLoading(false) })
   }, [id])

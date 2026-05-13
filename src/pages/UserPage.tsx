@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import AppHeader from '../components/AppHeader'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -31,7 +32,7 @@ export default function UserPage() {
 
   useEffect(() => {
     if (!id) return
-    fetch(`/api/follow/user/${id}`)
+    apiFetch(`/api/follow/user/${id}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { setProfile(d); setLoading(false) })
       .catch(() => setLoading(false))
@@ -39,13 +40,13 @@ export default function UserPage() {
 
   useEffect(() => {
     if (!id) return
-    fetch(`/api/follow/${id}/${tab}`).then(r => r.json()).then(setList)
+    apiFetch(`/api/follow/${id}/${tab}`).then(r => r.ok ? r.json() : []).then(setList).catch(() => {})
   }, [id, tab])
 
   async function toggleFollow() {
     if (!profile || !me) return
     const method = profile.isFollowing ? 'DELETE' : 'POST'
-    await fetch(`/api/follow/${id}`, { method })
+    await apiFetch(`/api/follow/${id}`, { method })
     setProfile(p => p ? { ...p,
       isFollowing: !p.isFollowing,
       _count: { ...p._count, followers: p._count.followers + (p.isFollowing ? -1 : 1) }

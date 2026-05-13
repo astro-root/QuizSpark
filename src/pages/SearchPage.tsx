@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api'
 import AppHeader from '../components/AppHeader'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -25,7 +26,7 @@ export default function SearchPage() {
     if (!q.trim()) { setUsers([]); return }
     setLoading(true)
     timer.current = setTimeout(() => {
-      fetch(`/api/search?q=${encodeURIComponent(q)}`, { credentials: 'include' })
+      apiFetch(`/api/search?q=${encodeURIComponent(q)}`)
         .then(r => r.json())
         .then(d => setUsers(d.users ?? []))
         .finally(() => setLoading(false))

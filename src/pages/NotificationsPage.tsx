@@ -21,12 +21,12 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (!user) return
-    apiFetch('/api/notifications', { credentials: 'include' })
+    apiFetch('/api/notifications')
       .then(r => r.json()).then(async (data: Note[]) => {
         setNotes(data)
         const ids = [...new Set(data.map(n => n.fromId).filter(Boolean))] as string[]
         const entries = await Promise.all(ids.map(id =>
-          fetch(`/api/follow/user/${id}`).then(r => r.json()).then(u => [id, u])
+          apiFetch(`/api/follow/user/${id}`).then(r => r.json()).then(u => [id, u])
         ))
         setUsers(Object.fromEntries(entries))
         apiFetch('/api/notifications/read-all', { method: 'POST', credentials: 'include' })
