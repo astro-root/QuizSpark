@@ -8,10 +8,29 @@
 
 ### ゲーム
 - **早押しバトル** — Socket.io によるリアルタイム早押し判定
-- **ルーム対戦** — ルームIDを共有して友達と対戦
+- **フリーマッチ** — ルームIDを共有して友達と対戦。公開ルームなら誰でも参加可能
 - **ランダムマッチ** — レート差±200以内で自動マッチング（待機時間に応じて範囲拡大）
-- **ゲームルール** — 5○2×形式など複数ルール対応
+- **ゲームルール** — 12種類のルール対応（下記参照）
 - **問題セット** — ユーザーが独自問題セットを作成・CSV管理可能
+- **問題履歴** — ランダムマッチで出題された直近10問の回答履歴を記録
+
+### ゲームルール一覧
+
+| ルール | 概要 |
+|--------|------|
+| m◯n× | m正解で勝ち抜け、n誤答で失格 |
+| Free | 制限なし自由形式 |
+| NewYork | 正解加点・誤答減点のポイント制 |
+| Up-Down | ポイント変動型 |
+| by | 基準値方式 |
+| Freeze | 正解数のみで勝ち抜け |
+| m◯n休 | 誤答で一定問数休み |
+| Swedish | 勝ち抜け・失格を同一基準で管理 |
+| Divide | 初期ポイントから分割加点 |
+| Lucky Shot | ランダム加点・減点 |
+| 連答付き | 連続正解でボーナス |
+| 連誤答付き | 連続誤答でペナルティ |
+| m hits Combo | コンボ式ポイント |
 
 ### ユーザー
 - **レートシステム** — 勝利+30 / 敗北-20、下限0
@@ -20,6 +39,7 @@
 - **フォロー** — 他ユーザーをフォロー、フォロワー管理
 - **アバター** — プロフィール画像のアップロード（最大2MB）
 - **戦績** — 対戦履歴・勝率・正解数の記録
+- **問題履歴** — 直近10問の出題・正誤・回答内容を確認
 
 ### その他
 - **チャット** — ロビー・ゲーム中のリアルタイムチャット
@@ -38,9 +58,11 @@
 | バックエンド | Express + Socket.io |
 | 認証 | Passport.js（Google OAuth2 + メール/パスワード） |
 | ORM | Prisma |
-| DB | PostgreSQL |
+| DB | PostgreSQL (Supabase) |
 | ファイルアップロード | Multer |
 | セッション | express-session + connect-pg-simple |
+| フロントホスティング | Cloudflare Pages |
+| バックエンドホスティング | Render |
 
 ---
 
@@ -53,7 +75,7 @@
 ### 手順
 
 ```bash
-git clone https://github.com/your-username/QuizSpark.git
+git clone https://github.com/astro-root/QuizSpark.git
 cd QuizSpark
 npm install
 ```
@@ -99,6 +121,7 @@ QuizSpark/
 │   │   ├── HomePage.tsx
 │   │   ├── GamePage.tsx
 │   │   ├── LobbyPage.tsx
+│   │   ├── FreeLobbyPage.tsx
 │   │   ├── MatchPage.tsx
 │   │   ├── ProfilePage.tsx
 │   │   ├── RankingPage.tsx
@@ -111,23 +134,23 @@ QuizSpark/
 │   │   ├── BottomNav.tsx
 │   │   ├── RoomChat.tsx
 │   │   ├── MatchmakingModal.tsx
-│   │   └── ConnectionBanner.tsx
+│   │   ├── ConnectionBanner.tsx
+│   │   └── profile/
+│   │       ├── ProfileTab.tsx
+│   │       ├── RecordsTab.tsx
+│   │       ├── SetsTab.tsx
+│   │       └── QuestionHistoryTab.tsx
 │   ├── context/            # React Context
 │   │   ├── AuthContext.tsx
 │   │   ├── SocketContext.tsx
 │   │   └── ThemeContext.tsx
 │   └── types/
-│       └── index.ts
 ├── server/                 # バックエンド (Express)
 │   ├── auth/               # 認証
-│   │   ├── router.ts
-│   │   ├── passport.ts
-│   │   └── local.ts
 │   ├── game/               # ゲームロジック
 │   │   ├── GameManager.ts
 │   │   ├── MatchmakingManager.ts
-│   │   ├── RoomState.ts
-│   │   ├── RuleEngine.ts (rules.ts)
+│   │   ├── rules.ts
 │   │   ├── quizData.ts
 │   │   └── seed.ts
 │   ├── routes/             # REST API
@@ -135,16 +158,13 @@ QuizSpark/
 │   │   ├── questions.ts
 │   │   ├── questionSets.ts
 │   │   ├── records.ts
+│   │   ├── questionHistory.ts
 │   │   ├── ranking.ts
 │   │   ├── follow.ts
 │   │   ├── rooms.ts
 │   │   └── contact.ts
-│   ├── socket/             # Socket.io
-│   │   ├── index.ts
-│   │   └── handlers.ts
+│   ├── socket/
 │   ├── lib/
-│   │   ├── prisma.ts
-│   │   └── sessionMiddleware.ts
 │   ├── app.ts
 │   └── index.ts
 └── prisma/
