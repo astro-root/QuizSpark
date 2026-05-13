@@ -104,7 +104,7 @@ export default function UserPage() {
 
         {/* スタッツ */}
         <div style={{ background:'var(--surface)', borderRadius:14, padding:'16px 20px', border:'1px solid var(--border)', marginBottom:12 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, textAlign:'center' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, textAlign:'center' }}>
             {[
               { label:'対戦', value: profile._count.battleRecords },
               { label:'勝利', value: profile.wins },
