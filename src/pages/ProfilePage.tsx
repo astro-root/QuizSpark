@@ -60,7 +60,7 @@ export default function ProfilePage() {
         ))}
       </div></div>
 
-      <div className='inner'>
+      <div className='inner' style={{ maxWidth: '100%' }}>
         {tab === 'profile' && <ProfileTab />}
         {tab === 'records' && <RecordsTab />}
         {tab === 'history' && <QuestionHistoryTab />}
