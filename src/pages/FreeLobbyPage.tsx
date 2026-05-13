@@ -65,7 +65,7 @@ export default function FreeLobbyPage() {
               onKeyDown={e => e.key === 'Enter' && handleJoin()}
               placeholder="6桁のRoom ID" maxLength={6}
               style={{ flex: 1, minWidth: 0, padding: '12px 16px', background: 'var(--surface2)',
-                border: \`1.5px solid \${joinError ? 'var(--wrong)' : 'var(--border)'}\`,
+                border: `1.5px solid ${joinError ? 'var(--wrong)' : 'var(--border)'}`,
                 borderRadius: 10, fontSize: 16, color: 'var(--text)',
                 fontFamily: 'Orbitron,sans-serif', letterSpacing: 4, textTransform: 'uppercase' }} />
             <button onClick={handleJoin}
