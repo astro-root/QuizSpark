@@ -1,10 +1,8 @@
 import AppHeader from '../components/AppHeader'
-import { User, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 interface UserResult { id: string; name: string; username: string | null; avatarUrl: string | null; rate: number }
-interface SetResult { id: string; name: string; description: string | null; user: { id: string; name: string; avatarUrl: string | null }; _count: { items: number } }
 
 function getRankEmoji(rate: number) {
   if (rate >= 2000) return '👑'
@@ -24,7 +22,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     clearTimeout(timer.current)
-    if (!q.trim()) { setUsers([]); setSets([]); return }
+    if (!q.trim()) { setUsers([]); return }
     setLoading(true)
     timer.current = setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(q)}`, { credentials: 'include' })
@@ -36,43 +34,16 @@ export default function SearchPage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
-      <AppHeader back title="検索" />
+      <AppHeader back title="ユーザー検索" />
       <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <input
-          autoFocus
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="ユーザー・問題セットを検索…"
-          style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '9px 16px', fontSize: 14, color: 'var(--text)', outline: 'none' }}
-        />
+        <input autoFocus value={q} onChange={e => setQ(e.target.value)}
+          placeholder="名前・ユーザーIDで検索…"
+          style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '9px 16px', fontSize: 14, color: 'var(--text)', outline: 'none' }} />
       </div>
-
-      {/* タブ */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
-        {(['users', 'sets'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            style={{ flex: 1, padding: '12px', fontSize: 13, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer',
-              color: tab === t ? 'var(--accent)' : 'var(--muted)',
-              borderBottom: `2px solid ${tab === t ? 'var(--accent)' : 'transparent'}` }}>
-            <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-              {t === 'users' ? <User size={14} /> : <BookOpen size={14} />}
-              {t === 'users' ? `ユーザー${users.length > 0 ? ` (${users.length})` : ''}` : `問題セット${sets.length > 0 ? ` (${sets.length})` : ''}`}
-            </span>
-          </button>
-        ))}
-      </div>
-
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '8px 16px' }}>
-        {loading && <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32, fontSize: 14 }}>検索中…</p>}
-
-        {!loading && q && tab === 'users' && users.length === 0 && (
-          <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32, fontSize: 14 }}>ユーザーが見つかりません</p>
-        )}
-        {!loading && q && tab === 'sets' && sets.length === 0 && (
-          <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32, fontSize: 14 }}>問題セットが見つかりません</p>
-        )}
-
-        {tab === 'users' && users.map(u => (
+        {loading && <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32 }}>検索中…</p>}
+        {!loading && q && users.length === 0 && <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32 }}>ユーザーが見つかりません</p>}
+        {users.map(u => (
           <div key={u.id} onClick={() => navigate(`/user/${u.id}`)}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--surface2)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
@@ -83,21 +54,6 @@ export default function SearchPage() {
               {u.username && <p style={{ fontSize: 12, color: 'var(--muted)' }}>@{u.username}</p>}
             </div>
             <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>{getRankEmoji(u.rate)} {u.rate}pt</span>
-          </div>
-        ))}
-
-        {tab === 'sets' && sets.map(s => (
-          <div key={s.id} onClick={() => navigate(`/sets/${s.id}`)}
-            style={{ padding: '14px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
-            <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{s.name}</p>
-            {s.description && <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{s.description}</p>}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--surface2)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>
-                {s.user.avatarUrl ? <img src={s.user.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : s.user.name[0]}
-              </div>
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{s.user.name}</span>
-              <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 'auto' }}>📝 {s._count.items}問</span>
-            </div>
           </div>
         ))}
       </div>
