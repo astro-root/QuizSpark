@@ -3,16 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
 import { useAuth } from '../context/AuthContext'
-import { Users, Plus, Hash, X, AlertTriangle } from 'lucide-react'
-
-const RULES = [
-  { id:'mon',   name:'m◯n×' },
-  { id:'free',  name:'Free' },
-  { id:'newyork',name:'NewYork' },
-  { id:'updown',name:'Up-Down' },
-  { id:'freeze',name:'Freeze' },
-  { id:'lucky', name:'Lucky Shot' },
-]
+import { Users, Plus, Hash } from 'lucide-react'
 
 export default function FreeLobbyPage() {
   const { user } = useAuth()
@@ -21,15 +12,11 @@ export default function FreeLobbyPage() {
   const [roomIdInput, setRoomIdInput] = useState('')
   const [joinError, setJoinError] = useState('')
   const [creating, setCreating] = useState(false)
-  const [ruleId, setRuleId] = useState('mon')
-  const [questionCount, setQuestionCount] = useState(10)
-  const [isPublic, setIsPublic] = useState(false)
 
   async function handleCreate() {
     if (!user) return
     setCreating(true)
     const roomId = await createRoom(user.name)
-    sessionStorage.setItem('pendingRoomSettings', JSON.stringify({ ruleId, questionCount, isPublic }))
     navigate('/room/' + roomId)
   }
 
@@ -59,11 +46,11 @@ export default function FreeLobbyPage() {
           style={{ width: '100%', padding: '20px 24px', borderRadius: 18, fontSize: 16, fontWeight: 900,
             background: 'linear-gradient(135deg,#0f766e,#14b8a6)', color: '#fff',
             boxShadow: '0 6px 24px rgba(20,184,166,0.3)',
-            display: 'flex', alignItems: 'center', gap: 14, border: 'none', cursor: 'pointer' }}>
+            display: 'flex', alignItems: 'center', gap: 14, border: 'none', cursor: 'pointer', opacity: creating ? 0.7 : 1 }}>
           <Plus size={28} strokeWidth={2.5} />
           <div style={{ textAlign: 'left' }}>
             <p style={{ fontSize: 17, fontWeight: 900 }}>ルームを作る</p>
-            <p style={{ fontSize: 12, fontWeight: 400, opacity: 0.85, marginTop: 2 }}>設定を自由にカスタマイズ</p>
+            <p style={{ fontSize: 12, fontWeight: 400, opacity: 0.85, marginTop: 2 }}>設定はロビーで変更できます</p>
           </div>
         </button>
 
@@ -78,7 +65,7 @@ export default function FreeLobbyPage() {
               onKeyDown={e => e.key === 'Enter' && handleJoin()}
               placeholder="6桁のRoom ID" maxLength={6}
               style={{ flex: 1, minWidth: 0, padding: '12px 16px', background: 'var(--surface2)',
-                border: `1.5px solid ${joinError ? 'var(--wrong)' : 'var(--border)'}`,
+                border: \`1.5px solid \${joinError ? 'var(--wrong)' : 'var(--border)'}\`,
                 borderRadius: 10, fontSize: 16, color: 'var(--text)',
                 fontFamily: 'Orbitron,sans-serif', letterSpacing: 4, textTransform: 'uppercase' }} />
             <button onClick={handleJoin}
@@ -114,3 +101,6 @@ export default function FreeLobbyPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
