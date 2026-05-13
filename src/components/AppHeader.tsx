@@ -37,9 +37,10 @@ export default function AppHeader({ title, back, right, left }: Props) {
           </button>
         ) : (
           <button onClick={() => navigate('/')}
-            style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 16, color: 'var(--accent)', letterSpacing: 1 }}>Quiz</span>
-            <span style={{ fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 16, color: 'var(--text)', letterSpacing: 1 }}>Spark</span>
+            style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 16, letterSpacing: 1 }}>
+              <span style={{ color: 'var(--accent)' }}>Quiz</span><span style={{ color: 'var(--text)' }}>Spark</span>
+            </span>
             <span style={{ fontSize: 16 }}>⚡</span>
           </button>
         ))}
