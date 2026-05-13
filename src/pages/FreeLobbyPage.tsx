@@ -57,7 +57,7 @@ export default function FreeLobbyPage() {
 
       <div className='inner' style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        <button onClick={() => setShowPopup(true)}
+        <button onClick={handleCreate} disabled={creating}
           style={{ width: '100%', padding: '20px 24px', borderRadius: 18, fontSize: 16, fontWeight: 900,
             background: 'linear-gradient(135deg,#0f766e,#14b8a6)', color: '#fff',
             boxShadow: '0 6px 24px rgba(20,184,166,0.3)',

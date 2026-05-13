@@ -102,11 +102,11 @@ export default function RoomChat({ myId }: Props) {
             <input value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
               placeholder="メッセージを入力..."
-              style={{ flex:1, padding:'8px 12px', background:'var(--surface2)', border:'1px solid var(--border)',
+              style={{ flex:1, minWidth:0, padding:'8px 12px', background:'var(--surface2)', border:'1px solid var(--border)',
                 borderRadius:8, fontSize:13, color:'var(--text)' }} />
             <button onClick={submit} disabled={!input.trim()}
               style={{ padding:'8px 12px', borderRadius:8, background:'var(--accent)', color:'#fff',
-                fontSize:13, fontWeight:700, opacity: input.trim() ? 1 : 0.4 }}>
+                fontSize:13, fontWeight:700, opacity: input.trim() ? 1 : 0.4, flexShrink:0 }}>
               送信
             </button>
           </div>
