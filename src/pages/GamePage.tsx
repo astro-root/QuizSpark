@@ -134,7 +134,7 @@ export default function GamePage() {
     buzz()
   }, [buzz])
 
-  if (!roomState) return <div style={{ minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)' }}>接続中...</div>
+  if (!roomState) return <div style={{ minHeight:'100dvh',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)',maxWidth:'var(--w)',margin:'0 auto' }}>接続中...</div>
 
   const { phase, currentQuestion, players, buzzedPlayerName, lastJudgement, currentQuestionIndex, totalQuestions, settings } = roomState
   const isBuzzed = roomState.buzzedPlayerId === myId
@@ -152,7 +152,7 @@ export default function GamePage() {
 
   /* Q番号 */
   if (showQNum) return (
-    <div style={{ minHeight:'100vh',background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:40,padding:24 }}>
+    <div style={{ minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:40,padding:24,maxWidth:'var(--w)',margin:'0 auto' }}>
       <div style={{ textAlign:'center', animation:'qnumIn 0.5s cubic-bezier(.34,1.56,.64,1) both' }}>
         <p style={{ fontFamily:'Orbitron,sans-serif',color:'var(--muted)',fontSize:11,letterSpacing:4,marginBottom:12 }}>QUESTION</p>
         <p style={{ fontFamily:'Orbitron,sans-serif',fontSize:100,fontWeight:900,color:'var(--accent)',lineHeight:1,
@@ -165,7 +165,7 @@ export default function GamePage() {
 
   /* 終了 */
   if (phase==='finished') return (
-    <div style={{ minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px 20px' }}>
+    <div style={{ minHeight:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px 20px',maxWidth:'var(--w)',margin:'0 auto' }}>
       <div style={{ width:'100%',maxWidth:400 }}>
         <div style={{ textAlign:'center',marginBottom:32,animation:'winStar 0.6s cubic-bezier(.34,1.56,.64,1) both' }}>
           <div style={{ fontSize:72 }}>🏆</div>
@@ -205,7 +205,7 @@ export default function GamePage() {
   /* ゲーム */
   return (
     <>
-    <div style={{ minHeight:'100vh',display:'flex',flexDirection:'column',
+    <div style={{ minHeight:'100dvh',display:'flex',flexDirection:'column',maxWidth:'var(--w)',margin:'0 auto',
       animation: screenFlash ? `${screenFlash==='correct'?'correctFlash':'wrongFlash'} 0.6s ease` : undefined,
       paddingBottom: phase==='question' ? 160 : 0 }}>
       {/* ヘッダー */}
@@ -236,7 +236,7 @@ export default function GamePage() {
         </div>
       </div>
 
-      <div style={{ flex:1,maxWidth:480,width:'100%',margin:'0 auto',padding:'16px 20px 40px',display:'flex',flexDirection:'column',gap:12 }}>
+      <div style={{ flex:1,width:'100%',padding:'16px 20px 40px',display:'flex',flexDirection:'column',gap:12 }}>
 
         {/* 問題文 */}
         <div style={{ background:'var(--surface)',borderRadius:14,padding:'22px 20px',minHeight:96,

@@ -72,7 +72,7 @@ export default function LobbyPage() {
   }
 
   if (!roomState) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)' }}>接続中...</div>
+    <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)', maxWidth:'var(--w)', margin:'0 auto' }}>接続中...</div>
   )
 
   const isHost = roomState.hostId === myId
@@ -84,12 +84,12 @@ export default function LobbyPage() {
   function onField(f: keyof GameSettings, val: number) { emit({...local,[f]:val}) }
 
   return (
-    <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column' }}>
+    <div style={{ minHeight:'100dvh', background:'var(--bg)', display:'flex', flexDirection:'column', maxWidth:'var(--w)', margin:'0 auto' }}>
       <AppHeader />
 
       <div style={{ flex:1, overflowY:'auto', padding:'20px 16px 100px' }}>
         {/* PC: 2カラム / SP: 1カラム */}
-        <div style={{ maxWidth:900, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))', gap:16, alignItems:'start' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:16, alignItems:'start' }}>
 
           {/* 左カラム */}
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>

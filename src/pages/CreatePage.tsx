@@ -138,11 +138,11 @@ export default function CreatePage() {
   )
 
   if (view === 'detail' && activeSet) return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
+    <div className='page'>
       <AppHeader title={activeSet.name}
         left={<button onClick={() => setView('list')} style={{ background: 'none', border: 'none', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}><ArrowLeft size={16} /> セット一覧</button>} />
 
-      <div style={{ maxWidth: 520, margin: '0 auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className='inner' style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* 公開設定 */}
         <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 18px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -228,10 +228,10 @@ export default function CreatePage() {
   )
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
+    <div className='page'>
       <AppHeader title="作問" />
 
-      <div style={{ maxWidth: 520, margin: '0 auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className='inner' style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* 新規セット作成 */}
         <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '18px', border: '1px solid var(--border)', display: 'flex', gap: 10 }}>

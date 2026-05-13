@@ -33,14 +33,14 @@ export default function SearchPage() {
   }, [q])
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
+    <div className='page'>
       <AppHeader back title="ユーザー検索" />
       <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         <input autoFocus value={q} onChange={e => setQ(e.target.value)}
           placeholder="名前・ユーザーIDで検索…"
           style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '9px 16px', fontSize: 14, color: 'var(--text)', outline: 'none' }} />
       </div>
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '8px 16px' }}>
+      <div className='inner' style={{ paddingTop: 8 }}>
         {loading && <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32 }}>検索中…</p>}
         {!loading && q && users.length === 0 && <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 32 }}>ユーザーが見つかりません</p>}
         {users.map(u => (

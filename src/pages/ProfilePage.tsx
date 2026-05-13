@@ -29,7 +29,7 @@ export default function ProfilePage() {
   ]
 
   return (
-    <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', paddingBottom:80 }}>
+    <div className='page' style={{ display:'flex', flexDirection:'column' }}>
       <AppHeader title="マイページ" />
 
       <div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
@@ -60,7 +60,7 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      <div style={{ flex:1, maxWidth:640, width:'100%', margin:'0 auto', padding:'16px' }}>
+      <div className='inner'>
         {tab === 'profile' && <ProfileTab />}
         {tab === 'records' && <RecordsTab />}
       </div>

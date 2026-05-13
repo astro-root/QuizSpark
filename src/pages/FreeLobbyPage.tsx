@@ -37,10 +37,10 @@ export default function FreeLobbyPage() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
+    <div className='page'>
       <AppHeader back title="フリーマッチ" />
 
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className='inner' style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* ルーム作成 */}
         <button onClick={handleCreate} disabled={creating}

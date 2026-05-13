@@ -47,7 +47,7 @@ export default function HomePage() {
   }
 
   if (authLoading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--muted)' }}>読み込み中...</div>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--muted)', maxWidth: 'var(--w)', margin: '0 auto' }}>読み込み中...</div>
   )
 
   const headerRight = (
@@ -66,10 +66,10 @@ export default function HomePage() {
   )
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
+    <div className='page'>
       <AppHeader right={headerRight} />
 
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className='inner' style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* ユーザーカード */}
         {user && (

@@ -15,6 +15,7 @@
   --text:     #f8fafc;
   --muted:    #64748b;
   --sub:      #94a3b8;
+  --w:        640px;
 }
 
 [data-theme="light"] {
@@ -37,13 +38,43 @@ html, body, #root {
   transition: background 0.2s, color 0.2s;
 }
 
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
+
 button {
-  font-family: inherit; cursor: pointer; border: none; outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
   transition: opacity .15s, transform .1s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-button:active { transform: scale(0.96); }
-input, select { font-family: inherit; outline: none; font-size: 16px; }
+button:active { transform: scale(0.97); }
+
+input, select, textarea {
+  font-family: inherit;
+  outline: none;
+  font-size: 16px;
+}
 select { cursor: pointer; }
 * { -webkit-text-size-adjust: 100%; }
+
+/* ページ共通ラッパー */
+.page {
+  min-height: 100dvh;
+  background: var(--bg);
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+/* コンテンツ幅制限 */
+.inner {
+  max-width: var(--w);
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.inner-sm {
+  max-width: var(--w);
+  margin: 0 auto;
+}

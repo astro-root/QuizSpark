@@ -59,9 +59,9 @@ export default function RankingPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+    <div className='page' style={{ display: 'flex', flexDirection: 'column' }}>
       <AppHeader title="ランキング" />
-      <div style={{ flex: 1, maxWidth: 600, width: '100%', margin: '0 auto', padding: '16px' }}>
+      <div className='inner'>
 
         {/* 自分の順位（TOP10外の場合） */}
         {displayMyRank && !myInTop10 && (
