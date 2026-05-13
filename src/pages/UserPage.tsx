@@ -96,7 +96,7 @@ export default function UserPage() {
         )}
       </div>
 
-      <div className='inner'>
+      <div className='inner profile-inner'>
         {/* Bio */}
         {profile.bio && (
           <div style={{ background:'var(--surface)', borderRadius:14, padding:'14px 16px', border:'1px solid var(--border)', marginBottom:12 }}>
