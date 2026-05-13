@@ -156,3 +156,11 @@ model QuestionHistory {
   isCorrect  Boolean
   playedAt   DateTime @default(now())
 }
+
+model session {
+  sid    String   @id @db.VarChar
+  sess   Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], name: "IDX_session_expire")
+}
