@@ -78,3 +78,13 @@ select { cursor: pointer; }
   max-width: var(--w);
   margin: 0 auto;
 }
+
+.profile-inner {
+  width: 70%;
+  max-width: 100%;
+}
+@media (max-width: 768px) {
+  .profile-inner {
+    width: 100%;
+  }
+}
