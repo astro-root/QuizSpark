@@ -113,7 +113,7 @@ export default function ChatPage() {
   const selectedUser = convs.find(c => c.user.id === userId)?.user
 
   return (
-    <div style={{ display: 'flex', height: '100dvh', background: 'var(--bg)', maxWidth: 700, margin: '0 auto' }}>
+    <div style={{ display: 'flex', height: '100dvh', background: 'var(--bg)' }}>
 
       {/* 会話リスト */}
       {(!userId || window.innerWidth > 600) && (
