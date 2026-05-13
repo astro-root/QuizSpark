@@ -46,7 +46,7 @@ export default function BottomNav() {
       {tabs.map((t, i) => {
         if (t.fab) return (
           <div key="fab" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <button onClick={() => navigate('/submit')}
+            <button onClick={() => navigate('/create')}
               style={{
                 width: 50, height: 50, borderRadius: '50%',
                 background: 'linear-gradient(135deg,var(--accent),var(--accent2))',

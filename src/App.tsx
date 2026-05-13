@@ -21,6 +21,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const SearchPage       = lazy(() => import('./pages/SearchPage'))
 const QuestionSetPage  = lazy(() => import('./pages/QuestionSetPage'))
 const FreeLobbyPage    = lazy(() => import('./pages/FreeLobbyPage'))
+const CreatePage       = lazy(() => import('./pages/CreatePage'))
 
 function Fallback() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/match" element={<MatchPage />} />
             <Route path="/lobby" element={<FreeLobbyPage />} />
+            <Route path="/create" element={<CreatePage />} />
             <Route path="/room/:roomId" element={<LobbyPage />} />
             <Route path="/room/:roomId/game" element={<GamePage />} />
             <Route path="/submit" element={<SubmitPage />} />
