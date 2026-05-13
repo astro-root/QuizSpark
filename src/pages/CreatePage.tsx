@@ -3,7 +3,7 @@ import AppHeader from '../components/AppHeader'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Plus, Trash2, Upload, ChevronRight, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, Upload, ChevronRight, ArrowLeft, Send } from 'lucide-react'
 
 interface QSet { id: string; name: string; isPublic: boolean; _count: { items: number } }
 interface QItem { id: number; text: string; answer: string; displayAnswer: string }
@@ -88,6 +88,17 @@ export default function CreatePage() {
       setSets(s => s.map(x => x.id === activeSet!.id ? { ...x, _count: { items: x._count.items + 1 } } : x))
     }
     setAdding(false)
+  }
+
+  async function submitItem(item: QItem) {
+    if (!confirm(`「${item.text}」を公開問題として投稿しますか？`)) return
+    const r = await apiFetch('/api/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: item.text, answer: item.answer, answers: [item.answer], displayAnswer: item.displayAnswer, genre: 'ノンジャンル' }),
+    })
+    if (r.ok) alert('投稿しました。審査後に公開されます。')
+    else alert('投稿に失敗しました')
   }
 
   async function deleteItem(itemId: number) {
@@ -199,6 +210,11 @@ export default function CreatePage() {
                   <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.5 }}>{item.text}</p>
                   <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>答え: {item.displayAnswer}（{item.answer}）</p>
                 </div>
+                <button onClick={() => submitItem(item)}
+                  title="公開問題として投稿"
+                  style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 4, flexShrink: 0 }}>
+                  <Send size={14} />
+                </button>
                 <button onClick={() => deleteItem(item.id)}
                   style={{ background: 'none', border: 'none', color: 'var(--wrong)', cursor: 'pointer', padding: 4, flexShrink: 0 }}>
                   <Trash2 size={15} />
@@ -213,11 +229,7 @@ export default function CreatePage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 80 }}>
-      <AppHeader title="作問" right={
-        <a href="/submit" style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', textDecoration: 'none', padding: '6px 12px' }}>
-          問題を投稿する
-        </a>
-      } />
+      <AppHeader title="作問" />
 
       <div style={{ maxWidth: 520, margin: '0 auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
