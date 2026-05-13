@@ -23,40 +23,41 @@ export default function AppHeader({ title, back, right, left }: Props) {
       position: 'sticky', top: 0, zIndex: 100,
       background: 'var(--surface)',
       borderBottom: '1px solid var(--border)',
+      display: 'flex',
+      alignItems: 'center',
+      height: 56,
+      padding: '0 12px',
     }}>
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        height: 52,
-        maxWidth: 'var(--w)',
-        margin: '0 auto',
-        padding: '0 4px',
-      }}>
-        <div style={{ width: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {left ?? (back !== undefined ? (
-            <button onClick={handleBack}
-              style={{ background: 'none', border: 'none', padding: 8, borderRadius: 8, color: 'var(--text)', display: 'flex' }}>
-              <ChevronLeft size={22} />
-            </button>
-          ) : (
-            <button onClick={() => navigate('/')}
-              style={{ background: 'none', border: 'none', padding: '4px 8px', fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 15, color: 'var(--accent)' }}>
-              QS⚡
-            </button>
-          ))}
-        </div>
+      {/* 左 */}
+      <div style={{ width: 120, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        {left ?? (back !== undefined ? (
+          <button onClick={handleBack}
+            style={{ background: 'none', border: 'none', padding: '8px 4px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+            <ChevronLeft size={22} />
+          </button>
+        ) : (
+          <button onClick={() => navigate('/')}
+            style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 16, color: 'var(--accent)', letterSpacing: 1 }}>Quiz</span>
+            <span style={{ fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 16, color: 'var(--text)', letterSpacing: 1 }}>Spark</span>
+            <span style={{ fontSize: 16 }}>⚡</span>
+          </button>
+        ))}
+      </div>
 
-        <div style={{ flex: 1, textAlign: 'center' }}>
-          {title && <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{title}</span>}
-        </div>
+      {/* 中央 */}
+      <div style={{ flex: 1, textAlign: 'center' }}>
+        {title && <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{title}</span>}
+      </div>
 
-        <div style={{ width: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {right ?? (
-            <button onClick={toggle}
-              style={{ background: 'none', border: 'none', padding: 8, borderRadius: 8, color: 'var(--muted)', display: 'flex' }}>
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-          )}
-        </div>
+      {/* 右 */}
+      <div style={{ width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}>
+        {right ?? (
+          <button onClick={toggle}
+            style={{ background: 'none', border: 'none', padding: 8, color: 'var(--muted)', display: 'flex', cursor: 'pointer' }}>
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        )}
       </div>
     </header>
   )
