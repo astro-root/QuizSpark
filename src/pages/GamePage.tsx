@@ -56,6 +56,7 @@ export default function GamePage() {
   const { roomState, myId, buzz, submitAnswer, resetGame, isHost, syncState } = useSocketContext()
   const navigate = useNavigate()
   const [answer, setAnswer] = useState('')
+  const isComposing = useRef(false)
   useEffect(() => { if (roomId) syncState(roomId) }, [roomId])
   const inputRef = useRef<HTMLInputElement>(null)
   const countdown = useCountdown(roomState?.timerEndsAt ?? null)
@@ -296,6 +297,8 @@ export default function GamePage() {
             {isBuzzed && (
               <div style={{ display:'flex',flexDirection:'column',gap:10,animation:'shake 0.3s ease' }}>
                 <input ref={inputRef} value={answer} onChange={e=>setAnswer(e.target.value)}
+                  onCompositionStart={()=>{ isComposing.current=true }}
+                  onCompositionEnd={e=>{ isComposing.current=false; setAnswer((e.target as HTMLInputElement).value) }}
                   onKeyDown={e=>{ if(e.key==='Enter'&&!e.nativeEvent.isComposing) submit() }}
                   placeholder="ひらがなで入力"
                   autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false}
