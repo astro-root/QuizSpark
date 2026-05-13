@@ -2,7 +2,7 @@ import { apiFetch } from '../lib/api'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
-import { Home, Swords, Search, MessageCircle, Bell, User, Plus } from 'lucide-react'
+import { Home, Search, Trophy, MessageCircle, User, Plus } from 'lucide-react'
 
 export default function BottomNav() {
   const navigate = useNavigate()
@@ -29,7 +29,7 @@ export default function BottomNav() {
 
   const tabs = [
     { path: '/',       Icon: Home,          label: 'ホーム' },
-    { path: '/search', Icon: Search,        label: '検索' },
+    { path: '/ranking', Icon: Trophy,        label: 'ランキング' },
     { path: null,      Icon: Plus,          label: '作問', fab: true },
     { path: '/chat',   Icon: MessageCircle, label: 'チャット', badge: unread },
     { path: '/profile',Icon: User,          label: 'マイページ' },

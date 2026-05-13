@@ -38,7 +38,7 @@ export default function MatchmakingModal({ onClose }: Props) {
       <div style={{ background:'var(--surface)', borderRadius:20, padding:'36px 28px', width:'100%', maxWidth:360, border:'1px solid var(--border)', textAlign:'center' }}>
         <div style={{ fontSize:60, marginBottom:16, display:'inline-block', animation:'spin 1.8s linear infinite' }}>⚡</div>
         <p style={{ fontWeight:900, fontSize:22, marginBottom:8 }}>対戦相手を探しています</p>
-        <p style={{ color:'var(--muted)', fontSize:13, marginBottom:4 }}>○○問形式　5◯2× 10問</p>
+        <p style={{ color:'var(--muted)', fontSize:13, marginBottom:4 }}>5◯2× 30問形式</p>
         <p style={{ color:'var(--accent)', fontSize:32, fontWeight:900, fontFamily:'Orbitron,sans-serif', margin:'20px 0' }}>
           {String(Math.floor(elapsed/60)).padStart(2,'0')}:{String(elapsed%60).padStart(2,'0')}
         </p>

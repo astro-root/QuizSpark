@@ -18,9 +18,7 @@ function getRankEmoji(rate: number) {
 export default function SearchPage() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
-  const [tab, setTab] = useState<'users' | 'sets'>('users')
   const [users, setUsers] = useState<UserResult[]>([])
-  const [sets, setSets] = useState<SetResult[]>([])
   const [loading, setLoading] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>()
 
@@ -31,7 +29,7 @@ export default function SearchPage() {
     timer.current = setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(q)}`, { credentials: 'include' })
         .then(r => r.json())
-        .then(d => { setUsers(d.users ?? []); setSets(d.sets ?? []) })
+        .then(d => setUsers(d.users ?? []))
         .finally(() => setLoading(false))
     }, 300)
   }, [q])
