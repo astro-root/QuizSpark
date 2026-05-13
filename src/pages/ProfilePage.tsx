@@ -3,13 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import AppHeader from '../components/AppHeader'
-import { User, BookOpen, Trophy } from 'lucide-react'
+import { User, Trophy } from 'lucide-react'
 import ProfileTab from '../components/profile/ProfileTab'
-import SetsTab from '../components/profile/SetsTab'
 import RecordsTab from '../components/profile/RecordsTab'
 import { useState } from 'react'
 
-type Tab = 'profile' | 'sets' | 'records'
+type Tab = 'profile' | 'records'
 
 export default function ProfilePage() {
   const { user, authLoading } = useAuth()
@@ -25,9 +24,8 @@ export default function ProfilePage() {
   if (!user) return null
 
   const tabs = [
-    { key: 'profile' as Tab, Icon: User,     label: 'プロフィール' },
-    { key: 'sets'    as Tab, Icon: BookOpen, label: '問題セット' },
-    { key: 'records' as Tab, Icon: Trophy,   label: '戦績' },
+    { key: 'profile' as Tab, Icon: User,   label: 'プロフィール' },
+    { key: 'records' as Tab, Icon: Trophy, label: '戦績' },
   ]
 
   return (
@@ -64,7 +62,6 @@ export default function ProfilePage() {
 
       <div style={{ flex:1, maxWidth:640, width:'100%', margin:'0 auto', padding:'16px' }}>
         {tab === 'profile' && <ProfileTab />}
-        {tab === 'sets'    && <SetsTab />}
         {tab === 'records' && <RecordsTab />}
       </div>
     </div>
