@@ -171,6 +171,7 @@ export default function HomePage() {
               ))}
             </div>
             {authTab === 'register' && (
+              <>
               <div style={{ marginBottom: 14 }}>
                 <p style={lbl}>名前</p>
                 <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="ニックネーム" style={inp} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
@@ -183,6 +184,7 @@ export default function HomePage() {
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>3〜20文字・英数字とアンダースコアのみ</p>
               </div>
+              </>
             )}
             <div style={{ marginBottom: 14 }}>
               <p style={lbl}>メールアドレス</p>
