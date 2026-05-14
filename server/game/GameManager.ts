@@ -45,6 +45,7 @@ class GameManager {
     const t = setTimeout(() => {
       const s = this.rooms.get(roomId)
       if (!s || s.phase !== 'question') return
+      console.log(`[Skip] fired roomId=${roomId} idx=${s.currentQuestionIndex}`)
       const skipped = skipQuestion(s)
       this.rooms.set(roomId, skipped)
       this.broadcast(roomId)
