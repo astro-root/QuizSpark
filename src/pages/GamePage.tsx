@@ -124,7 +124,7 @@ export default function GamePage() {
   }, [countdown, roomState?.phase])
 
   const twActive = !showQNum && roomState?.phase==='question'
-  const { displayed: qText, done: twDone } = useTypewriter(roomState?.currentQuestion?.text ?? '', twActive, 120, roomState?.questionStartedAt)
+  const { displayed: qText, done: twDone } = useTypewriter(roomState?.currentQuestion?.text ?? '', twActive, 120)
 
   const qTextRef = useRef('')
   const [frozen, setFrozen] = useState('')
