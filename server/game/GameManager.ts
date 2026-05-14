@@ -40,8 +40,8 @@ class GameManager {
   private startBuzzTimer(roomId: string) {
     this.clearTimer(roomId)
     const state = this.rooms.get(roomId)
-    // timerEndsAt に合わせて待つ（Q表示+タイプライター+5秒）
     const delay = state?.timerEndsAt ? Math.max(0, state.timerEndsAt - Date.now()) : BUZZ_TIMEOUT_MS
+    console.log(`[BuzzTimer] roomId=${roomId} delay=${delay}ms timerEndsAt=${state?.timerEndsAt} now=${Date.now()}`)
     const t = setTimeout(() => {
       const s = this.rooms.get(roomId)
       if (!s || s.phase !== 'question') return
