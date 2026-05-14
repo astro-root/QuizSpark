@@ -159,7 +159,9 @@ export function applyAnswer(
   if (state.buzzedPlayerId !== playerId) return { nextState: state, correct: false }
 
   const actual = normalizeAnswer(rawAnswer)
-  const acceptedAnswers = state.currentQuestion?.answers ?? [state.currentQuestion?.answer ?? '']
+  const acceptedAnswers = (state.currentQuestion?.answers?.length ?? 0) > 0
+    ? state.currentQuestion!.answers
+    : [state.currentQuestion?.answer ?? '']
   const correct = acceptedAnswers.some((a) => normalizeAnswer(a) === actual)
 
   const rule = getRuleDef(state.settings.ruleId)
