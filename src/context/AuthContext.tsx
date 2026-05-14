@@ -8,7 +8,7 @@ interface AuthCtx {
   loading: boolean
   loginWithGoogle: () => void
   loginWithPassword: (email: string, password: string) => Promise<string | null>
-  register: (name: string, email: string, password: string) => Promise<string | null>
+  register: (name: string, email: string, password: string, username?: string) => Promise<string | null>
   updateProfile: (name: string, bio?: string, username?: string) => Promise<string | null>
   updateAvatar: (file: File) => Promise<string | null>
   deleteAvatar: () => Promise<void>
@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data); return null
   }
 
-  const register = async (name: string, email: string, password: string) => {
-    const r = await apiFetch('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) })
+  const register = async (name: string, email: string, password: string, username?: string) => {
+    const r = await apiFetch('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, username }) })
     const data = await r.json()
     if (!r.ok) return data.error as string
     setUser(data); return null

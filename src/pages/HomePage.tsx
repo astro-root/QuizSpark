@@ -20,6 +20,7 @@ export default function HomePage() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authName, setAuthName] = useState('')
+  const [authUsername, setAuthUsername] = useState('')
   const [authError, setAuthError] = useState('')
   const [showMatchmaking, setShowMatchmaking] = useState(false)
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
@@ -33,10 +34,11 @@ export default function HomePage() {
   }, [authLoading, user])
 
   async function handleAuth() {
+    if (authTab === 'register' && !authUsername.trim()) { setAuthError('ユーザーIDを入力してください'); return }
     setAuthError('')
     const err = authTab === 'login'
       ? await loginWithPassword(authEmail, authPassword)
-      : await register(authName, authEmail, authPassword)
+      : await register(authName, authEmail, authPassword, authUsername)
     if (err) setAuthError(err)
     else setShowAuth(false)
   }
@@ -172,6 +174,14 @@ export default function HomePage() {
               <div style={{ marginBottom: 14 }}>
                 <p style={lbl}>名前</p>
                 <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="ニックネーム" style={inp} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <p style={lbl}>ユーザーID（@ID）<span style={{ color: 'var(--wrong)', marginLeft: 4 }}>必須</span></p>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', fontSize: 15 }}>@</span>
+                  <input value={authUsername} onChange={e => setAuthUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} placeholder="your_id" style={{ ...inp, paddingLeft: 28 }} onKeyDown={e => e.key === 'Enter' && handleAuth()} maxLength={20} />
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>3〜20文字・英数字とアンダースコアのみ</p>
               </div>
             )}
             <div style={{ marginBottom: 14 }}>
