@@ -58,9 +58,11 @@ export default function GamePage() {
   const [answer, setAnswer] = useState('')
   const [prematchCountdown, setPrematchCountdown] = useState(5)
   const isComposing = useRef(false)
+  const isMatchmakingGame = useRef(false)
   useEffect(() => { if (roomId) syncState(roomId) }, [roomId])
   useEffect(() => {
     if (!prematchInfo) return
+    isMatchmakingGame.current = true
     setPrematchCountdown(Math.ceil(prematchInfo.startsIn / 1000))
     const iv = setInterval(() => {
       setPrematchCountdown(n => {
@@ -149,7 +151,12 @@ export default function GamePage() {
     prevPhase2.current = ph
   }, [roomState?.phase, roomState?.lastJudgement, roomState?.currentQuestion?.text])
 
-  useEffect(() => { if (roomState?.phase==='lobby' && !prematchInfo) navigate('/room/'+roomId,{replace:true}) }, [roomState?.phase, roomId, navigate, prematchInfo])
+  useEffect(() => {
+    if (prematchInfo && roomState?.phase !== 'lobby') setPrematchInfo(null)
+  }, [roomState?.phase])
+  useEffect(() => {
+    if (roomState?.phase==='lobby' && !isMatchmakingGame.current) navigate('/room/'+roomId,{replace:true})
+  }, [roomState?.phase, roomId, navigate])
   useEffect(() => {
     if (roomState?.phase==='answering' && roomState.buzzedPlayerId===myId) {
       setAnswer(''); setTimeout(() => inputRef.current?.focus(), 100)
@@ -195,12 +202,9 @@ export default function GamePage() {
   /* 終了 */
 
   // プレマッチ画面
-  if (prematchInfo) {
+  if (prematchInfo && roomState?.phase === 'lobby') {
     const { myPlayer, opponent } = prematchInfo
-    const myResult = roomState?.players.find(p => p.id === myId)?.status
-    if (roomState?.phase !== 'lobby' && roomState?.phase !== 'question') {
-      // ゲーム開始したらprematch非表示
-    } else return (
+    return (
       <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center',
         background:'linear-gradient(135deg,#0f0c29,#302b63,#24243e)', padding:'24px' }}>
         <div style={{ width:'100%', maxWidth:480 }}>
@@ -309,7 +313,7 @@ export default function GamePage() {
           ))}
         </div>
         <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
-          {isHost && (
+          {isHost && !isMatchmakingGame.current && (
             <button onClick={resetGame} style={{ width:'100%',padding:'15px',background:'linear-gradient(135deg,var(--accent),var(--accent2))',color:'#fff',borderRadius:12,fontSize:15,fontWeight:700,border:'none',boxShadow:'0 4px 16px rgba(99,102,241,0.35)' }}>
               もう一度遊ぶ
             </button>
