@@ -9,9 +9,11 @@ const Q_DISPLAY_MS = 1500
 const TYPEWRITER_SPEED_MS = 120
 
 export function normalizeAnswer(input: string): string {
-  let s = input
+  let s = input.trim()
+  // カタカナ→ひらがな
   s = s.replace(/[\u30A1-\u30F6]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
-  s = s.replace(/[^\u3041-\u3096a-zA-Z]/g, '')
+  // ひらがな・英数字以外を除去（長音符ーも除去）
+  s = s.replace(/[^\u3041-\u309Fa-zA-Z0-9]/g, '')
   return s.toLowerCase()
 }
 
@@ -162,6 +164,7 @@ export function applyAnswer(
   const acceptedAnswers = (state.currentQuestion?.answers?.length ?? 0) > 0
     ? state.currentQuestion!.answers
     : [state.currentQuestion?.answer ?? '']
+  console.log('[Judge] actual:', actual, 'accepted:', acceptedAnswers.map(a => normalizeAnswer(a)))
   const correct = acceptedAnswers.some((a) => normalizeAnswer(a) === actual)
 
   const rule = getRuleDef(state.settings.ruleId)
