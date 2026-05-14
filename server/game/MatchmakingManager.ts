@@ -115,5 +115,5 @@ async function createMatch(host: QueueEntry, guest: QueueEntry) {
   if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId], [hostStats, guestStats])
 
   // 6秒後にゲーム開始（prematch画面表示時間）
-  setTimeout(() => { gameManager.startGame(roomId) }, 6000)
+  setTimeout(() => { gameManager.startGame(roomId) }, 5500)
 }

@@ -214,7 +214,7 @@ export default function GamePage() {
               MATCH FOUND
             </p>
             <p style={{ color:'#fff', fontSize:16, fontWeight:700 }}>
-              {prematchCountdown > 0 ? `${prematchCountdown}秒後にスタート` : 'スタート！'}
+              {prematchCountdown > 0 ? `${prematchCountdown}秒後にスタート` : '読み込み中...'}
             </p>
           </div>
           {/* VS */}
