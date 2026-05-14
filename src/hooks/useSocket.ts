@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { socket } from '../lib/socket'
-import type { RoomState, GameSettings, PublicRoom } from '../types'
+import type { RoomState, GameSettings, PublicRoom, PrematchInfo, RateResult } from '../types'
 
 export function useSocket() {
   const [roomState, setRoomState] = useState<RoomState | null>(null)
@@ -9,6 +9,8 @@ export function useSocket() {
   const [reconnecting, setReconnecting] = useState(false)
   const [publicRooms, setPublicRooms] = useState<PublicRoom[]>([])
 
+  const [prematchInfo, setPrematchInfo] = useState<PrematchInfo | null>(null)
+  const [rateResult, setRateResult] = useState<RateResult | null>(null)
   const savedRoomId = useRef<string | null>(null)
   const savedName = useRef<string | null>(null)
 
@@ -42,6 +44,8 @@ export function useSocket() {
     socket.on('reconnect_attempt', onReconnectAttempt)
     socket.on('room-update', onRoomUpdate)
     socket.on('public-rooms', onPublicRooms)
+    socket.on('prematch-info', setPrematchInfo)
+    socket.on('rate-result', setRateResult)
 
     if (!socket.connected) socket.connect()
 
@@ -51,6 +55,8 @@ export function useSocket() {
       socket.off('reconnect_attempt', onReconnectAttempt)
       socket.off('room-update', onRoomUpdate)
       socket.off('public-rooms', onPublicRooms)
+      socket.off('prematch-info', setPrematchInfo)
+      socket.off('rate-result', setRateResult)
     }
   }, [])
 
@@ -89,7 +95,7 @@ export function useSocket() {
   const isHost = roomState?.hostId === myId
 
   return {
-    roomState, myId, connected, reconnecting, isHost, publicRooms,
+    roomState, myId, connected, reconnecting, isHost, publicRooms, prematchInfo, rateResult, setPrematchInfo, setRateResult,
     createRoom, joinRoom, updateSettings, resetGame, startGame, buzz, submitAnswer,
     joinQueue, leaveQueue, sendChat, syncState, socket,
   }

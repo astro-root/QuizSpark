@@ -53,11 +53,23 @@ function playTone(freq: number, type: OscillatorType = 'sine', gain = 0.2, durat
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId:string }>()
-  const { roomState, myId, buzz, submitAnswer, resetGame, isHost, syncState } = useSocketContext()
+  const { roomState, myId, buzz, submitAnswer, resetGame, isHost, syncState, prematchInfo, rateResult, setPrematchInfo, setRateResult } = useSocketContext()
   const navigate = useNavigate()
   const [answer, setAnswer] = useState('')
+  const [prematchCountdown, setPrematchCountdown] = useState(5)
   const isComposing = useRef(false)
   useEffect(() => { if (roomId) syncState(roomId) }, [roomId])
+  useEffect(() => {
+    if (!prematchInfo) return
+    setPrematchCountdown(Math.ceil(prematchInfo.startsIn / 1000))
+    const iv = setInterval(() => {
+      setPrematchCountdown(n => {
+        if (n <= 1) { clearInterval(iv); return 0 }
+        return n - 1
+      })
+    }, 1000)
+    return () => clearInterval(iv)
+  }, [prematchInfo])
   const inputRef = useRef<HTMLInputElement>(null)
   const countdown = useCountdown(roomState?.timerEndsAt ?? null)
 
@@ -137,7 +149,7 @@ export default function GamePage() {
     prevPhase2.current = ph
   }, [roomState?.phase, roomState?.lastJudgement, roomState?.currentQuestion?.text])
 
-  useEffect(() => { if (roomState?.phase==='lobby') navigate('/room/'+roomId,{replace:true}) }, [roomState?.phase, roomId, navigate])
+  useEffect(() => { if (roomState?.phase==='lobby' && !prematchInfo) navigate('/room/'+roomId,{replace:true}) }, [roomState?.phase, roomId, navigate, prematchInfo])
   useEffect(() => {
     if (roomState?.phase==='answering' && roomState.buzzedPlayerId===myId) {
       setAnswer(''); setTimeout(() => inputRef.current?.focus(), 100)
@@ -181,6 +193,69 @@ export default function GamePage() {
   )
 
   /* 終了 */
+
+  // プレマッチ画面
+  if (prematchInfo) {
+    const { myPlayer, opponent } = prematchInfo
+    const myResult = roomState?.players.find(p => p.id === myId)?.status
+    if (roomState?.phase !== 'lobby' && roomState?.phase !== 'question') {
+      // ゲーム開始したらprematch非表示
+    } else return (
+      <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center',
+        background:'linear-gradient(135deg,#0f0c29,#302b63,#24243e)', padding:'24px' }}>
+        <div style={{ width:'100%', maxWidth:480 }}>
+          {/* カウントダウン */}
+          <div style={{ textAlign:'center', marginBottom:32 }}>
+            <p style={{ color:'rgba(255,255,255,0.5)', fontSize:13, fontWeight:700, letterSpacing:3, textTransform:'uppercase', marginBottom:8 }}>
+              MATCH FOUND
+            </p>
+            <p style={{ color:'#fff', fontSize:16, fontWeight:700 }}>
+              {prematchCountdown > 0 ? `${prematchCountdown}秒後にスタート` : 'スタート！'}
+            </p>
+          </div>
+          {/* VS */}
+          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+            {[myPlayer, opponent].map((pl, i) => (
+              <div key={pl.id} style={{ flex:1, background:'rgba(255,255,255,0.06)', borderRadius:16, padding:'20px 16px', textAlign:'center',
+                border: i===0 ? '1.5px solid rgba(99,102,241,0.5)' : '1.5px solid rgba(244,63,94,0.4)' }}>
+                <div style={{ width:64, height:64, borderRadius:'50%', margin:'0 auto 12px',
+                  background:'rgba(255,255,255,0.1)', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28 }}>
+                  {pl.avatarUrl
+                    ? <img src={pl.avatarUrl} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                    : '👤'}
+                </div>
+                <p style={{ color:'#fff', fontWeight:800, fontSize:15, marginBottom:4 }}>{pl.name}</p>
+                <p style={{ color:'rgba(255,255,255,0.6)', fontSize:22, fontWeight:900, marginBottom:8 }}>{pl.rate}</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  {pl.winStreak > 0 && (
+                    <span style={{ background:'rgba(251,191,36,0.15)', color:'#fbbf24', borderRadius:6, fontSize:12, fontWeight:700, padding:'3px 8px' }}>
+                      🔥 {pl.winStreak}連勝中
+                    </span>
+                  )}
+                  <span style={{ color:'rgba(255,255,255,0.35)', fontSize:11 }}>
+                    {i===0 ? 'あなた' : '相手'}
+                  </span>
+                </div>
+              </div>
+            ))}
+            <div style={{ position:'absolute', left:'50%', transform:'translateX(-50%)',
+              background:'linear-gradient(135deg,var(--accent),var(--accent2))', borderRadius:'50%',
+              width:40, height:40, display:'flex', alignItems:'center', justifyContent:'center',
+              color:'#fff', fontWeight:900, fontSize:14, boxShadow:'0 0 24px rgba(99,102,241,0.5)' }}>
+              VS
+            </div>
+          </div>
+          {/* プログレスバー */}
+          <div style={{ marginTop:28, height:4, background:'rgba(255,255,255,0.1)', borderRadius:2, overflow:'hidden' }}>
+            <div style={{ height:'100%', background:'var(--accent)', borderRadius:2,
+              width: `${((prematchInfo.startsIn/1000 - prematchCountdown) / (prematchInfo.startsIn/1000)) * 100}%`,
+              transition:'width 1s linear' }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (phase==='finished') return (
     <div style={{ minHeight:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px 20px',maxWidth:'var(--w)',margin:'0 auto' }}>
       <div style={{ width:'100%',maxWidth:400 }}>
@@ -188,6 +263,36 @@ export default function GamePage() {
           <div style={{ fontSize:72 }}>🏆</div>
           <p style={{ fontFamily:'Orbitron,sans-serif',fontSize:22,fontWeight:900,color:'var(--gold)',marginTop:8,
             textShadow:'0 0 20px rgba(251,191,36,0.6)' }}>GAME OVER</p>
+
+      {/* レートResult オーバーレイ */}
+      {rateResult && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100, padding:24 }}>
+          <div style={{ background:'var(--surface)', borderRadius:20, padding:'36px 32px', textAlign:'center', maxWidth:320, width:'100%',
+            boxShadow:'0 0 60px rgba(99,102,241,0.3)', animation:'slideUp 0.5s ease' }}>
+            <p style={{ fontSize:13, fontWeight:700, color:'var(--muted)', letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>RESULT</p>
+            <p style={{ fontSize:52, fontWeight:900, marginBottom:4,
+              color: rateResult.result==='WIN' ? 'var(--correct)' : 'var(--wrong)',
+              textShadow: rateResult.result==='WIN' ? '0 0 30px rgba(16,185,129,0.5)' : '0 0 30px rgba(244,63,94,0.5)' }}>
+              {rateResult.result==='WIN' ? '勝利' : '敗北'}
+            </p>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, margin:'20px 0' }}>
+              <span style={{ fontSize:28, fontWeight:900, color:'var(--muted)' }}>{rateResult.oldRate}</span>
+              <span style={{ fontSize:18, color:'var(--muted)' }}>→</span>
+              <span style={{ fontSize:36, fontWeight:900, color:'var(--text)' }}>{rateResult.newRate}</span>
+            </div>
+            <p style={{ fontSize:22, fontWeight:900, marginBottom:24,
+              color: rateResult.delta > 0 ? 'var(--correct)' : 'var(--wrong)' }}>
+              {rateResult.delta > 0 ? `+${rateResult.delta}` : rateResult.delta}
+            </p>
+            <button onClick={() => { setRateResult(null); setPrematchInfo(null) }}
+              style={{ width:'100%', padding:'13px', borderRadius:12, fontSize:15, fontWeight:800,
+                background:'linear-gradient(135deg,var(--accent),var(--accent2))', color:'#fff', border:'none', cursor:'pointer' }}>
+              結果を見る
+            </button>
+          </div>
+        </div>
+      )}
+
         </div>
         <div style={{ display:'flex',flexDirection:'column',gap:8,marginBottom:28 }}>
           {sorted.map((p,i) => (

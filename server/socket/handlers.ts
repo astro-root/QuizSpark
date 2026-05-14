@@ -34,17 +34,24 @@ let finishCallbackSet = false
 function ensureMatchCallback(io: IoServer) {
   if (matchCallbackSet) return
   matchCallbackSet = true
-  setOnMatch((roomId, playerIds) => {
-    for (const pid of playerIds) {
+  setOnMatch((roomId, playerIds, stats) => {
+    playerIds.forEach((pid, idx) => {
       io.sockets.sockets.forEach(s => {
         if (s.id === pid) {
           s.data.roomId = roomId
           s.data.playerId = pid
           s.join(roomId)
           s.emit('match-found', roomId)
+          if (stats) {
+            s.emit('prematch-info', {
+              myPlayer: stats[idx],
+              opponent: stats[1 - idx],
+              startsIn: 6000,
+            })
+          }
         }
       })
-    }
+    })
     const state = gameManager.getRoom(roomId)
     if (state) io.to(roomId).emit('room-update', state)
   })
@@ -88,18 +95,27 @@ function setupFinishHandler(io: IoServer) {
           }
         }
         const rateTargets = data.filter(d => d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
+        const rateResultMap = new Map<string, { result: string; oldRate: number; newRate: number; delta: number }>()
         if (rateTargets.length > 0) {
           await prisma.$transaction(async (tx) => {
             for (const d of rateTargets) {
               const delta = d.result === 'WIN' ? 30 : -20
               const user = await tx.user.findUnique({ where: { id: d.userId! }, select: { rate: true } })
               if (!user) continue
-              await tx.user.update({
-                where: { id: d.userId! },
-                data: { rate: Math.max(0, user.rate + delta) }
-              })
+              const oldRate = user.rate
+              const newRate = Math.max(0, user.rate + delta)
+              await tx.user.update({ where: { id: d.userId! }, data: { rate: newRate } })
+              rateResultMap.set(d.userId!, { result: d.result, oldRate, newRate, delta })
             }
           })
+        }
+        // rate-result を各プレイヤーに送信
+        for (const p of state.players) {
+          const pSocket = io.sockets.sockets.get(p.id)
+          const userId = pSocket?.data?.dbUserId ?? null
+          if (!userId || !pSocket) continue
+          const rr = rateResultMap.get(userId)
+          if (rr) pSocket.emit('rate-result', rr as any)
         }
       }
     } catch (e) {

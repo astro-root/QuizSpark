@@ -62,6 +62,25 @@ export interface PublicRoom {
   questionCount: number
 }
 
+export interface PrematchPlayer {
+  id: string
+  name: string
+  avatarUrl: string | null
+  rate: number
+  titleId: string | null
+  winStreak: number
+}
+export interface PrematchInfo {
+  myPlayer: PrematchPlayer
+  opponent: PrematchPlayer
+  startsIn: number
+}
+export interface RateResult {
+  result: 'WIN' | 'LOSE'
+  oldRate: number
+  newRate: number
+  delta: number
+}
 export interface ServerToClientEvents {
   'room-update': (state: RoomState) => void
   'match-found': (roomId: string) => void
@@ -70,6 +89,8 @@ export interface ServerToClientEvents {
   'buzz-accepted': (playerId: string, playerName: string) => void
   error: (message: string) => void
   'public-rooms': (rooms: PublicRoom[]) => void
+  'prematch-info': (info: PrematchInfo) => void
+  'rate-result': (result: RateResult) => void
 }
 
 export interface MatchmakingEntry {

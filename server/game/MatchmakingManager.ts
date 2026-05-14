@@ -1,22 +1,23 @@
 import { gameManager } from './GameManager'
 import { prisma } from '../lib/prisma'
+import type { PrematchPlayer } from '../../src/types'
 
 interface QueueEntry {
   playerId: string
   playerName: string
   rate: number
+  dbUserId?: string
   joinedAt: number
 }
 
 const queue: QueueEntry[] = []
-type OnMatchFn = (roomId: string, playerIds: string[]) => void
+type OnMatchFn = (roomId: string, playerIds: string[], stats: PrematchPlayer[]) => void
 let onMatchCallback: OnMatchFn | null = null
 
 export function setOnMatch(fn: OnMatchFn) {
   onMatchCallback = fn
 }
 
-// レート差の許容範囲（待機時間に応じて拡大）
 function rateRange(waitMs: number): number {
   if (waitMs < 15000) return 200
   if (waitMs < 30000) return 400
@@ -24,57 +25,40 @@ function rateRange(waitMs: number): number {
 }
 
 export async function joinQueue(playerId: string, playerName: string, dbUserId?: string) {
-  // 既存エントリ削除
   const idx = queue.findIndex(e => e.playerId === playerId)
   if (idx >= 0) queue.splice(idx, 1)
 
-  // レート取得（DBユーザーがいれば）
   let rate = 1000
   if (dbUserId) {
     const u = await prisma.user.findUnique({ where: { id: dbUserId }, select: { rate: true } })
     if (u) rate = u.rate
   }
 
-  const entry: QueueEntry = { playerId, playerName, rate, joinedAt: Date.now() }
-  queue.push(entry)
-
+  queue.push({ playerId, playerName, rate, dbUserId, joinedAt: Date.now() })
   tryMatch()
 }
 
 function tryMatch() {
   if (queue.length < 2) return
-
   const now = Date.now()
-
-  // 各エントリについて最も近いレートの相手を探す
   let bestI = -1, bestJ = -1, bestDiff = Infinity
 
   for (let i = 0; i < queue.length; i++) {
     for (let j = i + 1; j < queue.length; j++) {
       const a = queue[i], b = queue[j]
       const diff = Math.abs(a.rate - b.rate)
-      const waitA = now - a.joinedAt
-      const waitB = now - b.joinedAt
-      const allowedRange = Math.min(rateRange(waitA), rateRange(waitB))
-      if (diff <= allowedRange && diff < bestDiff) {
-        bestDiff = diff
-        bestI = i
-        bestJ = j
-      }
+      const allowed = Math.min(rateRange(now - a.joinedAt), rateRange(now - b.joinedAt))
+      if (diff <= allowed && diff < bestDiff) { bestDiff = diff; bestI = i; bestJ = j }
     }
   }
 
-  if (bestI < 0) return // マッチなし
-
-  // インデックスが大きい方から削除しないとズレる
+  if (bestI < 0) return
   const [a, b] = [queue[bestI], queue[bestJ]]
   queue.splice(bestJ, 1)
   queue.splice(bestI, 1)
-
   createMatch(a, b)
 }
 
-// 定期的に待機中プレイヤーを再チェック（範囲が拡大した可能性があるため）
 setInterval(() => { if (queue.length >= 2) tryMatch() }, 5000)
 
 export function leaveQueue(playerId: string) {
@@ -82,14 +66,36 @@ export function leaveQueue(playerId: string) {
   if (idx >= 0) queue.splice(idx, 1)
 }
 
-export function getQueueSize(): number {
-  return queue.length
+export function getQueueSize(): number { return queue.length }
+
+async function fetchStats(entry: QueueEntry): Promise<PrematchPlayer> {
+  let avatarUrl: string | null = null
+  let titleId: string | null = null
+  let winStreak = 0
+
+  if (entry.dbUserId) {
+    const u = await prisma.user.findUnique({
+      where: { id: entry.dbUserId },
+      select: { avatarUrl: true, titleId: true }
+    })
+    if (u) { avatarUrl = u.avatarUrl; titleId = u.titleId }
+
+    const records = await prisma.battleRecord.findMany({
+      where: { userId: entry.dbUserId },
+      orderBy: { playedAt: 'desc' },
+      take: 30,
+      select: { result: true }
+    })
+    for (const r of records) {
+      if (r.result === 'WIN') winStreak++
+      else break
+    }
+  }
+
+  return { id: entry.playerId, name: entry.playerName, rate: entry.rate, avatarUrl, titleId, winStreak }
 }
 
-function createMatch(
-  host: QueueEntry,
-  guest: QueueEntry
-) {
+async function createMatch(host: QueueEntry, guest: QueueEntry) {
   const roomId = gameManager.createRoom(host.playerId, host.playerName)
   gameManager.updateSettings(roomId, host.playerId, {
     ruleId: 'mon',
@@ -102,6 +108,11 @@ function createMatch(
   })
   const err = gameManager.joinRoom(roomId, guest.playerId, guest.playerName)
   if (err) { console.error('[Matchmaking] join failed:', err); return }
-  gameManager.startGame(roomId)
-  if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId])
+
+  const [hostStats, guestStats] = await Promise.all([fetchStats(host), fetchStats(guest)])
+
+  if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId], [hostStats, guestStats])
+
+  // 6秒後にゲーム開始（prematch画面表示時間）
+  setTimeout(() => { gameManager.startGame(roomId) }, 6000)
 }
