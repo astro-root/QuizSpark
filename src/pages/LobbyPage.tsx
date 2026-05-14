@@ -100,7 +100,7 @@ export default function LobbyPage() {
 
   return (
     <div style={{ minHeight:'100dvh', background:'var(--bg)', display:'flex', flexDirection:'column', maxWidth:'var(--w)', margin:'0 auto' }}>
-      <AppHeader />
+      <AppHeader back title="ルームロビー" />
 
       <div style={{ flex:1, overflowY:'auto', padding:'20px 16px 100px' }}>
         {/* PC: 2カラム / SP: 1カラム */}
