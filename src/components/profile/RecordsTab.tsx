@@ -2,7 +2,7 @@ import { apiFetch } from '../../lib/api'
 import { useState, useEffect } from 'react'
 
 interface Stats { total: number; wins: number; winRate: number; totalCorrect: number; totalWrong: number }
-interface Record { id: string; result: string; ruleId: string; playerCount: number; playedAt: string; correct: number; wrong: number }
+interface Record { id: string; result: string; ruleId: string; playerCount: number; isMatchmaking?: boolean; playedAt: string; correct: number; wrong: number }
 
 export default function RecordsTab() {
   const [stats, setStats] = useState<Stats>({ total:0, wins:0, winRate:0, totalCorrect:0, totalWrong:0 })
@@ -59,7 +59,9 @@ export default function RecordsTab() {
                 {r.result==='WIN' ? '🥇' : r.result==='LOSE' ? '💀' : '🎮'}
               </span>
               <div style={{ flex:1 }}>
-                <p style={{ fontSize:13, fontWeight:700 }}>{r.ruleId.toUpperCase()}</p>
+                <p style={{ fontSize:13, fontWeight:700 }}>
+                  {r.isMatchmaking ? 'ランダムマッチ' : (({'mon':'m○n×','free':'フリー','newyork':'ニューヨーク','updown':'アップダウン','by':'BY','freeze':'フリーズ','swedish':'スウェーデン','divide':'ディバイド','lucky':'ラッキー','rensei':'連勝','rengou':'連合','combo':'コンボ'} as Record<string,string>)[r.ruleId] ?? r.ruleId.toUpperCase())}
+                </p>
                 <p style={{ fontSize:11, color:'var(--muted)' }}>
                   {r.playerCount}人 · {new Date(r.playedAt).toLocaleDateString('ja-JP')}
                 </p>

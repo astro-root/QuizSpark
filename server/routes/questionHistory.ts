@@ -4,8 +4,8 @@ import { prisma } from '../lib/prisma'
 const router = Router()
 
 router.get('/me', async (req, res) => {
-  const userId = (req.session as any)?.passport?.user
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  if (!req.user) { res.status(401).json({ error: '未ログイン' }); return }
+  const userId = (req.user as any).id
   const history = await prisma.questionHistory.findMany({
     where: { userId },
     orderBy: { playedAt: 'desc' },

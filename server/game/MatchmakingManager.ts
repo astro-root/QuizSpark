@@ -108,6 +108,7 @@ async function createMatch(host: QueueEntry, guest: QueueEntry) {
   })
   const err = gameManager.joinRoom(roomId, guest.playerId, guest.playerName)
   if (err) { console.error('[Matchmaking] join failed:', err); return }
+  gameManager.setMatchmaking(roomId)
 
   const [hostStats, guestStats] = await Promise.all([fetchStats(host), fetchStats(guest)])
 

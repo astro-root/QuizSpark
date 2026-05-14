@@ -71,6 +71,7 @@ function setupFinishHandler(io: IoServer) {
           userId,
           roomId: state.id,
           ruleId: state.settings?.ruleId ?? 'free',
+          isMatchmaking: !!(state.isMatchmaking),
           result: p.status === 'WIN' ? 'WIN' : p.status === 'LOSE' ? 'LOSE' : 'ACTIVE',
           correct: (p.ruleState?.correct as number) ?? 0,
           wrong: (p.ruleState?.wrong as number) ?? 0,

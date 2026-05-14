@@ -188,6 +188,7 @@ class GameManager {
 
   getRoom(roomId: string): RoomState | undefined { return this.rooms.get(roomId) }
   setCustomQuestions(roomId: string, questions: import('../../src/types').Question[]) { this.customQuestionsMap.set(roomId, questions) }
+  setMatchmaking(roomId: string) { const s = this.rooms.get(roomId); if (s) this.rooms.set(roomId, { ...s, isMatchmaking: true }) }
   getCustomQuestions(roomId: string) { return this.customQuestionsMap.get(roomId) }
   getPublicRooms() {
     return [...this.rooms.values()]
