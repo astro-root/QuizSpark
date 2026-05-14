@@ -34,6 +34,9 @@ export default function HomePage() {
   }, [authLoading, user])
 
   async function handleAuth() {
+    if (!authEmail.trim()) { setAuthError('メールアドレスを入力してください'); return }
+    if (!authPassword.trim()) { setAuthError('パスワードを入力してください'); return }
+    if (authTab === 'register' && !authName.trim()) { setAuthError('名前を入力してください'); return }
     if (authTab === 'register' && !authUsername.trim()) { setAuthError('ユーザーIDを入力してください'); return }
     setAuthError('')
     const err = authTab === 'login'
@@ -188,7 +191,7 @@ export default function HomePage() {
             )}
             <div style={{ marginBottom: 14 }}>
               <p style={lbl}>メールアドレス</p>
-              <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="you@example.com" style={inp} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
+              <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="メールアドレス または @ユーザーID" style={inp} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
             </div>
             <div style={{ marginBottom: 16 }}>
               <p style={lbl}>パスワード{authTab === 'register' ? '（8文字以上）' : ''}</p>
