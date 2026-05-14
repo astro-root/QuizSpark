@@ -58,6 +58,7 @@ class GameManager {
     this.clearTimer(roomId)
     const t = setTimeout(() => {
       const state = this.rooms.get(roomId)
+      console.log(`[AnswerTimer] fired roomId=${roomId} phase=${state?.phase} buzzedId=${state?.buzzedPlayerId}`)
       if (!state || state.phase !== 'answering') return
       const { nextState } = applyAnswer(state, state.buzzedPlayerId ?? '', '')
       this.rooms.set(roomId, nextState)
