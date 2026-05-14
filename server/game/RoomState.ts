@@ -161,9 +161,10 @@ export function applyAnswer(
   if (state.buzzedPlayerId !== playerId) return { nextState: state, correct: false }
 
   const actual = normalizeAnswer(rawAnswer)
-  const acceptedAnswers = (state.currentQuestion?.answers?.length ?? 0) > 0
-    ? state.currentQuestion!.answers
-    : [state.currentQuestion?.answer ?? '']
+  // answerフィールド（ひらがな）は必ず含める
+  const base = state.currentQuestion?.answer ?? ''
+  const arr = state.currentQuestion?.answers ?? []
+  const acceptedAnswers = [...new Set([base, ...arr].filter(Boolean))]
   console.log('[Judge] actual:', actual, 'accepted:', acceptedAnswers.map(a => normalizeAnswer(a)))
   const correct = acceptedAnswers.some((a) => normalizeAnswer(a) === actual)
 
