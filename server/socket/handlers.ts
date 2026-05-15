@@ -128,6 +128,7 @@ function setupFinishHandler(io: IoServer) {
 export function registerHandlers(io: IoServer, socket: IoSocket) {
   ensureMatchCallback(io)
   setupFinishHandler(io)
+  socket.emit('public-rooms', gameManager.getPublicRooms())
 
   const dbUserId = (socket.request as any).user?.id
   if (dbUserId) socket.data.dbUserId = dbUserId
