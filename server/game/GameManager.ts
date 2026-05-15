@@ -125,6 +125,7 @@ class GameManager {
     if (!state || state.phase !== 'lobby') return false
     const next = advanceQuestion(state, this.customQuestionsMap.get(roomId))
     this.rooms.set(roomId, next)
+    this.broadcast(roomId)
     if (next.phase === 'question') this.startBuzzTimer(roomId)
     return true
   }
