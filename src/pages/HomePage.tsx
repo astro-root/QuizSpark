@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { Shuffle, Users, Sun, Moon, Settings, Swords } from 'lucide-react'
+import { Shuffle, Users, Sun, Moon, Settings, Swords, Zap, Star } from 'lucide-react'
 import MatchmakingModal from '../components/MatchmakingModal'
 import AppHeader from '../components/AppHeader'
 
@@ -77,44 +77,77 @@ export default function HomePage() {
 
       <div className='inner' style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* ユーザーカード */}
+        {/* プレイヤーHUD */}
         {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)' }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,var(--accent),var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#fff', flexShrink: 0, overflow: 'hidden' }}>
-              {user.avatarUrl ? <img src={user.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : user.name[0]}
+          <div style={{ position: 'relative', padding: '16px', background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--border)', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,58,237,0.18) 0%,transparent 70%)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--accent),var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: '#fff', overflow: 'hidden', boxShadow: '0 0 0 3px rgba(124,58,237,0.35)' }}>
+                  {user.avatarUrl ? <img src={user.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : user.name[0]}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 900, fontSize: 16, marginBottom: 2 }}>{user.name}</p>
+                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', background: 'rgba(124,58,237,0.15)', padding: '2px 8px', borderRadius: 20 }}>{getTitleById((user as any)?.titleId).label}</span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, letterSpacing: 1 }}>RATE</p>
+                <p style={{ fontSize: 26, fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>{(user as any)?.rate ?? 0}</p>
+              </div>
             </div>
-            <div>
-              <p style={{ fontWeight: 800, fontSize: 15 }}>{user.name}</p>
-              <p style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{getTitleById((user as any)?.titleId).label}</p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {[
+                { label: '対戦', value: stats.total },
+                { label: '勝利', value: stats.wins },
+                { label: '正解', value: stats.correct },
+              ].map(s => (
+                <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '8px 4px', background: 'var(--surface2)', borderRadius: 10 }}>
+                  <p style={{ fontSize: 16, fontWeight: 900 }}>{s.value}</p>
+                  <p style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700 }}>{s.label}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* ランダムマッチ */}
-        <button onClick={() => user ? setShowMatchmaking(true) : setShowAuth(true)}
-          style={{ width: '100%', padding: '20px 24px', borderRadius: 18, fontSize: 16, fontWeight: 900,
-            background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff',
-            boxShadow: '0 6px 24px rgba(124,58,237,0.35)',
-            display: 'flex', alignItems: 'center', gap: 14, border: 'none', cursor: 'pointer' }}>
-          <Shuffle size={28} strokeWidth={2.5} />
-          <div style={{ textAlign: 'left' }}>
-            <p style={{ fontSize: 17, fontWeight: 900 }}>ランダムマッチ</p>
-            <p style={{ fontSize: 12, fontWeight: 400, opacity: 0.85, marginTop: 2 }}>今すぐ対戦開始</p>
-          </div>
-        </button>
+        {/* バトルボタン */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button onClick={() => user ? setShowMatchmaking(true) : setShowAuth(true)}
+            style={{ width: '100%', padding: '0', borderRadius: 20, border: 'none', cursor: 'pointer', overflow: 'hidden', position: 'relative',
+              background: 'linear-gradient(135deg,#4c1d95,#7c3aed,#a855f7)',
+              boxShadow: '0 8px 32px rgba(124,58,237,0.45)' }}>
+            <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+            <div style={{ position: 'absolute', bottom: -20, left: 20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 24px', position: 'relative' }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Shuffle size={26} color="#fff" strokeWidth={2.5} />
+              </div>
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <p style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 0.5 }}>ランダムマッチ</p>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 3 }}>レーティング戦・今すぐ対戦</p>
+              </div>
+              <Zap size={20} color="rgba(255,255,255,0.5)" />
+            </div>
+          </button>
 
-        {/* フリーマッチ */}
-        <button onClick={() => navigate('/lobby')}
-          style={{ width: '100%', padding: '20px 24px', borderRadius: 18, fontSize: 16, fontWeight: 900,
-            background: 'linear-gradient(135deg,#0f766e,#14b8a6)', color: '#fff',
-            boxShadow: '0 6px 24px rgba(20,184,166,0.3)',
-            display: 'flex', alignItems: 'center', gap: 14, border: 'none', cursor: 'pointer' }}>
-          <Swords size={28} strokeWidth={2.5} />
-          <div style={{ textAlign: 'left' }}>
-            <p style={{ fontSize: 17, fontWeight: 900 }}>フリーマッチ</p>
-            <p style={{ fontSize: 12, fontWeight: 400, opacity: 0.85, marginTop: 2 }}>ルーム作成・参加</p>
-          </div>
-        </button>
+          <button onClick={() => navigate('/lobby')}
+            style={{ width: '100%', padding: '0', borderRadius: 20, border: 'none', cursor: 'pointer', overflow: 'hidden', position: 'relative',
+              background: 'linear-gradient(135deg,#064e3b,#0f766e,#14b8a6)',
+              boxShadow: '0 8px 32px rgba(20,184,166,0.3)' }}>
+            <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 24px', position: 'relative' }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Swords size={26} color="#fff" strokeWidth={2.5} />
+              </div>
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <p style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 0.5 }}>フリーマッチ</p>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 3 }}>ルーム作成・フレンドと対戦</p>
+              </div>
+              <Star size={20} color="rgba(255,255,255,0.5)" />
+            </div>
+          </button>
+        </div>
 
         {/* お知らせ */}
         {announcements.length > 0 && (
