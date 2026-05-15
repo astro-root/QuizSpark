@@ -25,11 +25,11 @@ export default function BottomNav() {
   if (pathname.includes('/room/')) return null
 
   const tabs = [
-    { path: '/',        Icon: Home,          label: 'ホーム' },
-    { path: '/ranking', Icon: Trophy,        label: 'ランキング' },
-    { path: null,       Icon: PenLine,       label: '作問',   fab: true },
-    { path: '/chat',    Icon: MessageCircle, label: 'チャット', badge: unread },
-    { path: '/profile', Icon: User,          label: 'マイページ' },
+    { path: '/',        Icon: Home,          label: 'ホーム',    color: '#7c3aed' },
+    { path: '/ranking', Icon: Trophy,        label: 'ランキング', color: '#f59e0b' },
+    { path: null,       Icon: PenLine,       label: '作問',      color: '#fff', fab: true },
+    { path: '/chat',    Icon: MessageCircle, label: 'チャット',   color: '#10b981', badge: unread },
+    { path: '/profile', Icon: User,          label: 'マイページ', color: '#38bdf8' },
   ]
 
   return (
@@ -38,27 +38,24 @@ export default function BottomNav() {
       background: 'var(--surface)',
       borderTop: '1px solid var(--border)',
       paddingBottom: 'env(safe-area-inset-bottom)',
+      boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
     }}>
-      <div style={{
-        display: 'flex',
-        maxWidth: 'var(--w)',
-        margin: '0 auto',
-      }}>
+      <div style={{ display: 'flex', maxWidth: 'var(--w)', margin: '0 auto' }}>
         {tabs.map((t) => {
           if (t.fab) return (
-            <div key="fab" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: '10px 0 8px' }}>
+            <div key="fab" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: '8px 0 10px' }}>
               <button onClick={() => navigate('/create')}
                 style={{
-                  width: 46, height: 46, borderRadius: '50%',
-                  background: 'linear-gradient(135deg,var(--accent),var(--accent2))',
+                  width: 52, height: 52, borderRadius: '50%',
+                  background: 'linear-gradient(135deg,#7c3aed,#6d28d9)',
                   color: '#fff', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(56,189,248,0.4)',
-                  transform: 'translateY(-8px)',
+                  boxShadow: '0 4px 16px rgba(124,58,237,0.5)',
+                  transform: 'translateY(-10px)',
                 }}>
-                <PenLine size={20} strokeWidth={2.5} />
+                <PenLine size={22} strokeWidth={2.5} />
               </button>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginTop: -4 }}>作問</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', marginTop: -6 }}>作問</span>
             </div>
           )
 
@@ -68,15 +65,29 @@ export default function BottomNav() {
             <button key={t.path} onClick={() => navigate(t.path!)}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', padding: '10px 0 8px', gap: 4,
+                justifyContent: 'center', padding: '10px 0 10px', gap: 4,
                 background: 'none', border: 'none', cursor: 'pointer',
+                position: 'relative',
               }}>
-              <span style={{ position: 'relative' }}>
+              {active && (
+                <span style={{
+                  position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+                  width: 32, height: 3, borderRadius: '0 0 4px 4px',
+                  background: t.color,
+                }} />
+              )}
+              <span style={{
+                position: 'relative',
+                width: 36, height: 36, borderRadius: 10,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: active ? `${t.color}22` : 'transparent',
+                transition: 'all .2s',
+              }}>
                 <Icon size={22} strokeWidth={active ? 2.5 : 1.8}
-                  color={active ? 'var(--accent)' : 'var(--muted)'} />
+                  color={active ? t.color : 'var(--muted)'} />
                 {(t.badge ?? 0) > 0 && (
                   <span style={{
-                    position: 'absolute', top: -5, right: -7,
+                    position: 'absolute', top: 2, right: 2,
                     background: '#e53e3e', color: '#fff',
                     borderRadius: 99, fontSize: 9, fontWeight: 800,
                     padding: '1px 4px', lineHeight: 1.4, minWidth: 14, textAlign: 'center'
@@ -85,7 +96,11 @@ export default function BottomNav() {
                   </span>
                 )}
               </span>
-              <span style={{ fontSize: 10, fontWeight: active ? 700 : 400, color: active ? 'var(--accent)' : 'var(--muted)' }}>
+              <span style={{
+                fontSize: 10, fontWeight: active ? 800 : 500,
+                color: active ? t.color : 'var(--muted)',
+                transition: 'all .2s',
+              }}>
                 {t.label}
               </span>
             </button>

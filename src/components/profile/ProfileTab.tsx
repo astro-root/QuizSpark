@@ -1,4 +1,5 @@
 import { apiFetch } from '../../lib/api'
+import { useNavigate } from 'react-router-dom'
 import { useState, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
@@ -7,6 +8,8 @@ const inp: React.CSSProperties = { width:'100%', padding:'13px 16px', background
 
 export default function ProfileTab() {
   const { user, updateProfile, updateAvatar, deleteAvatar, logout } = useAuth()
+  const navigate = useNavigate()
+  const isAdmin = !!(user as any)?.isAdmin
   const avatarRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(user?.name ?? '')
   const [bio, setBio] = useState((user as any)?.bio ?? '')
@@ -82,6 +85,18 @@ export default function ProfileTab() {
         </button>
       </div>
 
+      <div style={{ display:'flex', gap:8 }}>
+        <button onClick={() => navigate('/contact')}
+          style={{ flex:1, padding:'13px', borderRadius:12, fontSize:13, fontWeight:700, background:'var(--surface)', color:'var(--sub)', border:'1px solid var(--border)' }}>
+          📩 お問い合わせ
+        </button>
+        {isAdmin && (
+          <button onClick={() => navigate('/admin')}
+            style={{ flex:1, padding:'13px', borderRadius:12, fontSize:13, fontWeight:700, background:'rgba(251,191,36,0.1)', color:'#f59e0b', border:'1px solid rgba(251,191,36,0.3)' }}>
+            ⚙️ 管理者
+          </button>
+        )}
+      </div>
       <button onClick={logout}
         style={{ padding:'14px', borderRadius:12, fontSize:14, fontWeight:700, background:'rgba(239,68,68,0.08)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>
         ログアウト
