@@ -95,7 +95,9 @@ function setupFinishHandler(io: IoServer) {
             await prisma.questionHistory.deleteMany({ where: { id: { in: all.slice(10).map(h => h.id) } } })
           }
         }
+        console.log('[Rate] data:', JSON.stringify(data.map(d => ({userId:d.userId,result:d.result,isMatchmaking:d.isMatchmaking}))))
         const rateTargets = data.filter(d => d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
+        console.log('[Rate] targets:', rateTargets.length)
         const rateResultMap = new Map<string, { result: string; oldRate: number; newRate: number; delta: number }>()
         if (rateTargets.length > 0) {
           await prisma.$transaction(async (tx) => {
