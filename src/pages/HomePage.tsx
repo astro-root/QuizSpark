@@ -24,10 +24,17 @@ export default function HomePage() {
   const [authError, setAuthError] = useState('')
   const [showMatchmaking, setShowMatchmaking] = useState(false)
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
+  const [stats, setStats] = useState({ total: 0, wins: 0, correct: 0 })
 
   useEffect(() => {
     apiFetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
   }, [])
+  useEffect(() => {
+    if (!user) return
+    apiFetch('/api/records/me').then(r => r.ok ? r.json() : null).then(d => {
+      if (d) setStats({ total: d.stats.total, wins: d.stats.wins, correct: d.stats.totalCorrect })
+    }).catch(() => {})
+  }, [user])
 
   useEffect(() => {
     if (!authLoading && !user) setShowAuth(true)
