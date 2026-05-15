@@ -40,7 +40,7 @@ router.get('/google/callback',
 router.get('/me', (req, res) => {
   if (!req.user) { res.status(401).json(null); return }
   const u = req.user as any
-  res.json({ id: u.id, name: u.name, avatarUrl: u.avatarUrl, isAdmin: u.isAdmin, bio: u.bio, username: u.username, titleId: u.titleId })
+  res.json({ id: u.id, name: u.name, avatarUrl: u.avatarUrl, isAdmin: u.isAdmin, bio: u.bio, username: u.username, titleId: u.titleId, rate: u.rate })
 })
 
 router.post('/avatar', upload.single('avatar'), async (req, res) => {
@@ -52,7 +52,7 @@ router.post('/avatar', upload.single('avatar'), async (req, res) => {
       where: { id: (req.user as any).id },
       data: { avatarUrl: url },
     })
-    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin, titleId: user.titleId })
+    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin, titleId: user.titleId, rate: (user as any).rate ?? 0 })
   } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 
@@ -63,7 +63,7 @@ router.delete('/avatar', async (req, res) => {
       where: { id: (req.user as any).id },
       data: { avatarUrl: null },
     })
-    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin, titleId: user.titleId })
+    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin, titleId: user.titleId, rate: (user as any).rate ?? 0 })
   } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 
@@ -80,7 +80,7 @@ router.patch('/profile', async (req, res) => {
       where: { id: (req.user as any).id },
       data: { name: name.trim(), bio: bio?.trim() || null, username: username?.trim() || null, titleId: titleId ?? undefined },
     })
-    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin, titleId: user.titleId })
+    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin, titleId: user.titleId, rate: (user as any).rate ?? 0 })
   } catch (e: any) {
     if (e.code === 'P2002') { res.status(400).json({ error: 'そのユーザーIDは既に使われています' }); return }
     res.status(500).json({ error: 'サーバーエラー' })

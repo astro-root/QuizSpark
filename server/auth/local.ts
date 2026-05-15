@@ -35,7 +35,7 @@ router.post('/register', async (req, res) => {
   })
   req.login(user, (err) => {
     if (err) { res.status(500).json({ error: 'ログインに失敗しました' }); return }
-    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, isAdmin: user.isAdmin, bio: user.bio, username: user.username, titleId: (user as any).titleId })
+    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, isAdmin: user.isAdmin, bio: user.bio, username: user.username, titleId: (user as any).titleId, rate: (user as any).rate ?? 0 })
   })
 })
 
@@ -59,7 +59,7 @@ router.post('/login', async (req, res) => {
 
   req.login(user, (err) => {
     if (err) { res.status(500).json({ error: 'ログインに失敗しました' }); return }
-    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, isAdmin: user.isAdmin, bio: user.bio, username: user.username, titleId: (user as any).titleId })
+    res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, isAdmin: user.isAdmin, bio: user.bio, username: user.username, titleId: (user as any).titleId, rate: (user as any).rate ?? 0 })
   })
 })
 
