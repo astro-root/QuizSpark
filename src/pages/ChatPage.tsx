@@ -117,16 +117,30 @@ export default function ChatPage() {
   const selectedUser = convs.find(c => c.user.id === userId)?.user
 
   return (
-    <div style={{ display: 'flex', height: '100dvh', background: 'var(--bg)', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: 'var(--bg)', width: '100%' }}>
+      {/* ヘッダー：デスクトップは1本、モバイルは状況に応じて */}
+      {isWide ? (
+        <div style={{ display: 'flex', height: 56, background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <div style={{ width: 220, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderRight: '1px solid var(--border)' }}>
+            <span style={{ fontWeight: 900, fontSize: 15 }}>チャット</span>
+            <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 4 }}><Search size={18} /></button>
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 16px' }}>
+            {selectedUser && <span style={{ fontWeight: 800, fontSize: 15 }}>{selectedUser.name}</span>}
+          </div>
+        </div>
+      ) : userId ? (
+        <AppHeader title={selectedUser?.name ?? '...'} back="/chat" />
+      ) : (
+        <AppHeader title="チャット" right={
+          <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 4 }}><Search size={20} /></button>
+        } />
+      )}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
       {/* 会話リスト */}
       {(!userId || isWide) && (
-        <div style={{ width: userId ? 220 : '100%', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-          <AppHeader title="チャット" right={
-            <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 4 }}>
-              <Search size={20} />
-            </button>
-          } />
+        <div style={{ width: isWide && userId ? 220 : isWide ? 260 : '100%', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           {convs.length === 0 && (
             <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 32 }}>
               フォロー中のユーザーが<br />いません
@@ -154,9 +168,8 @@ export default function ChatPage() {
 
       {/* メッセージペイン */}
       {userId ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {!isWide && <AppHeader title={selectedUser?.name ?? '...'} back="/chat" />}
-          {isWide && <div style={{ height:56, display:'flex', alignItems:'center', padding:'0 16px', borderBottom:'1px solid var(--border)', fontWeight:800, fontSize:15 }}>{selectedUser?.name ?? '...'}</div>}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {msgs.map(m => {
               const mine = m.fromId === user?.id
@@ -192,6 +205,7 @@ export default function ChatPage() {
           </div>
         </div>
       ) : null}
+      </div>
 
       {/* 検索ポップアップ */}
       {showSearch && (
