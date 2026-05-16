@@ -1,4 +1,5 @@
 import { apiFetch } from '../lib/api'
+import { TITLES } from '../lib/titles'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -33,6 +34,12 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserSummary[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null)
+  const [editRate, setEditRate] = useState('')
+  const [editTitle, setEditTitle] = useState('')
+  const [notifTarget, setNotifTarget] = useState<'user'|'all'>('user')
+  const [notifTitle, setNotifTitle] = useState('')
+  const [notifBody, setNotifBody] = useState('')
+  const [notifStatus, setNotifStatus] = useState('')
   const [newTitle, setNewTitle] = useState('')
   const [newBody, setNewBody] = useState('')
   const [userSearch, setUserSearch] = useState('')
@@ -77,6 +84,23 @@ export default function AdminPage() {
   }
   async function toggleAnnouncement(id: number, active: boolean) {
     await apiFetch(`/api/admin/announcements/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active }) }); fetchAnnouncements()
+  }
+  async function updateRate(id: string) {
+    const r = await apiFetch(`/api/admin/users/${id}/rate`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ rate: editRate }) })
+    if (r.ok) { alert('レートを更新しました'); fetchUserDetail(id) }
+    else alert('更新失敗')
+  }
+  async function updateTitle(id: string) {
+    const r = await apiFetch(`/api/admin/users/${id}/title`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ titleId: editTitle || null }) })
+    if (r.ok) { alert('称号を更新しました'); fetchUserDetail(id) }
+    else alert('更新失敗')
+  }
+  async function sendNotification(id: string) {
+    if (!notifTitle.trim() || !notifBody.trim()) { alert('タイトルと本文を入力してください'); return }
+    const userIds = notifTarget === 'all' ? 'all' : [id]
+    const r = await apiFetch('/api/admin/notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ userIds, title: notifTitle, body: notifBody }) })
+    if (r.ok) { const d = await r.json(); setNotifStatus(`✓ ${d.sent}人に送信しました`); setNotifTitle(''); setNotifBody(''); setTimeout(() => setNotifStatus(''), 3000) }
+    else setNotifStatus('❌ 送信失敗')
   }
   async function fetchUserDetail(id: string) {
     const r = await apiFetch(`/api/admin/users/${id}`); if (r.ok) setSelectedUser(await r.json())
@@ -293,6 +317,55 @@ export default function AdminPage() {
                     border: `1px solid ${selectedUser.isAdmin ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}` }}>
                   {selectedUser.isAdmin ? '管理者権限を剥奪' : '管理者権限を付与'}
                 </button>
+
+                {/* レート・称号編集 */}
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:12, padding:'12px', background:'var(--surface2)', borderRadius:10, border:'1px solid var(--border)' }}>
+                  <p style={{ fontWeight:800, fontSize:12, color:'var(--muted)', letterSpacing:1 }}>レート・称号編集</p>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <input type="number" value={editRate} onChange={e => setEditRate(e.target.value)}
+                      style={{ flex:1, padding:'8px 10px', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:8, fontSize:14, color:'var(--text)' }} />
+                    <button onClick={() => updateRate(selectedUser.id)}
+                      style={{ padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'rgba(124,58,237,0.15)', color:'var(--accent)', border:'1px solid rgba(124,58,237,0.3)' }}>
+                      レート更新
+                    </button>
+                  </div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <select value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                      style={{ flex:1, padding:'8px 10px', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:8, fontSize:13, color:'var(--text)' }}>
+                      <option value="">称号なし</option>
+                      {TITLES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    </select>
+                    <button onClick={() => updateTitle(selectedUser.id)}
+                      style={{ padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'rgba(251,191,36,0.1)', color:'var(--gold)', border:'1px solid rgba(251,191,36,0.3)' }}>
+                      称号更新
+                    </button>
+                  </div>
+                </div>
+
+                {/* 個人通知送信 */}
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:12, padding:'12px', background:'var(--surface2)', borderRadius:10, border:'1px solid var(--border)' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <p style={{ fontWeight:800, fontSize:12, color:'var(--muted)', letterSpacing:1 }}>通知送信</p>
+                    <div style={{ display:'flex', gap:4 }}>
+                      {(['user','all'] as const).map(t => (
+                        <button key={t} onClick={() => setNotifTarget(t)}
+                          style={{ padding:'3px 10px', borderRadius:6, fontSize:11, fontWeight:700, border:'none', cursor:'pointer',
+                            background: notifTarget===t ? 'var(--accent)' : 'var(--border)', color: notifTarget===t ? '#fff' : 'var(--muted)' }}>
+                          {t==='user' ? 'この1人' : '全員'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <input value={notifTitle} onChange={e => setNotifTitle(e.target.value)} placeholder="タイトル"
+                    style={{ padding:'8px 10px', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:8, fontSize:13, color:'var(--text)' }} />
+                  <textarea value={notifBody} onChange={e => setNotifBody(e.target.value)} placeholder="本文" rows={2}
+                    style={{ padding:'8px 10px', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:8, fontSize:13, color:'var(--text)', resize:'vertical', fontFamily:'inherit' }} />
+                  <button onClick={() => sendNotification(selectedUser.id)}
+                    style={{ padding:'9px', borderRadius:8, fontSize:13, fontWeight:700, background:'linear-gradient(135deg,var(--accent),var(--accent2))', color:'#fff', border:'none' }}>
+                    送信
+                  </button>
+                  {notifStatus && <p style={{ fontSize:12, color: notifStatus.startsWith('✓') ? 'var(--correct)' : 'var(--wrong)' }}>{notifStatus}</p>}
+                </div>
 
                 <p style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>直近の対戦</p>
                 <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:200, overflowY:'auto' }}>

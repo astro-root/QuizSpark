@@ -114,6 +114,49 @@ router.patch('/users/:id/admin', async (req, res) => {
   } catch { res.status(404).json({ error: 'ユーザーが見つかりません' }) }
 })
 
+
+router.patch('/users/:id/rate', async (req, res) => {
+  try {
+    const rate = parseInt(req.body.rate)
+    if (isNaN(rate) || rate < 0) { res.status(400).json({ error: '無効な値' }); return }
+    res.json(await prisma.user.update({
+      where: { id: req.params.id },
+      data: { rate },
+      select: { id: true, name: true, rate: true }
+    }))
+  } catch { res.status(404).json({ error: 'ユーザーが見つかりません' }) }
+})
+
+router.patch('/users/:id/title', async (req, res) => {
+  try {
+    const titleId = req.body.titleId ?? null
+    res.json(await prisma.user.update({
+      where: { id: req.params.id },
+      data: { titleId },
+      select: { id: true, name: true, titleId: true }
+    }))
+  } catch { res.status(404).json({ error: 'ユーザーが見つかりません' }) }
+})
+
+router.post('/notifications', async (req, res) => {
+  try {
+    const { userIds, title, body, type } = req.body
+    if (!title?.trim() || !body?.trim()) { res.status(400).json({ error: '必須項目不足' }); return }
+    const targetIds: string[] = userIds === 'all'
+      ? (await prisma.user.findMany({ select: { id: true } })).map((u: {id:string}) => u.id)
+      : Array.isArray(userIds) ? userIds : []
+    if (targetIds.length === 0) { res.status(400).json({ error: '送信先がいません' }); return }
+    await prisma.notification.createMany({
+      data: targetIds.map((userId: string) => ({
+        userId,
+        type: type || 'admin',
+        data: JSON.stringify({ title: title.trim(), body: body.trim() }),
+        read: false,
+      }))
+    })
+    res.json({ sent: targetIds.length })
+  } catch (e) { res.status(500).json({ error: 'サーバーエラー' }) }
+})
 router.get('/contacts', async (_req, res) => {
   try {
     res.json(await prisma.contact.findMany({ orderBy: { createdAt: 'desc' } }))

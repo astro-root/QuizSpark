@@ -10,7 +10,17 @@ interface FromUser { id: string; name: string; avatarUrl: string | null }
 function typeLabel(type: string, data: string | null) {
   if (type === 'dm') return `💬 メッセージ: ${data ?? ''}`
   if (type === 'follow') return '👤 フォローされました'
+  if (type === 'admin') {
+    try { const d = JSON.parse(data ?? '{}'); return `📢 ${d.title ?? ''}` } catch { return '📢 お知らせ' }
+  }
   return data ?? type
+}
+
+function noteBody(type: string, data: string | null) {
+  if (type === 'admin') {
+    try { const d = JSON.parse(data ?? '{}'); return d.body ?? null } catch { return null }
+  }
+  return null
 }
 
 export default function NotificationsPage() {
@@ -52,6 +62,9 @@ export default function NotificationsPage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 {from && <span style={{ fontWeight: 700, fontSize: 13 }}>{from.name}　</span>}
                 <span style={{ fontSize: 13, color: 'var(--muted)' }}>{typeLabel(n.type, n.data)}</span>
+                {noteBody(n.type, n.data) && (
+                  <span style={{ fontSize: 12, color: 'var(--sub)', marginTop: 2, display: 'block', lineHeight: 1.5 }}>{noteBody(n.type, n.data)}</span>
+                )}
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                   {new Date(n.createdAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
