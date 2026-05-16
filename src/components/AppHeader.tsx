@@ -1,4 +1,8 @@
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/api'
+import { Bell } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { ChevronLeft, Sun, Moon } from 'lucide-react'
 
@@ -12,6 +16,16 @@ interface Props {
 export default function AppHeader({ title, back, right, left }: Props) {
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
+  const { user } = useAuth()
+  const [unread, setUnread] = useState(0)
+  useEffect(() => {
+    if (!user) return
+    apiFetch('/api/notifications/unread').then(r => r.ok ? r.json() : {count:0}).then(d => setUnread(d.count ?? 0)).catch(() => {})
+    const t = setInterval(() => {
+      apiFetch('/api/notifications/unread').then(r => r.ok ? r.json() : {count:0}).then(d => setUnread(d.count ?? 0)).catch(() => {})
+    }, 30000)
+    return () => clearInterval(t)
+  }, [user])
 
   function handleBack() {
     if (typeof back === 'string') navigate(back)
@@ -54,10 +68,21 @@ export default function AppHeader({ title, back, right, left }: Props) {
       {/* 右 */}
       <div style={{ width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}>
         {right ?? (
-          <button onClick={toggle}
-            style={{ background: 'none', border: 'none', padding: 8, color: 'var(--muted)', display: 'flex', cursor: 'pointer' }}>
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <div style={{ display:'flex', alignItems:'center', gap:2 }}>
+            {user && (
+              <button onClick={() => navigate('/notifications')}
+                style={{ background:'none', border:'none', padding:8, color:'var(--muted)', display:'flex', cursor:'pointer', position:'relative' }}>
+                <Bell size={18} />
+                {unread > 0 && (
+                  <span style={{ position:'absolute', top:4, right:4, width:8, height:8, borderRadius:'50%', background:'var(--buzz)' }} />
+                )}
+              </button>
+            )}
+            <button onClick={toggle}
+              style={{ background:'none', border:'none', padding:8, color:'var(--muted)', display:'flex', cursor:'pointer' }}>
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          </div>
         )}
       </div>
     </header>
