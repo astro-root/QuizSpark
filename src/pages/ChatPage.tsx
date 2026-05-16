@@ -1,3 +1,4 @@
+import React from 'react'
 import { apiFetch } from '../lib/api'
 import AppHeader from '../components/AppHeader'
 import { useState, useEffect, useRef } from 'react'
@@ -110,13 +111,16 @@ export default function ChatPage() {
     else alert('ルームに参加できませんでした: ' + err)
   }
 
+  const [winW, setWinW] = React.useState(window.innerWidth)
+  React.useEffect(() => { const h = () => setWinW(window.innerWidth); window.addEventListener('resize',h); return ()=>window.removeEventListener('resize',h) }, [])
+  const isWide = winW > 600
   const selectedUser = convs.find(c => c.user.id === userId)?.user
 
   return (
     <div style={{ display: 'flex', height: '100dvh', background: 'var(--bg)', width: '100%' }}>
 
       {/* 会話リスト */}
-      {(!userId || window.innerWidth > 600) && (
+      {(!userId || isWide) && (
         <div style={{ width: userId ? 220 : '100%', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
           <AppHeader title="チャット" right={
             <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 4 }}>
@@ -151,7 +155,8 @@ export default function ChatPage() {
       {/* メッセージペイン */}
       {userId ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <AppHeader title={selectedUser?.name ?? '...'} back="/chat" />
+          {!isWide && <AppHeader title={selectedUser?.name ?? '...'} back="/chat" />}
+          {isWide && <div style={{ height:56, display:'flex', alignItems:'center', padding:'0 16px', borderBottom:'1px solid var(--border)', fontWeight:800, fontSize:15 }}>{selectedUser?.name ?? '...'}</div>}
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {msgs.map(m => {
               const mine = m.fromId === user?.id
@@ -170,7 +175,7 @@ export default function ChatPage() {
             })}
             <div ref={bottomRef} />
           </div>
-          <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>
+          <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, paddingBottom: isWide ? '10px' : 'calc(72px + env(safe-area-inset-bottom))' }}>
             <button onClick={sendInvite} disabled={inviting}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700,
                 background: 'rgba(20,184,166,0.15)', color: '#14b8a6', border: '1px solid rgba(20,184,166,0.3)', cursor: 'pointer', flexShrink: 0, opacity: inviting ? 0.5 : 1 }}>
