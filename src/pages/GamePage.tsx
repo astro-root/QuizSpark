@@ -51,6 +51,46 @@ function playTone(freq: number, type: OscillatorType = 'sine', gain = 0.2, durat
   } catch {}
 }
 
+
+function VSHud({ players, myId, ruleId }: { players: import('../types').Player[], myId: string, ruleId: string }) {
+  const me = players.find(p => p.id === myId)
+  const opp = players.find(p => p.id !== myId)
+  if (!me || !opp) return null
+  const getScore = (p: import('../types').Player) => scoreLabel(p, ruleId)
+  const isWin = (p: import('../types').Player) => p.status === 'WIN'
+  const isLose = (p: import('../types').Player) => p.status === 'LOSE'
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
+      {/* 自分 */}
+      <div style={{ flex:1, display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))',
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:900, color:'#fff', flexShrink:0,
+          boxShadow: isWin(me) ? '0 0 12px rgba(16,185,129,0.6)' : isLose(me) ? '0 0 12px rgba(244,63,94,0.4)' : undefined }}>
+          {me.name[0]}
+        </div>
+        <div style={{ minWidth:0 }}>
+          <p style={{ fontSize:12, fontWeight:800, color: isWin(me)?'var(--correct)':isLose(me)?'var(--wrong)':'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{me.name}</p>
+          <p style={{ fontFamily:'Orbitron,sans-serif', fontSize:14, fontWeight:900, color:'var(--accent)' }}>{getScore(me)}</p>
+        </div>
+      </div>
+      {/* VS */}
+      <div style={{ fontSize:11, fontWeight:900, color:'var(--muted)', letterSpacing:1, flexShrink:0 }}>VS</div>
+      {/* 相手 */}
+      <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, flexDirection:'row-reverse' }}>
+        <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg,#f43f5e,#e11d48)',
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:900, color:'#fff', flexShrink:0,
+          boxShadow: isWin(opp) ? '0 0 12px rgba(16,185,129,0.6)' : isLose(opp) ? '0 0 12px rgba(244,63,94,0.4)' : undefined }}>
+          {opp.name[0]}
+        </div>
+        <div style={{ minWidth:0, textAlign:'right' }}>
+          <p style={{ fontSize:12, fontWeight:800, color: isWin(opp)?'var(--correct)':isLose(opp)?'var(--wrong)':'var(--sub)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{opp.name}</p>
+          <p style={{ fontFamily:'Orbitron,sans-serif', fontSize:14, fontWeight:900, color:'#f43f5e' }}>{getScore(opp)}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function GamePage() {
   const { roomId } = useParams<{ roomId:string }>()
   const { roomState, myId, buzz, submitAnswer, resetGame, isHost, syncState, prematchInfo, rateResult, setPrematchInfo, setRateResult } = useSocketContext()
@@ -361,12 +401,13 @@ export default function GamePage() {
           )}
         </div>
       </div>
+      {players.length === 2 && <VSHud players={players} myId={myId} ruleId={ruleId} />}
 
       <div style={{ flex:1,width:'100%',padding:'16px 20px 40px',display:'flex',flexDirection:'column',gap:12 }}>
 
         {/* 問題文 */}
         <div style={{ background:'var(--surface)',borderRadius:14,padding:'22px 20px',minHeight:96,
-          boxShadow: phase==='question' ? '0 0 0 1px var(--border)' : undefined }}>
+          boxShadow: phase==='answering' ? '0 0 0 2px var(--accent), 0 0 24px rgba(124,58,237,0.2)' : phase==='result' && lastJudgement==='correct' ? '0 0 0 2px var(--correct)' : phase==='result' && lastJudgement==='incorrect' ? '0 0 0 2px var(--wrong)' : '0 0 0 1px var(--border)' }}>
           <p style={{ fontSize:20,lineHeight:1.8,fontWeight:500 }}>{shownText||'\u00A0'}</p>
         </div>
 
@@ -455,11 +496,13 @@ export default function GamePage() {
           )
         })()}
 
-        {/* スコア */}
-        <div>
-          <p style={{ fontSize:11,fontWeight:700,letterSpacing:2,color:'var(--muted)',marginBottom:10,textTransform:'uppercase' }}>Score</p>
-          <Board players={sorted} myId={myId} ruleId={ruleId}/>
-        </div>
+        {/* スコア（多人数のみ）*/}
+        {players.length > 2 && (
+          <div>
+            <p style={{ fontSize:11,fontWeight:700,letterSpacing:2,color:'var(--muted)',marginBottom:10,textTransform:'uppercase' }}>Score</p>
+            <Board players={sorted} myId={myId} ruleId={ruleId}/>
+          </div>
+        )}
       </div>
     </div>
     <RoomChat myId={myId} />
