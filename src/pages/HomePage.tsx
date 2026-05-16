@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { Shuffle, Users, Sun, Moon, Settings, Swords, Zap, Star } from 'lucide-react'
+import { Shuffle, Users, Sun, Moon, Settings, Swords, Zap, Star, Bell } from 'lucide-react'
 import MatchmakingModal from '../components/MatchmakingModal'
 import AppHeader from '../components/AppHeader'
 
@@ -25,10 +25,15 @@ export default function HomePage() {
   const [showMatchmaking, setShowMatchmaking] = useState(false)
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
   const [stats, setStats] = useState({ total: 0, wins: 0, correct: 0 })
+  const [unread, setUnread] = useState(0)
 
   useEffect(() => {
     apiFetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
   }, [])
+  useEffect(() => {
+    if (!user) return
+    apiFetch('/api/notifications/unread').then(r => r.ok ? r.json() : {count:0}).then(d => setUnread(d.count ?? 0)).catch(() => {})
+  }, [user])
   useEffect(() => {
     if (!user) return
     apiFetch('/api/records/me').then(r => r.ok ? r.json() : null).then(d => {
@@ -65,6 +70,13 @@ export default function HomePage() {
 
   const headerRight = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      {user && (
+        <button onClick={() => navigate('/notifications')}
+          style={{ background:'none', border:'none', padding:8, color:'var(--muted)', display:'flex', cursor:'pointer', position:'relative' }}>
+          <Bell size={18} />
+          {unread > 0 && <span style={{ position:'absolute', top:4, right:4, width:8, height:8, borderRadius:'50%', background:'var(--buzz)' }} />}
+        </button>
+      )}
       {(user as any)?.isAdmin && (
         <button onClick={() => navigate('/admin')}
           style={{ background: 'none', border: 'none', padding: 8, color: 'var(--accent)', display: 'flex' }}>

@@ -204,7 +204,14 @@ export default function ChatPage() {
             </button>
           </div>
         </div>
-      ) : null}
+      ) : (
+        isWide ? (
+          <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, color:'var(--muted)' }}>
+            <span style={{ fontSize:40 }}>💬</span>
+            <p style={{ fontSize:14, fontWeight:700 }}>会話を選んでください</p>
+          </div>
+        ) : null
+      )}
       </div>
 
       {/* 検索ポップアップ */}
