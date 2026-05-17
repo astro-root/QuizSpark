@@ -42,6 +42,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!authLoading && !user) setShowAuth(true)
+    if (!authLoading && user) setShowAuth(false)
   }, [authLoading, user])
 
   async function handleAuth() {
