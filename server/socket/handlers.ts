@@ -52,6 +52,7 @@ function ensureMatchCallback(io: IoServer) {
         }
       })
     })
+    gameManager.setMatchmaking(roomId)
     const state = gameManager.getRoom(roomId)
     if (state) io.to(roomId).emit('room-update', state)
   })
@@ -96,7 +97,17 @@ function setupFinishHandler(io: IoServer) {
           }
         }
         console.log('[Rate] data:', JSON.stringify(data.map(d => ({userId:d.userId,result:d.result,isMatchmaking:d.isMatchmaking}))))
-        const rateTargets = data.filter(d => d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
+        if (state.isMatchmaking && data.every(d => d.result === 'ACTIVE') && data.length >= 2) {
+          const byScore = [...state.players].sort((a, b) => b.score - a.score)
+          data.forEach(d => {
+            const player = state.players.find(p => (io.sockets.sockets.get(p.id)?.data?.dbUserId) === d.userId)
+            if (!player) return
+            const rank = byScore.findIndex(p => p.id === player.id)
+            if (rank === 0) (d as any).result = 'WIN'
+            else if (rank === byScore.length - 1) (d as any).result = 'LOSE'
+          })
+        }
+        const rateTargets = data.filter(d => d.isMatchmaking && d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
         console.log('[Rate] targets:', rateTargets.length)
         const rateResultMap = new Map<string, { result: string; oldRate: number; newRate: number; delta: number }>()
         if (rateTargets.length > 0) {

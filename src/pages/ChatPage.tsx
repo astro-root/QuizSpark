@@ -135,7 +135,7 @@ export default function ChatPage() {
 
   // ── 会話リスト（左パネル / モバイル一覧） ──
   const ConvList = (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: isPC ? '100%' : '100dvh', overflow: 'hidden' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <span style={{ fontWeight: 900, fontSize: 15 }}>チャット</span>
         <button onClick={() => setShowSearch(true)}
@@ -283,16 +283,7 @@ export default function ChatPage() {
   // ── モバイルレイアウト ──
   return (
     <div style={{ height: '100dvh', background: 'var(--bg)', overflow: 'hidden' }}>
-      {userId ? MsgPanel : (
-        <>
-          <AppHeader title="チャット" right={
-            <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 6 }}><Search size={20} /></button>
-          } />
-          <div style={{ height: 'calc(100dvh - 56px - 72px - env(safe-area-inset-bottom))', overflowY: 'auto' }}>
-            {ConvList}
-          </div>
-        </>
-      )}
+      {userId ? MsgPanel : ConvList}
       {SearchModal}
     </div>
   )
