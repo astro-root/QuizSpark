@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ConnectionBanner from './components/ConnectionBanner'
 import BottomNav from './components/BottomNav'
+import PCNav from './components/PCNav'
 
 const HomePage         = lazy(() => import('./pages/HomePage'))
 const MatchPage        = lazy(() => import('./pages/MatchPage'))
@@ -92,6 +93,7 @@ export default function App() {
           </Routes>
         </Suspense>
         <BottomNav />
+        <PCNav />
       </BrowserRouter>
     </SocketProvider>
     </AuthProvider>
