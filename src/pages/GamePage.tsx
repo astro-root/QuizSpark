@@ -433,7 +433,7 @@ export default function GamePage() {
           </div>
         )}
 
-        {/* 回答 */}
+        {/* 解答 */}
         {phase==='answering' && (
           <div style={{ background:'var(--surface)',borderRadius:14,padding:'18px 20px',
             animation:'slideUp 0.3s ease both',
@@ -442,7 +442,7 @@ export default function GamePage() {
             position: isBuzzed ? 'sticky' : undefined,
             bottom: isBuzzed ? 8 : undefined }}>
             <p style={{ fontWeight:700,fontSize:15,marginBottom:isBuzzed?14:0,color:isBuzzed?'var(--accent)':'var(--muted)' }}>
-              {isBuzzed?'⚡ あなたの番！':`⏳ ${buzzedPlayerName} が回答中...`}
+              {isBuzzed?'⚡ あなたの番！':`⏳ ${buzzedPlayerName} が解答中...`}
             </p>
             {isBuzzed && (
               <div style={{ display:'flex',flexDirection:'column',gap:10,animation:'shake 0.3s ease' }}>

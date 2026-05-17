@@ -341,38 +341,14 @@ export default function AdminPage() {
                     </button>
                   </div>
                 </div>
-
-                {/* 個人通知送信 */}
-                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:12, padding:'12px', background:'var(--surface2)', borderRadius:10, border:'1px solid var(--border)' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <p style={{ fontWeight:800, fontSize:12, color:'var(--muted)', letterSpacing:1 }}>通知送信</p>
-                    <div style={{ display:'flex', gap:4 }}>
-                      {(['user','all'] as const).map(t => (
-                        <button key={t} onClick={() => setNotifTarget(t)}
-                          style={{ padding:'3px 10px', borderRadius:6, fontSize:11, fontWeight:700, border:'none', cursor:'pointer',
-                            background: notifTarget===t ? 'var(--accent)' : 'var(--border)', color: notifTarget===t ? '#fff' : 'var(--muted)' }}>
-                          {t==='user' ? 'この1人' : '全員'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <input value={notifTitle} onChange={e => setNotifTitle(e.target.value)} placeholder="タイトル"
-                    style={{ padding:'8px 10px', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:8, fontSize:13, color:'var(--text)' }} />
-                  <textarea value={notifBody} onChange={e => setNotifBody(e.target.value)} placeholder="本文" rows={2}
-                    style={{ padding:'8px 10px', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:8, fontSize:13, color:'var(--text)', resize:'vertical', fontFamily:'inherit' }} />
-                  <button onClick={() => sendNotification(selectedUser.id)}
-                    style={{ padding:'9px', borderRadius:8, fontSize:13, fontWeight:700, background:'linear-gradient(135deg,var(--accent),var(--accent2))', color:'#fff', border:'none' }}>
-                    送信
-                  </button>
-                  {notifStatus && <p style={{ fontSize:12, color: notifStatus.startsWith('✓') ? 'var(--correct)' : 'var(--wrong)' }}>{notifStatus}</p>}
-                </div>
-
                 <p style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>直近の対戦</p>
                 <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:200, overflowY:'auto' }}>
                   {selectedUser.battleRecords.slice(0, 10).map(r => (
                     <div key={r.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', background:'var(--surface2)', borderRadius:8 }}>
                       <span style={{ fontSize:14 }}>{r.result==='WIN'?'🥇':r.result==='LOSE'?'💀':'🎮'}</span>
-                      <span style={{ flex:1, fontSize:12 }}>{r.ruleId.toUpperCase()}</span>
+                      <span style={{ flex:1, fontSize:12 }}>
+                        {({'free':'フリー','mon':'m○n×','newyork':'ニューヨーク','updown':'アップダウン','by':'by','freeze':'フリーズ','mon_rest':'m○n休','swedish':'スウェーデン','divide':'ディバイド','lucky':'ラッキー','rensei':'連答付き','rengou':'連誤答付き','combo':'コンボ'} as any)[r.ruleId] ?? r.ruleId}
+                      </span>
                       <span style={{ fontSize:11, color:'var(--muted)' }}>{r.correct}◯{r.wrong}×</span>
                     </div>
                   ))}
@@ -380,6 +356,35 @@ export default function AdminPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ─── 通知送信 ─── */}
+        {tab === 'notify' && (
+          <div style={{ background:'var(--surface)', borderRadius:14, padding:'20px', border:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:12, maxWidth:500 }}>
+            <p style={{ fontWeight:800, fontSize:15 }}>通知を送信</p>
+            <div style={{ display:'flex', gap:8 }}>
+              {(['all','user'] as const).map(t => (
+                <button key={t} onClick={() => setNotifTarget(t)}
+                  style={{ padding:'8px 16px', borderRadius:8, fontSize:13, fontWeight:700, border:'none', cursor:'pointer',
+                    background: notifTarget===t ? 'var(--accent)' : 'var(--surface2)', color: notifTarget===t ? '#fff' : 'var(--muted)' }}>
+                  {t==='all' ? '全員に送信' : '特定ユーザーに送信'}
+                </button>
+              ))}
+            </div>
+            {notifTarget === 'user' && (
+              <input placeholder="ユーザーIDを入力"
+                style={{ padding:'10px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:10, fontSize:14, color:'var(--text)' }} />
+            )}
+            <input value={notifTitle} onChange={e => setNotifTitle(e.target.value)} placeholder="タイトル"
+              style={{ padding:'10px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:10, fontSize:14, color:'var(--text)' }} />
+            <textarea value={notifBody} onChange={e => setNotifBody(e.target.value)} placeholder="本文" rows={4}
+              style={{ padding:'10px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:10, fontSize:14, color:'var(--text)', resize:'vertical', fontFamily:'inherit' }} />
+            <button onClick={() => sendNotification(notifTarget === 'all' ? 'all' : '')}
+              style={{ padding:'12px', borderRadius:10, fontSize:14, fontWeight:800, background:'linear-gradient(135deg,var(--accent),var(--accent2))', color:'#fff', border:'none', cursor:'pointer' }}>
+              送信
+            </button>
+            {notifStatus && <p style={{ fontSize:13, color: notifStatus.startsWith('✓') ? 'var(--correct)' : 'var(--wrong)' }}>{notifStatus}</p>}
           </div>
         )}
 

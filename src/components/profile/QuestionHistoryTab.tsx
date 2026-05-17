@@ -15,7 +15,7 @@ export default function QuestionHistoryTab() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      <p style={{ fontSize:12, color:'var(--muted)', textAlign:'center' }}>直近10問の回答履歴</p>
+      <p style={{ fontSize:12, color:'var(--muted)', textAlign:'center' }}>直近10問の解答履歴</p>
       {list.length === 0 && (
         <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:32 }}>履歴がありません。ランダムマッチで問題に答えると記録されます。</p>
       )}
@@ -32,7 +32,7 @@ export default function QuestionHistoryTab() {
                 </div>
                 {!q.isCorrect && q.userAnswer && (
                   <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-                    <span style={{ fontSize:11, color:'var(--muted)', flexShrink:0 }}>回答</span>
+                    <span style={{ fontSize:11, color:'var(--muted)', flexShrink:0 }}>解答</span>
                     <span style={{ fontSize:13, fontWeight:700, color:'var(--wrong)' }}>{q.userAnswer}</span>
                   </div>
                 )}
