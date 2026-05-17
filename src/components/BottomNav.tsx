@@ -1,5 +1,6 @@
 import { apiFetch } from '../lib/api'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useIsPC } from '../hooks/useMediaQuery'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
 import { Home, Trophy, MessageCircle, User, PenLine } from 'lucide-react'
@@ -24,7 +25,8 @@ export default function BottomNav() {
   if (!user) return null
   if (pathname.includes('/room/')) return null
   if (pathname.startsWith('/chat')) return null
-  if (window.innerWidth >= 768) return null
+  const isPC = useIsPC()
+  if (isPC) return null
 
   const tabs = [
     { path: '/',        Icon: Home,          label: 'ホーム',    color: '#7c3aed' },

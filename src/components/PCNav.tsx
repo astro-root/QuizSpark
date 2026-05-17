@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Home, Trophy, MessageCircle, User, PenLine, Bell, HelpCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useIsPC } from '../hooks/useMediaQuery'
 import { apiFetch } from '../lib/api'
 
 export default function PCNav() {
@@ -18,7 +19,8 @@ export default function PCNav() {
     return () => clearInterval(t)
   }, [user])
 
-  if (typeof window !== 'undefined' && window.innerWidth < 768) return null
+  const isPC = useIsPC()
+  if (!isPC) return null
   if (!user) return null
   if (pathname.startsWith('/room/')) return null
 

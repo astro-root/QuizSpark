@@ -5,6 +5,7 @@ import { Bell } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { ChevronLeft, Sun, Moon } from 'lucide-react'
+import { useIsPC } from '../hooks/useMediaQuery'
 
 interface Props {
   title?: string
@@ -14,9 +15,8 @@ interface Props {
 }
 
 export default function AppHeader({ title, back, right, left }: Props) {
-  const isPC = typeof window !== 'undefined' && window.innerWidth >= 768
-  // PCはPCNavがあるのでロゴだけのAppHeaderは非表示
-  if (isPC && !title && back === undefined && !left && !right) return null
+  const isPC = useIsPC()
+  if (isPC) return null
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
   const { user } = useAuth()

@@ -22,9 +22,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const cached = sessionStorage.getItem('_me')
+    if (cached) { try { setUser(JSON.parse(cached)); setLoading(false) } catch {} }
     apiFetch('/auth/me')
       .then(r => r.ok ? r.json() : null)
-      .then(u => { setUser(u); setLoading(false) })
+      .then(u => {
+        setUser(u)
+        if (u) sessionStorage.setItem('_me', JSON.stringify(u))
+        else sessionStorage.removeItem('_me')
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 
@@ -59,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!r.ok) return data.error as string
     setUser(data); return null
   }
-  const logout = () => apiFetch('/auth/logout', { method: 'POST' }).then(() => setUser(null))
+  const logout = () => apiFetch('/auth/logout', { method: 'POST' }).then(() => { setUser(null); sessionStorage.removeItem('_me') })
 
   const deleteAvatar = async () => {
     const r = await apiFetch('/auth/avatar', { method: 'DELETE' })
