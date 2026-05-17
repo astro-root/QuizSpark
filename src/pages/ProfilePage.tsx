@@ -7,6 +7,7 @@ import { User, Trophy } from 'lucide-react'
 import ProfileTab from '../components/profile/ProfileTab'
 import RecordsTab from '../components/profile/RecordsTab'
 import QuestionHistoryTab from '../components/profile/QuestionHistoryTab'
+import GenreRadarTab from '../components/profile/GenreRadarTab'
 import TitleSelectTab from '../components/profile/TitleSelectTab'
 import { apiFetch } from '../lib/api'
 import { useState, useEffect } from 'react'
@@ -37,6 +38,7 @@ export default function ProfilePage() {
     { key: 'records' as Tab, Icon: Trophy, label: '戦績' },
     { key: 'history' as Tab, Icon: Trophy, label: '問題履歴' },
     { key: 'title'   as Tab, Icon: Trophy, label: '称号' },
+    { key: 'genre'   as Tab, Icon: Trophy, label: 'ジャンル' },
   ]
 
   return (
@@ -75,6 +77,7 @@ export default function ProfilePage() {
         {tab === 'records' && <RecordsTab />}
         {tab === 'history' && <QuestionHistoryTab />}
         {tab === 'title' && <TitleSelectTab stats={stats} />}
+        {tab === 'genre' && <GenreRadarTab />}
       </div>
     </div>
   )

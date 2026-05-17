@@ -22,7 +22,7 @@ class GameManager {
   private broadcastFn?: BroadcastFn
   private customQuestionsMap = new Map<string, import('../../src/types').Question[]>()
   private finishFn?: (state: import('../../src/types').RoomState) => void
-  private answerLogs = new Map<string, Map<string, Array<{text:string,answer:string,userAnswer:string,isCorrect:boolean}>>>()
+  private answerLogs = new Map<string, Map<string, Array<{text:string,answer:string,userAnswer:string,isCorrect:boolean,genre:string,questionId:number|null}>>>()
 
   setBroadcast(fn: BroadcastFn) { this.broadcastFn = fn }
   setOnFinish(fn: (state: import('../../src/types').RoomState) => void) { this.finishFn = fn }
@@ -151,7 +151,7 @@ class GameManager {
       if (!roomLog.has(playerId)) roomLog.set(playerId, [])
       const playerLog = roomLog.get(playerId)!
       const isCorrect = (nextState.lastJudgement as any)?.correct ?? false
-      playerLog.push({ text: state.currentQuestion.text, answer: (state.currentQuestion as any).displayAnswer || state.currentQuestion.answer, userAnswer: rawAnswer, isCorrect })
+      playerLog.push({ text: state.currentQuestion.text, answer: (state.currentQuestion as any).displayAnswer || state.currentQuestion.answer, userAnswer: rawAnswer, isCorrect, genre: (state.currentQuestion as any).genre ?? 'ノンジャンル', questionId: (state.currentQuestion as any).id ?? null })
       if (playerLog.length > 10) playerLog.shift()
     }
     this.rooms.set(roomId, nextState)

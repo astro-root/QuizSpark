@@ -16,6 +16,7 @@ import messagesRouter from './routes/messages'
 import notificationsRouter from './routes/notifications'
 import searchRouter from './routes/search'
 import questionsRouter from './routes/questions'
+import reportsRouter from './routes/reports'
 import cors from 'cors'
 import path from 'path'
 
@@ -39,6 +40,7 @@ export function createApp() {
   app.use('/auth', authRouter)
   app.use('/auth', authLimiter, localAuthRouter)
   app.use('/api/questions', questionsRouter)
+  app.use('/api/reports', reportsRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api/question-sets', questionSetsRouter)
   app.use('/api/records', recordsRouter)

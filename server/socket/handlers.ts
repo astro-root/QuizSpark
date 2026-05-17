@@ -89,7 +89,7 @@ function setupFinishHandler(io: IoServer) {
           const logs = gameManager.getAnswerLogs(state.id)?.get(p.id) ?? []
           if (logs.length === 0) continue
           await prisma.questionHistory.createMany({
-            data: logs.map(l => ({ userId, text: l.text, answer: l.answer, userAnswer: l.userAnswer, isCorrect: l.isCorrect }))
+            data: logs.map(l => ({ userId, text: l.text, answer: l.answer, userAnswer: l.userAnswer, isCorrect: l.isCorrect, genre: l.genre ?? 'ノンジャンル', questionId: l.questionId ?? null }))
           })
           const all = await prisma.questionHistory.findMany({ where: { userId }, orderBy: { playedAt: 'desc' }, select: { id: true } })
           if (all.length > 10) {

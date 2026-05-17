@@ -15,3 +15,20 @@ router.get('/me', async (req, res) => {
 })
 
 export default router
+
+router.get('/genre', async (req, res) => {
+  const user = (req as any).user
+  const targetId = (req.query.userId as string) || user?.id
+  if (!targetId) return res.status(401).json({ error: 'unauthorized' })
+  const histories = await prisma.questionHistory.findMany({ where: { userId: targetId }, select: { genre: true, isCorrect: true } })
+  const map = new Map<string, { correct: number; total: number }>()
+  for (const h of histories) {
+    const g = h.genre ?? 'ノンジャンル'
+    if (!map.has(g)) map.set(g, { correct: 0, total: 0 })
+    const s = map.get(g)!
+    s.total++
+    if (h.isCorrect) s.correct++
+  }
+  const result = Array.from(map.entries()).map(([genre, s]) => ({ genre, correct: s.correct, total: s.total, rate: s.total > 0 ? s.correct / s.total : 0 }))
+  res.json(result)
+})

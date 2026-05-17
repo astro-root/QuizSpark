@@ -26,6 +26,7 @@ model User {
   receivedMessages DirectMessage[] @relation("dmTo")
   notifications    Notification[]
   questionHistories QuestionHistory[]
+  questionReports   QuestionReport[]
 }
 
 model PasswordAuth {
@@ -155,7 +156,19 @@ model QuestionHistory {
   answer     String
   userAnswer String
   isCorrect  Boolean
+  genre      String   @default("ノンジャンル")
+  questionId Int?
   playedAt   DateTime @default(now())
+}
+
+model QuestionReport {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId Int
+  reason     String
+  createdAt  DateTime @default(now())
+  resolved   Boolean  @default(false)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model session {
