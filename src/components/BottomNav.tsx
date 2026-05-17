@@ -10,6 +10,7 @@ export default function BottomNav() {
   const { pathname } = useLocation()
   const { user } = useAuth()
   const [unread, setUnread] = useState(0)
+  const isPC = useIsPC()
 
   useEffect(() => {
     if (!user) return
@@ -25,7 +26,6 @@ export default function BottomNav() {
   if (!user) return null
   if (pathname.includes('/room/')) return null
   if (pathname.startsWith('/chat')) return null
-  const isPC = useIsPC()
   if (isPC) return null
 
   const tabs = [
