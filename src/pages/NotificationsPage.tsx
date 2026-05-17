@@ -10,6 +10,7 @@ interface FromUser { id: string; name: string; avatarUrl: string | null }
 function typeLabel(type: string, data: string | null) {
   if (type === 'dm') return `💬 メッセージ: ${data ?? ''}`
   if (type === 'follow') return '👤 フォローされました'
+  if (type === 'invite') return '⚔️ フリーマッチ招待が届いています'
   if (type === 'admin') {
     try { const d = JSON.parse(data ?? '{}'); return `📢 ${d.title ?? ''}` } catch { return '📢 お知らせ' }
   }

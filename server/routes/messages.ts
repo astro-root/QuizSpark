@@ -57,9 +57,12 @@ router.post('/messages/:userId', async (req, res) => {
     const msg = await prisma.directMessage.create({
       data: { fromId: me, toId, body: body.trim() }
     })
-    await prisma.notification.create({
-      data: { userId: toId, type: 'dm', fromId: me, data: body.trim().slice(0, 50) }
-    }).catch(() => {})
+    // 招待メッセージのみ通知を送る
+    if (body.trim().startsWith('[INVITE:')) {
+      await prisma.notification.create({
+        data: { userId: toId, type: 'invite', fromId: me, data: body.trim() }
+      }).catch(() => {})
+    }
     res.json(msg)
   } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })

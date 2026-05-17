@@ -125,8 +125,16 @@ export default function ChatPage() {
             <span style={{ fontWeight: 900, fontSize: 15 }}>チャット</span>
             <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 4 }}><Search size={18} /></button>
           </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 16px' }}>
-            {selectedUser && <span style={{ fontWeight: 800, fontSize: 15 }}>{selectedUser.name}</span>}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
+            {selectedUser && (
+              <>
+                <button onClick={() => navigate('/chat')}
+                  style={{ background:'none', border:'none', color:'var(--muted)', cursor:'pointer', display:'flex', alignItems:'center', padding:'4px 6px 4px 0', flexShrink:0 }}>
+                  ←
+                </button>
+                <span style={{ fontWeight: 800, fontSize: 15 }}>{selectedUser.name}</span>
+              </>
+            )}
           </div>
         </div>
       ) : userId ? (
@@ -188,7 +196,7 @@ export default function ChatPage() {
             })}
             <div ref={bottomRef} />
           </div>
-          <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, paddingBottom: isWide ? '10px' : 'calc(72px + env(safe-area-inset-bottom))' }}>
+          <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>
             <button onClick={sendInvite} disabled={inviting}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700,
                 background: 'rgba(20,184,166,0.15)', color: '#14b8a6', border: '1px solid rgba(20,184,166,0.3)', cursor: 'pointer', flexShrink: 0, opacity: inviting ? 0.5 : 1 }}>
