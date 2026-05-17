@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
-import { Bell } from 'lucide-react'
+import { Bell, ChevronLeft, Sun, Moon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
-import { ChevronLeft, Sun, Moon } from 'lucide-react'
 import { useIsPC } from '../hooks/useMediaQuery'
 
 interface Props {
@@ -16,11 +15,11 @@ interface Props {
 
 export default function AppHeader({ title, back, right, left }: Props) {
   const isPC = useIsPC()
-  if (isPC) return null
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
   const { user } = useAuth()
   const [unread, setUnread] = useState(0)
+
   useEffect(() => {
     if (!user) return
     apiFetch('/api/notifications/unread').then(r => r.ok ? r.json() : {count:0}).then(d => setUnread(d.count ?? 0)).catch(() => {})
@@ -29,6 +28,8 @@ export default function AppHeader({ title, back, right, left }: Props) {
     }, 30000)
     return () => clearInterval(t)
   }, [user])
+
+  if (isPC) return null
 
   function handleBack() {
     if (typeof back === 'string') navigate(back)
@@ -45,7 +46,6 @@ export default function AppHeader({ title, back, right, left }: Props) {
       height: 56,
       padding: '0 12px',
     }}>
-      {/* 左 */}
       <div style={{ width: 120, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         {left ?? (back !== undefined ? (
           <button onClick={handleBack}
@@ -62,13 +62,9 @@ export default function AppHeader({ title, back, right, left }: Props) {
           </button>
         ))}
       </div>
-
-      {/* 中央 */}
       <div style={{ flex: 1, textAlign: 'center' }}>
         {title && <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{title}</span>}
       </div>
-
-      {/* 右 */}
       <div style={{ width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}>
         {right ?? (
           <div style={{ display:'flex', alignItems:'center', gap:2 }}>
@@ -76,9 +72,7 @@ export default function AppHeader({ title, back, right, left }: Props) {
               <button onClick={() => navigate('/notifications')}
                 style={{ background:'none', border:'none', padding:8, color:'var(--muted)', display:'flex', cursor:'pointer', position:'relative' }}>
                 <Bell size={18} />
-                {unread > 0 && (
-                  <span style={{ position:'absolute', top:4, right:4, width:8, height:8, borderRadius:'50%', background:'var(--buzz)' }} />
-                )}
+                {unread > 0 && <span style={{ position:'absolute', top:4, right:4, width:8, height:8, borderRadius:'50%', background:'var(--buzz)' }} />}
               </button>
             )}
             <button onClick={toggle}
