@@ -14,6 +14,9 @@ interface Props {
 }
 
 export default function AppHeader({ title, back, right, left }: Props) {
+  const isPC = typeof window !== 'undefined' && window.innerWidth >= 768
+  // PCはPCNavがあるのでロゴだけのAppHeaderは非表示
+  if (isPC && !title && back === undefined && !left && !right) return null
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
   const { user } = useAuth()

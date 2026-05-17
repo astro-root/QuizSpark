@@ -1,9 +1,11 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { SocketProvider } from './context/SocketContext'
+import { useAuth } from './context/AuthContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ConnectionBanner from './components/ConnectionBanner'
+import ErrorBoundary from './components/ErrorBoundary'
 import BottomNav from './components/BottomNav'
 import PCNav from './components/PCNav'
 
@@ -54,6 +56,12 @@ function TitleUpdater() {
   return null
 }
 
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { loading } = useAuth()
+  if (loading) return <Fallback />
+  return <>{children}</>
+}
+
 function Fallback() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
@@ -68,9 +76,11 @@ export default function App() {
     <AuthProvider>
     <SocketProvider>
       <BrowserRouter>
+      <ErrorBoundary>
         <TitleUpdater />
         <ConnectionBanner />
         <Suspense fallback={<Fallback />}>
+          <AuthGate>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/match" element={<MatchPage />} />
@@ -91,9 +101,11 @@ export default function App() {
             <Route path="/sets/:id" element={<QuestionSetPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </AuthGate>
         </Suspense>
         <BottomNav />
         <PCNav />
+      </ErrorBoundary>
       </BrowserRouter>
     </SocketProvider>
     </AuthProvider>
