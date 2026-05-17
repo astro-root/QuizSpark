@@ -10,11 +10,6 @@ import MatchmakingModal from '../components/MatchmakingModal'
 import AppHeader from '../components/AppHeader'
 
 export default function HomePage() {
-  const { joinRoom, publicRooms } = useSocketContext()
-  const { user, loading: authLoading, loginWithGoogle, loginWithPassword, register } = useAuth()
-  const { theme, toggle: toggleTheme } = useTheme()
-  const navigate = useNavigate()
-
   const [showAuth, setShowAuth] = useState(false)
   const [authTab, setAuthTab] = useState<'login'|'register'>('login')
   const [authEmail, setAuthEmail] = useState('')
@@ -181,29 +176,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 公開ルーム */}
-        {publicRooms.length > 0 && (
-          <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '16px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <Users size={15} color="var(--muted)" />
-              <p style={{ fontWeight: 800, fontSize: 14 }}>参加できるルーム</p>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {publicRooms.map(room => (
-                <div key={room.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700 }}>{room.hostName} のルーム</p>
-                    <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{room.ruleId.toUpperCase()} · {room.questionCount}問 · {room.playerCount}人</p>
-                  </div>
-                  <button onClick={() => quickJoin(room.id)}
-                    style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, background: 'var(--buzz)', color: '#fff', flexShrink: 0, border: 'none', cursor: 'pointer' }}>
-                    参加
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
 
       </div>

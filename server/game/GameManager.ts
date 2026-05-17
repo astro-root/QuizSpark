@@ -195,8 +195,8 @@ class GameManager {
   getCustomQuestions(roomId: string) { return this.customQuestionsMap.get(roomId) }
   getPublicRooms() {
     return [...this.rooms.values()]
-      .filter(r => r.settings?.isPublic && r.phase === 'lobby')
-      .map(r => ({ id: r.id, playerCount: r.players.length, hostName: r.players.find(p => p.id === r.hostId)?.name ?? '?', ruleId: r.settings.ruleId, questionCount: r.settings.questionCount }))
+      .filter(r => r.settings?.isPublic)
+      .map(r => ({ id: r.id, playerCount: r.players.length, hostName: r.players.find(p => p.id === r.hostId)?.name ?? '?', ruleId: r.settings.ruleId, questionCount: r.settings.questionCount, phase: r.phase }))
   }
   getRoomIdByPlayer(playerId: string): string | undefined { return this.playerRoomMap.get(playerId) }
   getAnswerLogs(roomId: string) { return this.answerLogs.get(roomId) }

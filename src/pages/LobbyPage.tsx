@@ -7,8 +7,8 @@ import RoomChat from '../components/RoomChat'
 import type { GameSettings, RuleId } from '../types'
 
 const RULE_DEFS = [
-  { id:'free',     name:'Free',         params:[] },
-  { id:'mon',      name:'m◯n×',         params:[{key:'m',label:'勝ち抜け正解数',def:5},{key:'n',label:'失格誤答数',def:2}] },
+  { id:'free',     name:'フリー（制限なし）', params:[] },
+  { id:'mon',      name:'m○n×',          params:[{key:'m',label:'勝ち抜け正解数',def:5},{key:'n',label:'失格誤答数',def:2}] },
   { id:'newyork',  name:'NewYork',      params:[{key:'m',label:'正解加点',def:1},{key:'n',label:'誤答減点',def:1},{key:'x',label:'勝ち抜けPt',def:10},{key:'y',label:'失格Pt',def:-10}] },
   { id:'updown',   name:'Up-Down',      params:[{key:'m',label:'勝ち抜けPt',def:5},{key:'n',label:'失格誤答数',def:2}] },
   { id:'by',       name:'by',           params:[{key:'m',label:'基準値',def:5},{key:'n',label:'失格誤答数',def:3}] },
@@ -37,6 +37,7 @@ export default function LobbyPage() {
   const [synced, setSynced] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showPublicWarn, setShowPublicWarn] = useState(false)
+  const [showSettings, setShowSettings] = useState(true)
   const [sets, setSets] = useState<{id:string;name:string;_count:{items:number}}[]>([])
 
   useEffect(() => {
@@ -99,10 +100,10 @@ export default function LobbyPage() {
   function onField(f: keyof GameSettings, val: number) { emit({...local,[f]:val}) }
 
   return (
-    <div style={{ minHeight:'100dvh', background:'var(--bg)', display:'flex', flexDirection:'column', maxWidth:'var(--w)', margin:'0 auto' }}>
+    <div style={{ minHeight:'100dvh', background:'var(--bg)', display:'flex', flexDirection:'column' }}>
       <AppHeader back title="ルームロビー" />
 
-      <div style={{ flex:1, overflowY:'auto', padding:'20px 16px 100px' }}>
+      <div style={{ flex:1, overflowY:'auto', padding:'20px 16px 100px', maxWidth:'var(--w)', width:'100%', margin:'0 auto', boxSizing:'border-box' }}>
         {/* PC: 2カラム / SP: 1カラム */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:16, alignItems:'start' }}>
 
@@ -185,11 +186,13 @@ export default function LobbyPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
             {/* 設定 */}
-            <div style={{ background:'var(--surface)', borderRadius:14, padding:'18px 18px 8px', border:'1px solid var(--border)' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+            <div style={{ background:'var(--surface)', borderRadius:14, border:'1px solid var(--border)', overflow:'hidden' }}>
+              <button onClick={() => setShowSettings(v => !v)}
+                style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', background:'none', border:'none', cursor:'pointer' }}>
                 <span style={{ fontWeight:800, fontSize:14 }}>ゲーム設定</span>
-                {!isHost && <span style={{ fontSize:11, color:'var(--muted)' }}>ホストのみ変更可</span>}
-              </div>
+                <span style={{ fontSize:12, color:'var(--muted)' }}>{showSettings ? '▲ 閉じる' : '▼ 開く'}</span>
+              </button>
+              {showSettings && <div style={{ padding:'0 18px 14px', borderTop:'1px solid var(--border)' }}>
 
               <Row label="ルール">
                 <select disabled={!isHost} value={local.ruleId} onChange={e=>onRule(e.target.value as RuleId)} style={sel}>
@@ -235,6 +238,7 @@ export default function LobbyPage() {
                   {[1,2,3,4,5].map(n=><option key={n} value={n}>{n}人</option>)}
                 </select>
               </Row>
+              </div>}
             </div>
 
 

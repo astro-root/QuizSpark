@@ -60,6 +60,7 @@ export interface PublicRoom {
   hostName: string
   ruleId: string
   questionCount: number
+  phase?: string
 }
 
 export interface PrematchPlayer {
