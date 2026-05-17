@@ -21,6 +21,10 @@ export default function HomePage() {
   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
   const [stats, setStats] = useState({ total: 0, wins: 0, correct: 0 })
   const [unread, setUnread] = useState(0)
+  const { user, authLoading, loginWithPassword, loginWithGoogle, register, logout } = useAuth()
+  const { theme, toggle: toggleTheme } = useTheme()
+  const navigate = useNavigate()
+  const { joinRoom, createRoom } = useSocketContext()
 
   useEffect(() => {
     apiFetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
