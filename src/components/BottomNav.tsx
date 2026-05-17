@@ -23,7 +23,8 @@ export default function BottomNav() {
 
   if (!user) return null
   if (pathname.includes('/room/')) return null
-  if (/^\/chat\/.+/.test(pathname)) return null
+  if (pathname.startsWith('/chat')) return null
+  if (window.innerWidth >= 768) return null
 
   const tabs = [
     { path: '/',        Icon: Home,          label: 'ホーム',    color: '#7c3aed' },
