@@ -136,13 +136,9 @@ export default function ChatPage() {
   // ── 会話リスト（左パネル / モバイル一覧） ──
   const ConvList = (
     <div style={{ display: 'flex', flexDirection: 'column', height: isPC ? '100%' : '100dvh', overflow: 'hidden' }}>
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <span style={{ fontWeight: 900, fontSize: 15 }}>チャット</span>
-        <button onClick={() => setShowSearch(true)}
-          style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 6 }}>
-          <Search size={18} />
-        </button>
-      </div>
+      {!isPC && <AppHeader title="チャット" right={
+        <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 6 }}><Search size={18} /></button>
+      } />}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {convs.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--muted)' }}>
@@ -172,17 +168,7 @@ export default function ChatPage() {
   // ── メッセージパネル ──
   const MsgPanel = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* モバイルのみ独自ヘッダー */}
-      {!isPC && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', height: 56, background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <button onClick={() => navigate('/chat')}
-            style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: 6, display: 'flex' }}>
-            <ChevronLeft size={22} />
-          </button>
-          {selectedUser && <Avatar url={selectedUser.avatarUrl} name={selectedUser.name} size={32} />}
-          <span style={{ fontWeight: 800, fontSize: 15 }}>{selectedUser?.name ?? '...'}</span>
-        </div>
-      )}
+      {!isPC && <AppHeader back="/chat" title={selectedUser?.name ?? '...'} />}
       {/* メッセージ一覧 */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {msgs.map(m => {
@@ -261,7 +247,7 @@ export default function ChatPage() {
 
   // ── PC レイアウト ──
   if (isPC) return (
-    <div style={{ display: 'flex', height: '100dvh', background: 'var(--bg)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100dvh', paddingTop: 52, background: 'var(--bg)', overflow: 'hidden', boxSizing: 'border-box' }}>
       {/* PC ヘッダー（縦分割） */}
       <div style={{ width: 280, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         {ConvList}
