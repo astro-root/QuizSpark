@@ -92,6 +92,7 @@ export interface ServerToClientEvents {
   'public-rooms': (rooms: PublicRoom[]) => void
   'prematch-info': (info: PrematchInfo) => void
   'rate-result': (result: RateResult) => void
+  stamp: (data: { fromId: string; fromName: string; stamp: string }) => void
 }
 
 export interface MatchmakingEntry {
@@ -113,6 +114,7 @@ export interface ClientToServerEvents {
   'start-game': () => void
   buzz: () => void
   'submit-answer': (answer: string) => void
+  'send-stamp': (stamp: string) => void
 }
 
 export interface InterServerEvents {}
