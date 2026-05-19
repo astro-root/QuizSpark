@@ -100,7 +100,7 @@ export function advanceQuestion(state: RoomState, customQuestions?: import('../.
   const typewriterMs = question.text.length * TYPEWRITER_SPEED_MS
   const prevRecent: number[] = (state as any).recentQuestionIds ?? []
   const newRecent = question?.id
-    ? [...prevRecent.filter((id: number) => id !== question.id), question.id].slice(-5)
+    ? [...prevRecent.filter((id: number) => id !== question.id), question.id].slice(-20)
     : prevRecent
   return {
     ...state,
