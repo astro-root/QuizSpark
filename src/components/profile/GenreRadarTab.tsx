@@ -22,10 +22,9 @@ export default function GenreRadarTab({ userId }: { userId?: string }) {
     const s = stats.find(x => x.genre === g)
     return { genre: g, 正答率: s ? Math.round(s.rate * 100) : 0, 問題数: s?.total ?? 0 }
   }).filter(d => d['問題数'] > 0)
-  // recharts RadarChartは3点未満だと描画できないのでダミー追加
   const data = rawData.length >= 3 ? rawData : [
     ...rawData,
-    ...Array.from({ length: 3 - rawData.length }, (_, i) => ({ genre: `_dummy${i}`, 正答率: 0, 問題数: 0 }))
+    ...Array.from({ length: 3 - rawData.length }, (_, i) => ({ genre: `　${i}`, 正答率: 0, 問題数: 0 }))
   ]
 
   return (
@@ -43,7 +42,7 @@ export default function GenreRadarTab({ userId }: { userId?: string }) {
         </RadarChart>
       </ResponsiveContainer>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 }}>
-        {data.map(d => (
+        {rawData.map(d => (
           <div key={d.genre} style={{ background: 'var(--surface2)', borderRadius: 8, padding: '6px 12px', fontSize: 12 }}>
             <span style={{ color: 'var(--muted)' }}>{d.genre}</span>
             <span style={{ color: 'var(--accent)', fontWeight: 800, marginLeft: 6 }}>{d['正答率']}%</span>
