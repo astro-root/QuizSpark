@@ -197,6 +197,30 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
         console.error('[StartGame] failed to load question set:', e)
       }
     }
+    // 公開問題プール使用時のみ: 両プレイヤーの直近20問のquestionIdを収集して除外
+    if (!state.settings.questionSetId) {
+      const playerIds = state.players
+        .map(p => io.sockets.sockets.get(p.id)?.data?.dbUserId as string | undefined)
+        .filter(Boolean) as string[]
+      if (playerIds.length > 0) {
+        const histories = await prisma.questionHistory.findMany({
+          where: { userId: { in: playerIds }, questionId: { not: null } },
+          orderBy: { playedAt: 'desc' },
+          select: { userId: true, questionId: true },
+        })
+        // ユーザーごとに直近20問のIDを収集
+        const usedIds = new Set<number>()
+        const countPerUser = new Map<string, number>()
+        for (const h of histories) {
+          const cnt = countPerUser.get(h.userId!) ?? 0
+          if (cnt < 20 && h.questionId) {
+            usedIds.add(h.questionId)
+            countPerUser.set(h.userId!, cnt + 1)
+          }
+        }
+        gameManager.setRecentQuestionIds(roomId, [...usedIds])
+      }
+    }
     if (gameManager.startGame(roomId)) {
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
       broadcastPublicRooms(io)

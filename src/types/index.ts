@@ -52,6 +52,7 @@ export interface RoomState {
   settings: GameSettings
   isMatchmaking?: boolean
   questionStartedAt?: number
+  recentQuestionIds?: number[]
 }
 
 export interface PublicRoom {

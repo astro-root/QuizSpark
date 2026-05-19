@@ -81,7 +81,7 @@ function shuffle(arr: number[]): number[] {
 export function advanceQuestion(state: RoomState, customQuestions?: import('../../src/types').Question[]): RoomState {
   const nextIndex = state.currentQuestionIndex + 1
   const sourceQuestions = customQuestions ?? getQuizData()
-  const recentIds: Set<number> = new Set((state as any).recentQuestionIds ?? [])
+  const recentIds: Set<number> = new Set(state.recentQuestionIds ?? [])
   // カスタム問題は重複排除不要
   const pool = customQuestions
     ? sourceQuestions
@@ -99,6 +99,7 @@ export function advanceQuestion(state: RoomState, customQuestions?: import('../.
   const question = available[order[nextIndex]]
   const typewriterMs = question.text.length * TYPEWRITER_SPEED_MS
   const prevRecent: number[] = (state as any).recentQuestionIds ?? []
+  const prevRecent: number[] = state.recentQuestionIds ?? []
   const newRecent = question?.id
     ? [...prevRecent.filter((id: number) => id !== question.id), question.id].slice(-20)
     : prevRecent
