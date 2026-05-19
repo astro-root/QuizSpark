@@ -1,6 +1,5 @@
 import { Router } from 'express'
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+import { prisma } from '../lib/prisma'
 const router = Router()
 
 router.post('/', async (req, res) => {
