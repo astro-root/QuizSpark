@@ -12,7 +12,7 @@ import TitleSelectTab from '../components/profile/TitleSelectTab'
 import { apiFetch } from '../lib/api'
 import { useState, useEffect } from 'react'
 
-type Tab = 'profile' | 'records' | 'history' | 'title'
+type Tab = 'profile' | 'records' | 'history' | 'title' | 'genre'
 
 export default function ProfilePage() {
   const [stats, setStats] = useState({ rate: 0, total: 0, wins: 0, correct: 0 })
