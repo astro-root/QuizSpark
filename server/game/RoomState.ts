@@ -81,22 +81,33 @@ function shuffle(arr: number[]): number[] {
 export function advanceQuestion(state: RoomState, customQuestions?: import('../../src/types').Question[]): RoomState {
   const nextIndex = state.currentQuestionIndex + 1
   const sourceQuestions = customQuestions ?? getQuizData()
-  const count = Math.min(state.settings.questionCount, sourceQuestions.length)
+  const recentIds: Set<number> = new Set((state as any).recentQuestionIds ?? [])
+  // カスタム問題は重複排除不要
+  const pool = customQuestions
+    ? sourceQuestions
+    : sourceQuestions.filter(q => !recentIds.has(q.id))
+  const available = pool.length > 0 ? pool : sourceQuestions
+  const count = Math.min(state.settings.questionCount, available.length)
   const order = state.questionOrder.length === count
     ? state.questionOrder
-    : shuffle(sourceQuestions.map((_, i) => i)).slice(0, count)
+    : shuffle(available.map((_, i) => i)).slice(0, count)
 
   // 問題数終了 or 全員WIN/LOSEならfinished
   if (nextIndex >= order.length || checkGameEnd(state)) {
     return { ...state, phase: 'finished', currentQuestion: null, timerEndsAt: null, questionOrder: order }
   }
-  const question = (customQuestions ?? getQuizData())[order[nextIndex]]
+  const question = available[order[nextIndex]]
   const typewriterMs = question.text.length * TYPEWRITER_SPEED_MS
+  const prevRecent: number[] = (state as any).recentQuestionIds ?? []
+  const newRecent = question?.id
+    ? [...prevRecent.filter((id: number) => id !== question.id), question.id].slice(-5)
+    : prevRecent
   return {
     ...state,
     phase: 'question',
     currentQuestionIndex: nextIndex,
     currentQuestion: question,
+    recentQuestionIds: newRecent,
     questionStartedAt: Date.now(),
     buzzedPlayerId: null,
     buzzedPlayerName: null,
