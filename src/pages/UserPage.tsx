@@ -65,37 +65,35 @@ export default function UserPage() {
       <AppHeader back />
 
       {/* バナー */}
-      <div style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', padding:'28px 20px 16px', display:'flex', flexDirection:'column', gap:12 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <div style={{ width:72, height:72, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.4)', overflow:'hidden', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:900, color:'#fff', flexShrink:0 }}>
-            {profile.avatarUrl ? <img src={profile.avatarUrl} style={{ width:72, height:72, objectFit:'cover' }} alt="" /> : profile.name[0]}
-          </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <p style={{ fontWeight:900, fontSize:20, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile.name}</p>
-            {profile.username && <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', marginTop:2 }}>@{profile.username}</p>}
-            <div style={{ display:'inline-flex', alignItems:'center', gap:6, marginTop:6, padding:'3px 10px', background:'rgba(255,255,255,0.15)', borderRadius:20 }}>
-              <span style={{ fontSize:13 }}>{rank.emoji}</span>
-              <span style={{ fontSize:12, fontWeight:700, color:'#fff', whiteSpace:'nowrap' }}>{rank.label}</span>
-              <span style={{ fontSize:12, color:'rgba(255,255,255,0.8)', fontFamily:'Orbitron,sans-serif' }}>{profile.rate}pt</span>
-            </div>
-          </div>
+      <div style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', padding:'32px 24px 24px', display:'flex', alignItems:'flex-start', gap:20, flexWrap:'wrap' }}>
+        <div style={{ width:88, height:88, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.5)', overflow:'hidden', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, fontWeight:900, color:'#fff', flexShrink:0 }}>
+          {profile.avatarUrl ? <img src={profile.avatarUrl} style={{ width:88, height:88, objectFit:'cover' }} alt="" /> : profile.name[0]}
         </div>
-        {!isMe && me && (
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => navigate(`/chat/${id}`)}
-              style={{ padding:'10px 14px', borderRadius:20, fontSize:14, fontWeight:700,
-                background:'rgba(255,255,255,0.2)', color:'#fff', border:'1px solid rgba(255,255,255,0.4)', cursor:'pointer' }}>
-              💬
-            </button>
-            <button onClick={toggleFollow}
-              style={{ flex:1, padding:'10px 20px', borderRadius:20, fontSize:14, fontWeight:700,
-                background: profile.isFollowing ? 'rgba(255,255,255,0.2)' : '#fff',
-                color: profile.isFollowing ? '#fff' : 'var(--accent)',
-                border: profile.isFollowing ? '1px solid rgba(255,255,255,0.4)' : 'none', cursor:'pointer' }}>
-              {profile.isFollowing ? 'フォロー中' : 'フォロー'}
-            </button>
+        <div style={{ flex:1, minWidth:180 }}>
+          <p style={{ fontWeight:900, fontSize:22, color:'#fff' }}>{profile.name}</p>
+          {profile.username && <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', marginTop:2 }}>@{profile.username}</p>}
+          <div style={{ display:'inline-flex', alignItems:'center', gap:6, marginTop:8, padding:'4px 12px', background:'rgba(255,255,255,0.15)', borderRadius:20 }}>
+            <span style={{ fontSize:14 }}>{rank.emoji}</span>
+            <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{rank.label}</span>
+            <span style={{ fontSize:13, color:'rgba(255,255,255,0.85)', fontFamily:'Orbitron,sans-serif' }}>{profile.rate}pt</span>
           </div>
-        )}
+          {!isMe && me && (
+            <div style={{ display:'flex', gap:8, marginTop:12 }}>
+              <button onClick={() => navigate(`/chat/${id}`)}
+                style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 16px', borderRadius:20, fontSize:13, fontWeight:700,
+                  background:'rgba(255,255,255,0.2)', color:'#fff', border:'1px solid rgba(255,255,255,0.4)', cursor:'pointer' }}>
+                💬 チャット
+              </button>
+              <button onClick={toggleFollow}
+                style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 20px', borderRadius:20, fontSize:13, fontWeight:700,
+                  background: profile.isFollowing ? 'rgba(255,255,255,0.2)' : '#fff',
+                  color: profile.isFollowing ? '#fff' : 'var(--accent)',
+                  border: profile.isFollowing ? '1px solid rgba(255,255,255,0.4)' : 'none', cursor:'pointer' }}>
+                {profile.isFollowing ? '✓ フォロー中' : '+ フォロー'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className='inner profile-inner'>

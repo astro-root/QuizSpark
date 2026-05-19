@@ -223,13 +223,13 @@ export default function CreatePage() {
     <div className="page">
       <AppHeader title="作問" />
       <div className="inner" style={{ display:'flex', flexDirection:'column', gap:14 }}>
-        <div style={{ background:'var(--surface)', borderRadius:14, padding:'14px 16px', border:'1px solid var(--border)', display:'flex', gap:10 }}>
+        <div style={{ background:'var(--surface)', borderRadius:14, padding:'14px 16px', border:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:10 }}>
           <input value={newSetName} onChange={e => setNewSetName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && createSet()}
             placeholder="新しいセットの名前"
-            style={{ flex:1, padding:'11px 14px', background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:10, fontSize:14, color:'var(--text)' }} />
+            style={{ width:'100%', padding:'11px 14px', background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:10, fontSize:14, color:'var(--text)', boxSizing:'border-box' }} />
           <button onClick={createSet} disabled={creating || !newSetName.trim()}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'11px 16px', borderRadius:10, fontSize:14, fontWeight:800, border:'none', cursor:'pointer',
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'11px 16px', borderRadius:10, fontSize:14, fontWeight:800, border:'none', cursor:'pointer',
               background: newSetName.trim() ? 'linear-gradient(135deg,var(--accent),var(--accent2))' : 'var(--surface2)',
               color: newSetName.trim() ? '#fff' : 'var(--muted)' }}>
             <Plus size={16} /> 作成
