@@ -86,6 +86,10 @@ export default function ProfileTab() {
       </div>
 
       <div style={{ display:'flex', gap:8 }}>
+        <button onClick={() => navigate('/help')}
+          style={{ width:'100%', padding:'13px 16px', borderRadius:12, border:'1px solid var(--border)', background:'var(--surface2)', color:'var(--text)', fontSize:14, fontWeight:700, cursor:'pointer', textAlign:'left' }}>
+          ❓ ヘルプ
+        </button>
         <button onClick={() => navigate('/contact')}
           style={{ flex:1, padding:'13px', borderRadius:12, fontSize:13, fontWeight:700, background:'var(--surface)', color:'var(--sub)', border:'1px solid var(--border)' }}>
           📩 お問い合わせ

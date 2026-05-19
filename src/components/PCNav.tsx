@@ -65,7 +65,7 @@ export default function PCNav() {
           )
         })}
       </div>
-      <button onClick={() => navigate('/contact')}
+      <button onClick={() => navigate('/help')}
         style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 8, display: 'flex' }}>
         <HelpCircle size={18} />
       </button>

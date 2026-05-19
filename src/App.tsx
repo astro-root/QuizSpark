@@ -19,6 +19,7 @@ const ProfilePage      = lazy(() => import('./pages/ProfilePage'))
 const RankingPage      = lazy(() => import('./pages/RankingPage'))
 const UserPage         = lazy(() => import('./pages/UserPage'))
 const ContactPage      = lazy(() => import('./pages/ContactPage'))
+const HelpPage         = lazy(() => import('./pages/HelpPage'))
 const ChatPage         = lazy(() => import('./pages/ChatPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const SearchPage       = lazy(() => import('./pages/SearchPage'))
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="/ranking" element={<RankingPage />} />
             <Route path="/user/:id" element={<UserPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/help" element={<HelpPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/chat/:userId" element={<ChatPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
