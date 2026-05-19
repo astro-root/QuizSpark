@@ -18,10 +18,15 @@ export default function GenreRadarTab({ userId }: { userId?: string }) {
   if (loading) return <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 24 }}>読み込み中...</p>
   if (stats.every(s => s.total === 0)) return <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 24 }}>対戦履歴がありません</p>
 
-  const data = GENRES.map(g => {
+  const rawData = GENRES.map(g => {
     const s = stats.find(x => x.genre === g)
     return { genre: g, 正答率: s ? Math.round(s.rate * 100) : 0, 問題数: s?.total ?? 0 }
   }).filter(d => d['問題数'] > 0)
+  // recharts RadarChartは3点未満だと描画できないのでダミー追加
+  const data = rawData.length >= 3 ? rawData : [
+    ...rawData,
+    ...Array.from({ length: 3 - rawData.length }, (_, i) => ({ genre: `_dummy${i}`, 正答率: 0, 問題数: 0 }))
+  ]
 
   return (
     <div style={{ padding: '16px 0' }}>

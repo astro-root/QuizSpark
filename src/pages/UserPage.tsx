@@ -65,33 +65,35 @@ export default function UserPage() {
       <AppHeader back />
 
       {/* バナー */}
-      <div style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', padding:'28px 20px 20px', display:'flex', alignItems:'center', gap:16 }}>
-        <div style={{ width:72, height:72, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.4)', overflow:'hidden', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:900, color:'#fff', flexShrink:0 }}>
-          {profile.avatarUrl ? <img src={profile.avatarUrl} style={{ width:72, height:72, objectFit:'cover' }} alt="" /> : profile.name[0]}
-        </div>
-        <div style={{ flex:1 }}>
-          <p style={{ fontWeight:900, fontSize:20, color:'#fff' }}>{profile.name}</p>
-          {profile.username && <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', marginTop:2 }}>@{profile.username}</p>}
-          <div style={{ display:'inline-flex', alignItems:'center', gap:6, marginTop:6, padding:'3px 10px', background:'rgba(255,255,255,0.15)', borderRadius:20 }}>
-            <span style={{ fontSize:13 }}>{rank.emoji}</span>
-            <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{rank.label}</span>
-            <span style={{ fontSize:12, color:'rgba(255,255,255,0.8)', fontFamily:'Orbitron,sans-serif' }}>{profile.rate}pt</span>
+      <div style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', padding:'28px 20px 16px', display:'flex', flexDirection:'column', gap:12 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          <div style={{ width:72, height:72, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.4)', overflow:'hidden', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:900, color:'#fff', flexShrink:0 }}>
+            {profile.avatarUrl ? <img src={profile.avatarUrl} style={{ width:72, height:72, objectFit:'cover' }} alt="" /> : profile.name[0]}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <p style={{ fontWeight:900, fontSize:20, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile.name}</p>
+            {profile.username && <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', marginTop:2 }}>@{profile.username}</p>}
+            <div style={{ display:'inline-flex', alignItems:'center', gap:6, marginTop:6, padding:'3px 10px', background:'rgba(255,255,255,0.15)', borderRadius:20 }}>
+              <span style={{ fontSize:13 }}>{rank.emoji}</span>
+              <span style={{ fontSize:12, fontWeight:700, color:'#fff', whiteSpace:'nowrap' }}>{rank.label}</span>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,0.8)', fontFamily:'Orbitron,sans-serif' }}>{profile.rate}pt</span>
+            </div>
           </div>
         </div>
         {!isMe && me && (
-          <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-          <button onClick={() => navigate(`/chat/${id}`)}
-            style={{ padding:'10px 14px', borderRadius:20, fontSize:14, fontWeight:700,
-              background:'rgba(255,255,255,0.2)', color:'#fff', border:'1px solid rgba(255,255,255,0.4)' }}>
-            💬
-          </button>
-          <button onClick={toggleFollow}
-            style={{ padding:'10px 20px', borderRadius:20, fontSize:14, fontWeight:700, flexShrink:0,
-              background: profile.isFollowing ? 'rgba(255,255,255,0.2)' : '#fff',
-              color: profile.isFollowing ? '#fff' : 'var(--accent)',
-              border: profile.isFollowing ? '1px solid rgba(255,255,255,0.4)' : 'none' }}>
-            {profile.isFollowing ? 'フォロー中' : 'フォロー'}
-          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => navigate(`/chat/${id}`)}
+              style={{ padding:'10px 14px', borderRadius:20, fontSize:14, fontWeight:700,
+                background:'rgba(255,255,255,0.2)', color:'#fff', border:'1px solid rgba(255,255,255,0.4)', cursor:'pointer' }}>
+              💬
+            </button>
+            <button onClick={toggleFollow}
+              style={{ flex:1, padding:'10px 20px', borderRadius:20, fontSize:14, fontWeight:700,
+                background: profile.isFollowing ? 'rgba(255,255,255,0.2)' : '#fff',
+                color: profile.isFollowing ? '#fff' : 'var(--accent)',
+                border: profile.isFollowing ? '1px solid rgba(255,255,255,0.4)' : 'none', cursor:'pointer' }}>
+              {profile.isFollowing ? 'フォロー中' : 'フォロー'}
+            </button>
           </div>
         )}
       </div>

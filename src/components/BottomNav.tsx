@@ -25,7 +25,7 @@ export default function BottomNav() {
 
   if (!user) return null
   if (pathname.includes('/room/')) return null
-  if (pathname.startsWith('/chat')) return null
+  if (pathname.startsWith('/chat/')) return null
   if (isPC) return null
 
   const tabs = [
