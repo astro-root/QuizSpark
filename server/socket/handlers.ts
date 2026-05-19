@@ -208,12 +208,14 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
           orderBy: { playedAt: 'desc' },
           select: { userId: true, questionId: true },
         })
-        // ユーザーごとに直近20問のIDを収集
+        // ユーザーごとに直近20戦分の問題IDをすべて収集
+        // 1戦 = questionCount問なので最大 20 * questionCount 問分のIDを除外
+        const battleSize = state.settings.questionCount
         const usedIds = new Set<number>()
         const countPerUser = new Map<string, number>()
         for (const h of histories) {
           const cnt = countPerUser.get(h.userId!) ?? 0
-          if (cnt < 20 && h.questionId) {
+          if (cnt < battleSize * 20 && h.questionId) {
             usedIds.add(h.questionId)
             countPerUser.set(h.userId!, cnt + 1)
           }
