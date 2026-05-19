@@ -86,17 +86,19 @@ export default function ProfileTab() {
       </div>
 
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        <button onClick={() => navigate('/help')}
-          style={{ width:'100%', padding:'13px 16px', borderRadius:12, border:'1px solid var(--border)', background:'var(--surface2)', color:'var(--text)', fontSize:14, fontWeight:700, cursor:'pointer', textAlign:'left' }}>
-          ❓ ヘルプ
-        </button>
-        <button onClick={() => navigate('/contact')}
-          style={{ width:'100%', padding:'13px 16px', borderRadius:12, fontSize:14, fontWeight:700, background:'var(--surface2)', color:'var(--text)', border:'1px solid var(--border)', cursor:'pointer', textAlign:'left' }}>
-          📩 お問い合わせ
-        </button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={() => navigate('/help')}
+            style={{ flex:1, padding:'13px', borderRadius:12, border:'1px solid var(--border)', background:'var(--surface2)', color:'var(--text)', fontSize:14, fontWeight:700, cursor:'pointer', textAlign:'center' }}>
+            ❓ ヘルプ
+          </button>
+          <button onClick={() => navigate('/contact')}
+            style={{ flex:1, padding:'13px', borderRadius:12, fontSize:14, fontWeight:700, background:'var(--surface2)', color:'var(--text)', border:'1px solid var(--border)', cursor:'pointer', textAlign:'center' }}>
+            📩 お問い合わせ
+          </button>
+        </div>
         {isAdmin && (
           <button onClick={() => navigate('/admin')}
-            style={{ flex:1, padding:'13px', borderRadius:12, fontSize:13, fontWeight:700, background:'rgba(251,191,36,0.1)', color:'#f59e0b', border:'1px solid rgba(251,191,36,0.3)' }}>
+            style={{ width:'100%', padding:'13px', borderRadius:12, fontSize:13, fontWeight:700, background:'rgba(251,191,36,0.1)', color:'#f59e0b', border:'1px solid rgba(251,191,36,0.3)', cursor:'pointer', textAlign:'center' }}>
             ⚙️ 管理者
           </button>
         )}
