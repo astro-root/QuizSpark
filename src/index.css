@@ -101,3 +101,11 @@ img { max-width: 100%; }
 @media (min-width: 768px) {
   .page { padding-top: 52px; }
 }
+
+@keyframes stampPop {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.3); }
+  15%  { opacity: 1; transform: translateX(-50%) scale(1.2); }
+  30%  { transform: translateX(-50%) scale(1); }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-80px); }
+}

@@ -241,6 +241,18 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     }
   })
 
+  socket.on('send-stamp', (stamp: string) => {
+    const roomId = socket.data.roomId
+    if (!roomId) return
+    const state = gameManager.getRoom(roomId)
+    if (!state) return
+    const player = state.players.find(p => p.id === socket.id)
+    if (!player) return
+    const VALID = ['👍','👏','🔥','💪','😲','🤔','😭','🎉']
+    if (!VALID.includes(stamp)) return
+    io.to(roomId).emit('stamp', { fromId: socket.id, fromName: player.name, stamp })
+  })
+
   socket.on('send-chat', (text) => {
     const roomId = socket.data.roomId
     if (!roomId || !text?.trim()) return

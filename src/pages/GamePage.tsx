@@ -513,6 +513,24 @@ export default function GamePage() {
         )}
       </div>
     </div>
+    {/* スタンプ */}
+    <div style={{ position:'fixed', bottom: 80, right: 16, zIndex: 300, display:'flex', flexDirection:'column', gap:6 }}>
+      {['👍','👏','🔥','💪','😲','🤔','😭','🎉'].map(s => (
+        <button key={s} onClick={() => sendStamp(s)}
+          style={{ width:44, height:44, borderRadius:'50%', border:'none', background:'var(--surface)', boxShadow:'0 2px 8px rgba(0,0,0,0.3)', fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          {s}
+        </button>
+      ))}
+    </div>
+    {/* スタンプ表示 */}
+    <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:400, overflow:'hidden' }}>
+      {stamps.map(s => (
+        <div key={s.id} style={{ position:'absolute', left:'50%', top:'30%', transform:'translateX(-50%)', textAlign:'center', animation:'stampPop 3s ease-out forwards' }}>
+          <div style={{ fontSize:64 }}>{s.stamp}</div>
+          <p style={{ fontSize:13, fontWeight:800, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.8)', marginTop:4 }}>{s.fromName}</p>
+        </div>
+      ))}
+    </div>
     <RoomChat myId={myId} />
     {reportTarget && <QuestionReportModal questionId={reportTarget.id} questionText={reportTarget.text} onClose={() => setReportTarget(null)} />}
     </>

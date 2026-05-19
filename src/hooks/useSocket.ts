@@ -46,6 +46,12 @@ export function useSocket() {
     socket.on('public-rooms', onPublicRooms)
     socket.on('prematch-info', setPrematchInfo)
     socket.on('rate-result', setRateResult)
+    const onStamp = (data: {fromId:string,fromName:string,stamp:string}) => {
+      const id = Math.random().toString(36).slice(2)
+      setStamps(prev => [...prev, { id, ...data }])
+      setTimeout(() => setStamps(prev => prev.filter(s => s.id !== id)), 3000)
+    }
+    socket.on('stamp', onStamp)
 
     if (!socket.connected) socket.connect()
 
@@ -57,6 +63,7 @@ export function useSocket() {
       socket.off('public-rooms', onPublicRooms)
       socket.off('prematch-info', setPrematchInfo)
       socket.off('rate-result', setRateResult)
+    socket.off('stamp', onStamp)
     }
   }, [])
 
