@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Home, Trophy, MessageCircle, User, PenLine, Bell, HelpCircle } from 'lucide-react'
+import { Home, Trophy, MessageCircle, User, PenLine, Bell, HelpCircle, Sun, Moon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useIsPC } from '../hooks/useMediaQuery'
+import { useTheme } from '../context/ThemeContext'
 import { apiFetch } from '../lib/api'
 
 export default function PCNav() {
@@ -10,6 +11,7 @@ export default function PCNav() {
   const { pathname } = useLocation()
   const { user } = useAuth()
   const [unread, setUnread] = useState(0)
+  const { theme, toggle } = useTheme()
 
   useEffect(() => {
     if (!user) return
@@ -68,6 +70,10 @@ export default function PCNav() {
       <button onClick={() => navigate('/help')}
         style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 8, display: 'flex' }}>
         <HelpCircle size={18} />
+      </button>
+      <button onClick={toggle}
+        style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 8, display: 'flex' }}>
+        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
       </button>
       <button onClick={() => navigate('/notifications')}
         style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 8, display: 'flex' }}>

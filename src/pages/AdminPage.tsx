@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import AppHeader from '../components/AppHeader'
 
-type Tab = 'questions' | 'users' | 'contacts' | 'announcements'
+type Tab = 'questions' | 'users' | 'contacts' | 'announcements' | 'reports'
 
 interface Question { id: number; text: string; answer: string; displayAnswer: string; createdAt: string }
 interface Announcement { id: number; title: string; body: string; active: boolean }
@@ -43,6 +43,7 @@ export default function AdminPage() {
   const [newTitle, setNewTitle] = useState('')
   const [newBody, setNewBody] = useState('')
   const [userSearch, setUserSearch] = useState('')
+  const [reports, setReports] = useState<{id:string,questionId:number,reason:string,createdAt:string,resolved:boolean,user:{id:string,name:string}}[]>([])
   const [csvStatus, setCsvStatus] = useState<'idle'|'ok'|'err'>('idle')
   const [csvMsg, setCsvMsg] = useState('')
   const csvRef = useRef<HTMLInputElement>(null)
@@ -54,8 +55,10 @@ export default function AdminPage() {
     else if (tab === 'announcements') fetchAnnouncements()
     else if (tab === 'users') fetchUsers()
     else if (tab === 'contacts') fetchContacts()
+    else if (tab === 'reports') fetchReports()
   }, [tab])
 
+  async function fetchReports() { const r = await apiFetch('/api/reports'); if (r.ok) setReports(await r.json()) }
   async function fetchQuestions() { const r = await apiFetch('/api/admin/questions'); if (r.ok) setQuestions(await r.json()) }
   async function fetchAllQuestions() { const r = await apiFetch('/api/admin/questions/all'); if (r.ok) setAllQuestions(await r.json()) }
   async function fetchAnnouncements() { const r = await apiFetch('/api/admin/announcements'); if (r.ok) setAnnouncements(await r.json()) }
@@ -148,6 +151,7 @@ export default function AdminPage() {
     { key: 'users', label: '👤 ユーザー' },
     { key: 'contacts', label: `📬 問い合わせ${contacts.filter(c => c.status === 'open').length > 0 ? ` (${contacts.filter(c => c.status === 'open').length})` : ''}` },
     { key: 'announcements', label: '📢 お知らせ' },
+    { key: 'reports', label: '🚩 報告' },
   ]
 
   return (
@@ -417,7 +421,30 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ─── お知らせ ─── */}
+        {tab === 'reports' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {reports.length === 0 && <p style={{ color:'var(--muted)', textAlign:'center', padding:32 }}>未解決の報告はありません</p>}
+            {reports.map(r => (
+              <div key={r.id} style={{ background:'var(--surface)', borderRadius:12, padding:'14px 16px', border:'1px solid var(--border)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
+                  <div style={{ flex:1 }}>
+                    <p style={{ fontSize:12, color:'var(--muted)', marginBottom:4 }}>
+                      問題ID: {r.questionId} ／ {r.user.name} ／ {new Date(r.createdAt).toLocaleDateString('ja-JP')}
+                    </p>
+                    <p style={{ fontSize:14, fontWeight:700 }}>{r.reason}</p>
+                  </div>
+                  <button onClick={async () => {
+                    await apiFetch(`/api/reports/${r.id}/resolve`, { method: 'PATCH' })
+                    setReports(prev => prev.filter(x => x.id !== r.id))
+                  }} style={{ flexShrink:0, padding:'7px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'rgba(34,197,94,0.1)', color:'var(--correct)', border:'1px solid rgba(34,197,94,0.2)', cursor:'pointer' }}>
+                    解決済み
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+                {/* ─── お知らせ ─── */}
         {tab === 'announcements' && (
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <div style={{ background:'var(--surface)', borderRadius:14, padding:'18px', border:'1px solid var(--border)' }}>
