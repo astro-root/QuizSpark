@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import AppHeader from '../components/AppHeader'
+import { useIsPC } from '../hooks/useMediaQuery'
 
 type Tab = 'questions' | 'users' | 'contacts' | 'announcements' | 'reports'
 
