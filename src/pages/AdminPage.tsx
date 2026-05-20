@@ -16,6 +16,8 @@ interface UserSummary {
   _count: { battleRecords: number; questionSets: number }
 }
 interface UserDetail extends UserSummary {
+  rate: number
+  titleId: string | null
   bio: string | null
   battleRecords: { id: string; ruleId: string; result: string; correct: number; wrong: number; score: number; playerCount: number; playedAt: string }[]
   questionSets: { id: string; name: string; isPublic: boolean; _count: { items: number } }[]
@@ -107,7 +109,13 @@ export default function AdminPage() {
     else setNotifStatus('❌ 送信失敗')
   }
   async function fetchUserDetail(id: string) {
-    const r = await apiFetch(`/api/admin/users/${id}`); if (r.ok) setSelectedUser(await r.json())
+    const r = await apiFetch(`/api/admin/users/${id}`)
+    if (r.ok) {
+      const d = await r.json()
+      setSelectedUser(d)
+      setEditRate(String(d.rate ?? 0))
+      setEditTitle(d.titleId ?? '')
+    }
   }
   async function toggleAdmin(id: string, isAdmin: boolean) {
     if (!confirm(`管理者権限を${isAdmin ? '付与' : '剥奪'}しますか？`)) return

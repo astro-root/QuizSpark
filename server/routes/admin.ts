@@ -93,7 +93,7 @@ router.get('/users/:id', async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
       select: {
-        id: true, name: true, username: true, email: true, avatarUrl: true, isAdmin: true, bio: true, createdAt: true,
+        id: true, name: true, username: true, email: true, avatarUrl: true, isAdmin: true, bio: true, createdAt: true, rate: true, titleId: true,
         battleRecords: { orderBy: { playedAt: 'desc' }, take: 20 },
         questionSets: { select: { id: true, name: true, isPublic: true, _count: { select: { items: true } } } },
         _count: { select: { battleRecords: true, questionSets: true } }
