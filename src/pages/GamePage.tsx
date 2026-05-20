@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
-import QuestionReportModal from '../components/QuestionReportModal'
 import RoomChat from '../components/RoomChat'
 import Board from '../components/Board'
 import { useCountdown } from '../hooks/useCountdown'
@@ -183,7 +182,6 @@ export default function GamePage() {
 
   const qTextRef = useRef('')
   const [frozen, setFrozen] = useState('')
-  const [reportTarget, setReportTarget] = useState<{id:number,text:string}|null>(null)
   useEffect(() => { qTextRef.current = qText }, [qText])
   const prevPhase2 = useRef<string|null>(null)
   useEffect(() => {
@@ -494,12 +492,7 @@ export default function GamePage() {
                 <span style={{ color:'var(--muted)',fontSize:13 }}>答え：</span>
                 <span style={{ fontWeight:900,fontSize:18 }}>{currentQuestion?.displayAnswer}</span>
               </div>
-              {currentQuestion?.id && (
-                <button onClick={() => setReportTarget({ id: currentQuestion.id, text: currentQuestion.text })}
-                  style={{ marginTop:8, display:'flex', alignItems:'center', gap:4, background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:11, padding:'4px 8px', borderRadius:6 }}>
-                  <Flag size={12} />問題を報告
-                </button>
-              )}
+
             </div>
           )
         })()}
@@ -532,7 +525,6 @@ export default function GamePage() {
       ))}
     </div>
     <RoomChat myId={myId} />
-    {reportTarget && <QuestionReportModal questionId={reportTarget.id} questionText={reportTarget.text} onClose={() => setReportTarget(null)} />}
     </>
   )
 }

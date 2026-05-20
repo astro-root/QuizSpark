@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma'
-
 const router = Router()
 
 router.get('/me', async (req, res) => {
@@ -10,11 +9,10 @@ router.get('/me', async (req, res) => {
     where: { userId },
     orderBy: { playedAt: 'desc' },
     take: 10,
+    select: { id: true, text: true, answer: true, userAnswer: true, isCorrect: true, genre: true, questionId: true, playedAt: true },
   })
   res.json(history)
 })
-
-export default router
 
 router.get('/genre', async (req, res) => {
   const user = (req as any).user
@@ -32,3 +30,5 @@ router.get('/genre', async (req, res) => {
   const result = Array.from(map.entries()).map(([genre, s]) => ({ genre, correct: s.correct, total: s.total, rate: s.total > 0 ? s.correct / s.total : 0 }))
   res.json(result)
 })
+
+export default router
