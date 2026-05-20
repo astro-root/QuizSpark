@@ -22,11 +22,19 @@
 [data-theme="light"] {
   --bg:       #f1f5f9;
   --surface:  #ffffff;
-  --surface2: #f8fafc;
-  --border:   rgba(0,0,0,0.08);
+  --surface2: #f4f6fb;
+  --border:   rgba(0,0,0,0.09);
+  --accent:   #7c3aed;
+  --accent2:  #6d28d9;
+  --accent3:  #a78bfa;
+  --buzz:     #f43f5e;
+  --buzz2:    #e11d48;
+  --correct:  #059669;
+  --wrong:    #dc2626;
+  --gold:     #d97706;
   --text:     #0f172a;
-  --muted:    #94a3b8;
-  --sub:      #64748b;
+  --muted:    #64748b;
+  --sub:      #475569;
 }
 
 html, body, #root {
