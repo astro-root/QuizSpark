@@ -18,7 +18,7 @@ export default function ProfilePage() {
   const [stats, setStats] = useState({ rate: 0, total: 0, wins: 0, correct: 0 })
   useEffect(() => {
     apiFetch('/api/records/me').then(r => r.ok ? r.json() : null).then(d => {
-      if (d) setStats({ rate: 0, total: d.stats.total, wins: d.stats.wins, correct: d.stats.totalCorrect })
+      if (d) setStats({ rate: d.rate ?? 0, total: d.stats.total, wins: d.stats.wins, correct: d.stats.totalCorrect })
     }).catch(() => {})
   }, [])
   const { user, authLoading } = useAuth()

@@ -16,7 +16,8 @@ router.get('/me', async (req, res) => {
     const wins = records.filter(r => r.result === 'WIN').length
     const totalCorrect = records.reduce((s, r) => s + r.correct, 0)
     const totalWrong = records.reduce((s, r) => s + r.wrong, 0)
-    res.json({ records, stats: { total, wins, winRate: total ? Math.round(wins / total * 100) : 0, totalCorrect, totalWrong } })
+    const userRow = await prisma.user.findUnique({ where: { id: userId }, select: { rate: true } })
+    res.json({ records, rate: userRow?.rate ?? 0, stats: { total, wins, winRate: total ? Math.round(wins / total * 100) : 0, totalCorrect, totalWrong } })
   } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 
