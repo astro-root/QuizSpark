@@ -155,11 +155,11 @@ export default function AdminPage() {
     { key: 'reports', label: '🚩 報告' },
   ]
 
+  const isPC = useIsPC()
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column' }}>
       <AppHeader title="管理画面" />
-
-      <div style={{ flex:1, maxWidth:900, width:'100%', margin:'0 auto', padding:'20px 16px 60px' }}>
+      <div style={{ flex:1, maxWidth:900, width:'100%', margin:'0 auto', paddingTop: isPC ? 72 : 20, paddingLeft:16, paddingRight:16, paddingBottom:60 }}>
         {/* タブ */}
         <div style={{ display:'flex', background:'var(--surface)', borderRadius:12, padding:4, gap:4, marginBottom:20, flexWrap:'wrap' }}>
           {TABS.map(t => (
