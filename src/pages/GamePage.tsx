@@ -93,7 +93,7 @@ function VSHud({ players, myId, ruleId }: { players: import('../types').Player[]
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId:string }>()
-  const { roomState, myId, buzz, submitAnswer, resetGame, isHost, syncState, prematchInfo, rateResult, setPrematchInfo, setRateResult } = useSocketContext()
+  const { roomState, myId, buzz, submitAnswer, resetGame, isHost, syncState, prematchInfo, rateResult, setPrematchInfo, setRateResult, stamps, sendStamp } = useSocketContext()
   const navigate = useNavigate()
   const [answer, setAnswer] = useState('')
   const [prematchCountdown, setPrematchCountdown] = useState(5)
