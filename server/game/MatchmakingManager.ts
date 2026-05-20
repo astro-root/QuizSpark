@@ -114,6 +114,28 @@ async function createMatch(host: QueueEntry, guest: QueueEntry) {
 
   if (onMatchCallback) onMatchCallback(roomId, [host.playerId, guest.playerId], [hostStats, guestStats])
 
-  // 6秒後にゲーム開始（prematch画面表示時間）
-  setTimeout(() => { gameManager.startGame(roomId) }, 5500)
+  // 5.5秒後にゲーム開始（prematch画面表示時間）
+  setTimeout(async () => {
+    // 両プレイヤーの直近20戦分の問題IDを除外
+    const playerDbIds = [host.dbUserId, guest.dbUserId].filter(Boolean) as string[]
+    if (playerDbIds.length > 0) {
+      const battleSize = 30 // questionCount
+      const histories = await prisma.questionHistory.findMany({
+        where: { userId: { in: playerDbIds }, questionId: { not: null } },
+        orderBy: { playedAt: 'desc' },
+        select: { userId: true, questionId: true },
+      })
+      const usedIds = new Set<number>()
+      const countPerUser = new Map<string, number>()
+      for (const h of histories) {
+        const cnt = countPerUser.get(h.userId!) ?? 0
+        if (cnt < battleSize * 20 && h.questionId) {
+          usedIds.add(h.questionId)
+          countPerUser.set(h.userId!, cnt + 1)
+        }
+      }
+      gameManager.setRecentQuestionIds(roomId, [...usedIds])
+    }
+    gameManager.startGame(roomId)
+  }, 5500)
 }
