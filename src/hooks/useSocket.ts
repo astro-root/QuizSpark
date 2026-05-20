@@ -11,6 +11,7 @@ export function useSocket() {
 
   const [prematchInfo, setPrematchInfo] = useState<PrematchInfo | null>(null)
   const [rateResult, setRateResult] = useState<RateResult | null>(null)
+  const [stamps, setStamps] = useState<{id:string,fromId:string,fromName:string,stamp:string}[]>([])
   const savedRoomId = useRef<string | null>(null)
   const savedName = useRef<string | null>(null)
 
@@ -98,12 +99,13 @@ export function useSocket() {
   const syncState = useCallback((roomId: string) => { socket.emit('sync-state', roomId) }, [])
   const sendChat = useCallback((text: string) => { socket.emit('send-chat', text) }, [])
   const leaveQueue = useCallback(() => { socket.emit('leave-queue') }, [])
+  const sendStamp = useCallback((stamp: string) => { socket.emit('send-stamp', stamp) }, [])
 
   const isHost = roomState?.hostId === myId
 
   return {
     roomState, myId, connected, reconnecting, isHost, publicRooms, prematchInfo, rateResult, setPrematchInfo, setRateResult,
     createRoom, joinRoom, updateSettings, resetGame, startGame, buzz, submitAnswer,
-    joinQueue, leaveQueue, sendChat, syncState, socket,
+    joinQueue, leaveQueue, sendChat, syncState, socket, stamps, sendStamp,
   }
 }
