@@ -1,6 +1,6 @@
 import http from 'http'
 import { createApp } from './app'
-import { loadQuizData } from './game/quizData'
+import { loadQuizData, startAutoReload } from './game/quizData'
 import { initSocketIO } from './socket'
 import { pool } from './lib/pool'
 
@@ -17,6 +17,7 @@ async function main() {
   `).catch(() => {})
   await pool.query('CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")').catch(() => {})
   await loadQuizData()
+  startAutoReload()
   const app = createApp()
   const httpServer = http.createServer(app)
   initSocketIO(httpServer)

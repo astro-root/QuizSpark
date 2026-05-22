@@ -19,3 +19,10 @@ export async function loadQuizData(): Promise<void> {
 export function getQuizData(): Question[] {
   return cache
 }
+
+export function startAutoReload(intervalMs = 5 * 60 * 1000): void {
+  setInterval(async () => {
+    await loadQuizData()
+  }, intervalMs)
+  console.log(`[QuizData] ${intervalMs / 1000}秒おきに自動リロードを開始`)
+}
