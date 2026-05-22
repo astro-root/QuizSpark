@@ -18,3 +18,5 @@ jobs:
       - run: npx ts-node --project tsconfig.server.json prisma/import-csv.ts prisma/questions.csv
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Render再デプロイ
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
