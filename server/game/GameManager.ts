@@ -150,7 +150,7 @@ class GameManager {
       const roomLog = this.answerLogs.get(roomId)!
       if (!roomLog.has(playerId)) roomLog.set(playerId, [])
       const playerLog = roomLog.get(playerId)!
-      const isCorrect = (nextState.lastJudgement as any)?.correct ?? false
+      const isCorrect = nextState.lastJudgement === 'correct'
       playerLog.push({ text: state.currentQuestion.text, answer: (state.currentQuestion as any).displayAnswer || state.currentQuestion.answer, userAnswer: rawAnswer, isCorrect, genre: (state.currentQuestion as any).genre ?? 'ノンジャンル', questionId: (state.currentQuestion as any).id ?? null })
       if (playerLog.length > 10) playerLog.shift()
     }
