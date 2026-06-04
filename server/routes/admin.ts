@@ -31,10 +31,19 @@ router.patch('/questions/:id/approve', async (req, res) => {
 router.patch('/questions/:id', async (req, res) => {
   const id = parseInt(req.params.id)
   if (!Number.isInteger(id)) { res.status(400).end(); return }
-  const { text, answer, answers, displayAnswer } = req.body ?? {}
+  const { text, answer, answers, displayAnswer, genre } = req.body ?? {}
   if (!text?.trim() || !answer?.trim()) { res.status(400).json({ error: '必須項目不足' }); return }
   try {
-    res.json(await prisma.question.update({ where: { id }, data: { text: text.trim(), answer: answer.trim(), answers, displayAnswer } }))
+    res.json(await prisma.question.update({
+      where: { id },
+      data: {
+        text: text.trim(),
+        answer: answer.trim(),
+        answers: Array.isArray(answers) ? answers.map((a: string) => a.trim()).filter(Boolean) : [answer.trim()],
+        displayAnswer: displayAnswer?.trim() || answer.trim(),
+        genre: genre?.trim() || 'ノンジャンル',
+      }
+    }))
   } catch { res.status(404).json({ error: '問題が見つかりません' }) }
 })
 

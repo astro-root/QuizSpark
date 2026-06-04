@@ -82,21 +82,29 @@ export function advanceQuestion(state: RoomState, customQuestions?: import('../.
   const nextIndex = state.currentQuestionIndex + 1
   const sourceQuestions = customQuestions ?? getQuizData()
   const recentIds: Set<number> = new Set(state.recentQuestionIds ?? [])
-  // カスタム問題は重複排除不要
   const pool = customQuestions
     ? sourceQuestions
     : sourceQuestions.filter(q => !recentIds.has(q.id))
   const available = pool.length > 0 ? pool : sourceQuestions
   const count = Math.min(state.settings.questionCount, available.length)
-  const order = state.questionOrder.length === count
-    ? state.questionOrder
-    : shuffle(available.map((_, i) => i)).slice(0, count)
 
-  // 問題数終了 or 全員WIN/LOSEならfinished
+  // Fix①: questionOrderが一度確定したら絶対に再作成しない
+  //   旧: state.questionOrder.length === count
+  //       → countがrecentIdsの増加で縮小するたびにorderが短く再作成され早期終了していた
+  //   新: state.questionOrder.length > 0 でゲーム中は常に既存orderを使用
+  //
+  // Fix②: orderにはavailable相対インデックスではなくsourceQuestionsの絶対インデックスを保存
+  //       → availableがrecentIds変化やDB自動リロードで変わっても常に同じ問題を参照できる
+  const order: number[] = state.questionOrder.length > 0
+    ? state.questionOrder
+    : shuffle(available.map(q => sourceQuestions.indexOf(q))).slice(0, count)
+
   if (nextIndex >= order.length || checkGameEnd(state)) {
     return { ...state, phase: 'finished', currentQuestion: null, timerEndsAt: null, questionOrder: order }
   }
-  const question = available[order[nextIndex]]
+
+  // Fix②続き: availableではなくsourceQuestionsから直接取得
+  const question = sourceQuestions[order[nextIndex]]
   const typewriterMs = question.text.length * TYPEWRITER_SPEED_MS
   const prevRecent: number[] = state.recentQuestionIds ?? []
   const newRecent = question?.id

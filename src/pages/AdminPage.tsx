@@ -8,7 +8,7 @@ import { useIsPC } from '../hooks/useMediaQuery'
 
 type Tab = 'questions' | 'users' | 'contacts' | 'announcements' | 'reports'
 
-interface Question { id: number; text: string; answer: string; displayAnswer: string; createdAt: string }
+interface Question { id: number; text: string; answer: string; answers: string[]; displayAnswer: string; genre: string; approved: boolean; createdAt: string }
 interface Announcement { id: number; title: string; body: string; active: boolean }
 interface UserSummary {
   id: string; name: string; username: string | null; email: string | null
@@ -32,6 +32,10 @@ export default function AdminPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
   const [editingQ, setEditingQ] = useState<Question | null>(null)
+  const [editAnswers, setEditAnswers] = useState<string[]>([])
+  const [editGenre, setEditGenre] = useState('ノンジャンル')
+  const [newAnswerInput, setNewAnswerInput] = useState('')
+  const [qSearch, setQSearch] = useState('')
   const [qTab, setQTab] = useState<'pending'|'approved'>('pending')
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [users, setUsers] = useState<UserSummary[]>([])
@@ -69,11 +73,26 @@ export default function AdminPage() {
   async function fetchContacts() { const r = await apiFetch('/api/admin/contacts'); if (r.ok) setContacts(await r.json()) }
 
   async function saveEdit(q: Question) {
+    const finalAnswers = editAnswers.map(a => a.trim()).filter(Boolean)
+    if (!finalAnswers.length) return
     await apiFetch(`/api/admin/questions/${q.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: q.text, answer: q.answer, answers: [q.answer], displayAnswer: q.displayAnswer })
+      body: JSON.stringify({
+        text: q.text,
+        answer: finalAnswers[0],
+        answers: finalAnswers,
+        displayAnswer: q.displayAnswer,
+        genre: editGenre,
+      })
     })
-    setEditingQ(null); fetchQuestions(); fetchAllQuestions()
+    setEditingQ(null); setEditAnswers([]); fetchQuestions(); fetchAllQuestions()
+  }
+
+  function startEdit(q: Question) {
+    setEditingQ({ ...q })
+    setEditAnswers(q.answers?.length ? [...q.answers] : [q.answer])
+    setEditGenre(q.genre ?? 'ノンジャンル')
+    setNewAnswerInput('')
   }
 
   async function approve(id: number) {
@@ -217,12 +236,22 @@ export default function AdminPage() {
                 {questions.length === 0 && <p style={{ color:'var(--muted)', textAlign:'center', padding:32 }}>承認待ちの問題はありません</p>}
                 {questions.map(q => (
                   <div key={q.id} style={{ background:'var(--surface)', borderRadius:12, padding:'16px 18px', border:'1px solid var(--border)' }}>
-                    <p style={{ fontWeight:600, marginBottom:6 }}>{q.text}</p>
-                    <p style={{ fontSize:13, color:'var(--muted)', marginBottom:12 }}>答え: {q.displayAnswer}（{q.answer}）</p>
-                    <div style={{ display:'flex', gap:8 }}>
-                      <button onClick={() => approve(q.id)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--correct)', color:'#fff' }}>承認</button>
-                      <button onClick={() => deleteQ(q.id)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'rgba(239,68,68,0.1)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>削除</button>
-                    </div>
+                    {editingQ?.id === q.id
+                      ? <QuestionEditForm q={editingQ} editAnswers={editAnswers} editGenre={editGenre} newAnswerInput={newAnswerInput}
+                          setQ={setEditingQ} setEditAnswers={setEditAnswers} setEditGenre={setEditGenre} setNewAnswerInput={setNewAnswerInput}
+                          onSave={() => saveEdit(editingQ)} onCancel={() => { setEditingQ(null); setEditAnswers([]) }} />
+                      : (
+                        <>
+                          <p style={{ fontWeight:600, marginBottom:4 }}>{q.text}</p>
+                          <p style={{ fontSize:13, color:'var(--muted)', marginBottom:4 }}>表示: <span style={{ color:'var(--text)', fontWeight:700 }}>{q.displayAnswer}</span>　読み: {q.answer}</p>
+                          <p style={{ fontSize:12, color:'var(--muted)', marginBottom:12 }}>ジャンル: {(q as any).genre ?? 'ノンジャンル'}　別解: {(q.answers ?? []).length > 1 ? `+${(q.answers ?? []).length - 1}件` : 'なし'}</p>
+                          <div style={{ display:'flex', gap:8 }}>
+                            <button onClick={() => approve(q.id)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--correct)', color:'#fff' }}>承認</button>
+                            <button onClick={() => startEdit(q)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--surface2)', color:'var(--text)', border:'1px solid var(--border)' }}>編集</button>
+                            <button onClick={() => deleteQ(q.id)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'rgba(239,68,68,0.1)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>削除</button>
+                          </div>
+                        </>
+                      )}
                   </div>
                 ))}
               </>
@@ -230,35 +259,33 @@ export default function AdminPage() {
 
             {qTab === 'approved' && (
               <>
-                {allQuestions.filter((q:any) => q.approved).map(q => (
-                  <div key={q.id} style={{ background:'var(--surface)', borderRadius:12, padding:'16px 18px', border:'1px solid var(--border)' }}>
-                    {editingQ?.id === q.id ? (
-                      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                        <input value={editingQ.text} onChange={e => setEditingQ({...editingQ, text:e.target.value})}
-                          style={inp2} placeholder="問題文" />
-                        <div style={{ display:'flex', gap:8 }}>
-                          <input value={editingQ.answer} onChange={e => setEditingQ({...editingQ, answer:e.target.value})}
-                            style={{...inp2, flex:1}} placeholder="答え（ひらがな）" />
-                          <input value={editingQ.displayAnswer} onChange={e => setEditingQ({...editingQ, displayAnswer:e.target.value})}
-                            style={{...inp2, flex:1}} placeholder="表示用の答え（漢字）" />
-                        </div>
-                        <div style={{ display:'flex', gap:8 }}>
-                          <button onClick={() => saveEdit(editingQ)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--accent)', color:'#fff' }}>保存</button>
-                          <button onClick={() => setEditingQ(null)} style={{ padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--surface2)', color:'var(--muted)' }}>キャンセル</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <p style={{ fontWeight:600, marginBottom:4, fontSize:14 }}>{q.text}</p>
-                        <p style={{ fontSize:13, color:'var(--muted)', marginBottom:10 }}>
-                          表示: <span style={{ color:'var(--text)', fontWeight:700 }}>{q.displayAnswer}</span>　読み: {q.answer}
-                        </p>
-                        <div style={{ display:'flex', gap:8 }}>
-                          <button onClick={() => setEditingQ(q)} style={{ padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'var(--surface2)', color:'var(--text)' }}>編集</button>
-                          <button onClick={() => deleteQ(q.id)} style={{ padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'rgba(239,68,68,0.1)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>削除</button>
-                        </div>
-                      </>
-                    )}
+                <input value={qSearch} onChange={e => setQSearch(e.target.value)}
+                  placeholder="問題文・答えで絞り込み…"
+                  style={{ width:'100%', padding:'10px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:9, fontSize:13, color:'var(--text)', boxSizing:'border-box' }} />
+                {allQuestions
+                  .filter((q:any) => q.approved)
+                  .filter((q:any) => !qSearch.trim() || q.text.includes(qSearch) || q.answer.includes(qSearch) || q.displayAnswer.includes(qSearch))
+                  .map(q => (
+                  <div key={q.id} style={{ background:'var(--surface)', borderRadius:12, padding:'16px 18px', border:`1px solid ${editingQ?.id === q.id ? 'var(--accent)' : 'var(--border)'}` }}>
+                    {editingQ?.id === q.id
+                      ? <QuestionEditForm q={editingQ} editAnswers={editAnswers} editGenre={editGenre} newAnswerInput={newAnswerInput}
+                          setQ={setEditingQ} setEditAnswers={setEditAnswers} setEditGenre={setEditGenre} setNewAnswerInput={setNewAnswerInput}
+                          onSave={() => saveEdit(editingQ)} onCancel={() => { setEditingQ(null); setEditAnswers([]) }} />
+                      : (
+                        <>
+                          <p style={{ fontWeight:600, marginBottom:4, fontSize:14 }}>{q.text}</p>
+                          <p style={{ fontSize:13, color:'var(--muted)', marginBottom:4 }}>
+                            表示: <span style={{ color:'var(--text)', fontWeight:700 }}>{q.displayAnswer}</span>　読み: {q.answer}
+                          </p>
+                          <p style={{ fontSize:12, color:'var(--muted)', marginBottom:10 }}>
+                            ジャンル: {(q as any).genre ?? 'ノンジャンル'}　別解: {(q.answers ?? []).length > 1 ? `+${(q.answers ?? []).length - 1}件` : 'なし'}
+                          </p>
+                          <div style={{ display:'flex', gap:8 }}>
+                            <button onClick={() => startEdit(q)} style={{ padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'var(--surface2)', color:'var(--text)' }}>編集</button>
+                            <button onClick={() => deleteQ(q.id)} style={{ padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:700, background:'rgba(239,68,68,0.1)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>削除</button>
+                          </div>
+                        </>
+                      )}
                   </div>
                 ))}
               </>
@@ -491,3 +518,119 @@ export default function AdminPage() {
 
 const inp2: React.CSSProperties = { width:'100%', padding:'9px 12px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, fontSize:13, color:'var(--text)' }
 const inp: React.CSSProperties = { width:'100%', padding:'11px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:9, fontSize:14, color:'var(--text)' }
+
+const Q_GENRES = ['文学','歴史','地理','公民','自然科学','言葉','芸能','スポーツ','漫アゲ','音楽','生活','ノンジャンル']
+
+interface EditFormProps {
+  q: { id: number; text: string; displayAnswer: string }
+  editAnswers: string[]
+  editGenre: string
+  newAnswerInput: string
+  setQ: (q: any) => void
+  setEditAnswers: React.Dispatch<React.SetStateAction<string[]>>
+  setEditGenre: (g: string) => void
+  setNewAnswerInput: (s: string) => void
+  onSave: () => void
+  onCancel: () => void
+}
+
+function QuestionEditForm({ q, editAnswers, editGenre, newAnswerInput, setQ, setEditAnswers, setEditGenre, setNewAnswerInput, onSave, onCancel }: EditFormProps) {
+  const base: React.CSSProperties = { width:'100%', padding:'9px 12px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, fontSize:13, color:'var(--text)', boxSizing:'border-box' }
+  const label: React.CSSProperties = { fontSize:11, fontWeight:700, color:'var(--muted)', letterSpacing:1, textTransform:'uppercase', marginBottom:6, display:'block' }
+
+  function addAnswer() {
+    const v = newAnswerInput.trim()
+    if (!v) return
+    setEditAnswers(prev => [...prev, v])
+    setNewAnswerInput('')
+  }
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+
+      {/* 問題文 */}
+      <div>
+        <span style={label}>問題文</span>
+        <textarea value={q.text} rows={3}
+          onChange={e => setQ({ ...q, text: e.target.value })}
+          style={{ ...base, resize:'vertical', fontFamily:'inherit', lineHeight:1.6 }} />
+      </div>
+
+      {/* 表示用解答 */}
+      <div>
+        <span style={label}>表示用解答（漢字など）</span>
+        <input value={q.displayAnswer}
+          onChange={e => setQ({ ...q, displayAnswer: e.target.value })}
+          style={base} placeholder="例: 東京都" />
+      </div>
+
+      {/* 入力用解答 chips */}
+      <div>
+        <span style={label}>入力用解答（ひらがな）</span>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8, minHeight:32 }}>
+          {editAnswers.map((a, i) => (
+            <span key={i} style={{
+              display:'flex', alignItems:'center', gap:5,
+              padding:'4px 10px',
+              background: i === 0 ? 'rgba(99,102,241,0.15)' : 'var(--surface2)',
+              border: `1px solid ${i === 0 ? 'rgba(99,102,241,0.45)' : 'var(--border)'}`,
+              borderRadius:20, fontSize:13, fontWeight: i === 0 ? 700 : 400,
+            }}>
+              {i === 0 && <span style={{ fontSize:10, color:'var(--accent)', letterSpacing:0.5 }}>主</span>}
+              {a}
+              <button
+                onClick={() => setEditAnswers(prev => prev.filter((_, j) => j !== i))}
+                style={{ border:'none', background:'none', color:'var(--muted)', cursor:'pointer', padding:'0 0 1px', fontSize:15, lineHeight:1 }}>
+                ×
+              </button>
+            </span>
+          ))}
+          {editAnswers.length === 0 && <span style={{ fontSize:12, color:'var(--wrong)' }}>⚠ 解答が1件以上必要です</span>}
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <input value={newAnswerInput} onChange={e => setNewAnswerInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAnswer() }}}
+            style={{ ...base, flex:1 }} placeholder="別解を入力して Enter または＋ボタン" />
+          <button onClick={addAnswer}
+            style={{ padding:'9px 14px', borderRadius:8, fontSize:13, fontWeight:700, background:'var(--surface2)', color:'var(--text)', border:'1px solid var(--border)', cursor:'pointer', flexShrink:0 }}>
+            ＋
+          </button>
+        </div>
+        <p style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>
+          ※「主」マークが実際に判定に使われるメイン解答。上のチップの並び順が優先度順です。
+        </p>
+      </div>
+
+      {/* ジャンル */}
+      <div>
+        <span style={label}>ジャンル</span>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+          {Q_GENRES.map(g => (
+            <button key={g} onClick={() => setEditGenre(g)} style={{
+              padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:700,
+              border:'none', cursor:'pointer',
+              background: editGenre === g ? 'var(--accent)' : 'var(--surface2)',
+              color: editGenre === g ? '#fff' : 'var(--muted)',
+              transition:'all .15s',
+            }}>
+              {g}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 保存/キャンセル */}
+      <div style={{ display:'flex', gap:8, paddingTop:4, borderTop:'1px solid var(--border)' }}>
+        <button onClick={onSave} disabled={editAnswers.length === 0}
+          style={{ padding:'10px 24px', borderRadius:9, fontSize:13, fontWeight:700, background: editAnswers.length ? 'var(--accent)' : 'var(--border)', color:'#fff', border:'none', cursor: editAnswers.length ? 'pointer' : 'not-allowed' }}>
+          保存
+        </button>
+        <button onClick={onCancel}
+          style={{ padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:700, background:'var(--surface2)', color:'var(--muted)', border:'1px solid var(--border)', cursor:'pointer' }}>
+          キャンセル
+        </button>
+      </div>
+
+    </div>
+  )
+}

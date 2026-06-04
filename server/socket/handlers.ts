@@ -54,7 +54,8 @@ function ensureMatchCallback(io: IoServer) {
     })
     gameManager.setMatchmaking(roomId)
     const state = gameManager.getRoom(roomId)
-    if (state) io.to(roomId).emit('room-update', state)
+    // Fix B: マッチ成立通知も sanitizeState を通す
+    if (state) io.to(roomId).emit('room-update', sanitizeState(state))
   })
 }
 
@@ -81,7 +82,6 @@ function setupFinishHandler(io: IoServer) {
         }]
       })
       if (data.length > 0) {
-        await prisma.battleRecord.createMany({ data, skipDuplicates: true })
         for (const p of state.players) {
           const pSocket = io.sockets.sockets.get(p.id)
           const userId = pSocket?.data?.dbUserId ?? null
@@ -92,11 +92,13 @@ function setupFinishHandler(io: IoServer) {
             data: logs.map(l => ({ userId, text: l.text, answer: l.answer, userAnswer: l.userAnswer, isCorrect: l.isCorrect, genre: l.genre ?? 'ノンジャンル', questionId: l.questionId ?? null }))
           })
           const all = await prisma.questionHistory.findMany({ where: { userId }, orderBy: { playedAt: 'desc' }, select: { id: true } })
-          if (all.length > 10) {
-            await prisma.questionHistory.deleteMany({ where: { id: { in: all.slice(10).map(h => h.id) } } })
+          // Fix D: 保存上限を questionCount に合わせる（旧: 10件固定）
+          const historyLimit = state.settings?.questionCount ?? 30
+          if (all.length > historyLimit) {
+            await prisma.questionHistory.deleteMany({ where: { id: { in: all.slice(historyLimit).map(h => h.id) } } })
           }
         }
-        console.log('[Rate] data:', JSON.stringify(data.map(d => ({userId:d.userId,result:d.result,isMatchmaking:d.isMatchmaking}))))
+        // Fix C: ACTIVE→WIN/LOSE 変換を battleRecord 保存より先に実行
         if (state.isMatchmaking && data.every(d => d.result === 'ACTIVE') && data.length >= 2) {
           const byScore = [...state.players].sort((a, b) => b.score - a.score)
           data.forEach(d => {
@@ -107,6 +109,9 @@ function setupFinishHandler(io: IoServer) {
             else if (rank === byScore.length - 1) (d as any).result = 'LOSE'
           })
         }
+        // Fix C: 変換後の result で battleRecord を保存
+        await prisma.battleRecord.createMany({ data, skipDuplicates: true })
+        console.log('[Rate] data:', JSON.stringify(data.map(d => ({userId:d.userId,result:d.result,isMatchmaking:d.isMatchmaking}))))
         const rateTargets = data.filter(d => d.isMatchmaking && d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
         console.log('[Rate] targets:', rateTargets.length)
         const rateResultMap = new Map<string, { result: string; oldRate: number; newRate: number; delta: number }>()
@@ -263,7 +268,8 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (state) {
       socket.data.roomId = roomId
       socket.join(roomId)
-      socket.emit('room-update', state)
+      // Fix A: 再接続時も sanitizeState を通して答えを隠す
+      socket.emit('room-update', sanitizeState(state))
     }
   })
 
