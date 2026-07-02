@@ -93,7 +93,7 @@ function setupFinishHandler(io: IoServer) {
           })
           const all = await prisma.questionHistory.findMany({ where: { userId }, orderBy: { playedAt: 'desc' }, select: { id: true } })
           // Fix D: 保存上限を questionCount に合わせる（旧: 10件固定）
-          const historyLimit = (state.settings?.questionCount ?? 30) * 20
+          const historyLimit = state.settings?.questionCount ?? 30
           if (all.length > historyLimit) {
             await prisma.questionHistory.deleteMany({ where: { id: { in: all.slice(historyLimit).map(h => h.id) } } })
           }
@@ -186,11 +186,6 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (!state || state.hostId !== socket.id) return
     if (state.settings.questionSetId) {
       try {
-        const qSet = await prisma.questionSet.findUnique({ where: { id: state.settings.questionSetId } })
-        if (!qSet || (qSet.userId !== socket.data.dbUserId && !qSet.isPublic)) {
-          console.warn('[StartGame] unauthorized questionSetId:', state.settings.questionSetId)
-          return
-        }
         const items = await prisma.questionSetItem.findMany({
           where: { setId: state.settings.questionSetId },
           orderBy: { order: 'asc' },

@@ -76,13 +76,13 @@ router.post('/:id/items', requireAuth, async (req, res) => {
   try {
     const set = await prisma.questionSet.findUnique({ where: { id: req.params.id } })
     if (!set || set.userId !== (req.user as any).id) { res.status(403).json({ error: '権限がありません' }); return }
-    const { text, answer, answers, displayAnswer, order, genre } = req.body ?? {}
+    const { text, answer, answers, displayAnswer, order } = req.body ?? {}
     if (!text?.trim() || !answer?.trim() || !displayAnswer?.trim())
       { res.status(400).json({ error: '必須項目不足' }); return }
     if (text.length > 500 || answer.length > 100)
       { res.status(400).json({ error: '入力が長すぎます' }); return }
     const item = await prisma.questionSetItem.create({
-      data: { setId: req.params.id, text: text.trim(), answer: answer.trim(), answers: answers ?? [answer.trim()], displayAnswer: displayAnswer.trim(), genre: genre?.trim() || 'ノンジャンル', order: order ?? 0 }
+      data: { setId: req.params.id, text: text.trim(), answer: answer.trim(), answers: answers ?? [answer.trim()], displayAnswer: displayAnswer.trim(), order: order ?? 0 }
     })
     await prisma.questionSet.update({ where: { id: req.params.id }, data: { updatedAt: new Date() } })
     res.status(201).json(item)
@@ -103,7 +103,6 @@ router.post('/:id/import', requireAuth, async (req, res) => {
       answer: String(r.answer ?? '').trim().slice(0, 100),
       answers: Array.isArray(r.answers) ? r.answers : [String(r.answer ?? '').trim()],
       displayAnswer: String(r.displayAnswer ?? r.answer ?? '').trim().slice(0, 100),
-      genre: String(r.genre ?? 'ノンジャンル').trim().slice(0, 50) || 'ノンジャンル',
       order: existing + i,
     })).filter(r => r.text && r.answer)
     await prisma.questionSetItem.createMany({ data })

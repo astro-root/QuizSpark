@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
 import { CloudinaryStorage } from 'multer-storage-cloudinary'
+import { getUnlockedTitles } from '../../src/lib/titles'
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -43,6 +44,16 @@ router.get('/me', (req, res) => {
   res.json({ id: u.id, name: u.name, avatarUrl: u.avatarUrl, isAdmin: u.isAdmin, bio: u.bio, username: u.username, titleId: u.titleId, rate: u.rate })
 })
 
+router.post('/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) { res.status(500).json({ error: 'ログアウトに失敗しました' }); return }
+    req.session.destroy(() => {
+      res.clearCookie('connect.sid')
+      res.json({ ok: true })
+    })
+  })
+})
+
 router.post('/avatar', upload.single('avatar'), async (req, res) => {
   if (!req.user) { res.status(401).json({ error: '未ログイン' }); return }
   if (!req.file) { res.status(400).json({ error: 'ファイルがありません' }); return }
@@ -75,9 +86,27 @@ router.patch('/profile', async (req, res) => {
   if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
     res.status(400).json({ error: 'ユーザーIDは3〜20文字の英数字・アンダースコアのみです' }); return
   }
+
+  const uid = (req.user as any).id
+
+  if (titleId) {
+    const [records, userRow] = await Promise.all([
+      prisma.battleRecord.findMany({ where: { userId: uid }, select: { result: true, correct: true } }),
+      prisma.user.findUnique({ where: { id: uid }, select: { rate: true } }),
+    ])
+    const stats = {
+      rate: userRow?.rate ?? 0,
+      total: records.length,
+      wins: records.filter(r => r.result === 'WIN').length,
+      correct: records.reduce((s, r) => s + r.correct, 0),
+    }
+    const unlocked = getUnlockedTitles(stats).some(t => t.id === titleId)
+    if (!unlocked) { res.status(400).json({ error: '未解放の称号です' }); return }
+  }
+
   try {
     const user = await prisma.user.update({
-      where: { id: (req.user as any).id },
+      where: { id: uid },
       data: { name: name.trim(), bio: bio?.trim() || null, username: username?.trim() || null, titleId: titleId ?? undefined },
     })
     res.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl, bio: user.bio, username: user.username, isAdmin: user.isAdmin, titleId: user.titleId, rate: (user as any).rate ?? 0 })

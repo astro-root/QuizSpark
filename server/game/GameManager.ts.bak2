@@ -106,7 +106,7 @@ class GameManager {
     if (!state) return null
     let updated = removePlayer(state, playerId)
     this.playerRoomMap.delete(playerId)
-    if (updated.players.length === 0) { this.rooms.delete(roomId); this.clearTimer(roomId); this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId); return null }
+    if (updated.players.length === 0) { this.rooms.delete(roomId); this.clearTimer(roomId); return null }
     if (state.hostId === playerId) updated = reassignHost(updated)
     this.rooms.set(roomId, updated)
     return roomId
