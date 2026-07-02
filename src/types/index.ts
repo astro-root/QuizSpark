@@ -15,7 +15,7 @@ export interface GameSettings {
   questionSetId: string | null // 使用する問題セットID (nullは共有DB)
 }
 
-export type PlayerStatus = 'ACTIVE' | 'WIN' | 'LOSE'
+export type PlayerStatus = 'ACTIVE' | 'WIN' | 'LOSE' | 'DISCONNECTED'
 
 export interface Player {
   id: string

@@ -3,8 +3,10 @@ import { getRuleDef } from './rules'
 import {
   createRoom, addPlayer, removePlayer,
   advanceQuestion, skipQuestion, acceptBuzz, applyAnswer, reassignHost, updateSettings,
+  disconnectPlayer, reconnectPlayer, finalizeDisconnect, checkGameEnd,
   BUZZ_TIMEOUT_MS, ANSWER_TIMEOUT_MS, RESULT_SHOW_MS,
 } from './RoomState'
+import { reconnectManager } from './ReconnectManager'
 
 type BroadcastFn = (roomId: string, state: RoomState) => void
 
@@ -17,12 +19,19 @@ function generateRoomId(): string {
 
 class GameManager {
   private rooms: Map<string, RoomState> = new Map()
+  // token(=永続プレイヤーID) → roomId
   private playerRoomMap: Map<string, string> = new Map()
+  // token → 現在接続中のsocket.id（切断中はundefined相当で存在しない）
+  private tokenToSocketId: Map<string, string> = new Map()
   private timers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private broadcastFn?: BroadcastFn
   private customQuestionsMap = new Map<string, import('../../src/types').Question[]>()
   private finishFn?: (state: import('../../src/types').RoomState) => void
   private answerLogs = new Map<string, Map<string, Array<{text:string,answer:string,userAnswer:string,isCorrect:boolean,genre:string,questionId:number|null}>>>()
+
+  constructor() {
+    reconnectManager.setFinalizeFn((roomId, token) => this.finalizeDisconnect(roomId, token))
+  }
 
   setBroadcast(fn: BroadcastFn) { this.broadcastFn = fn }
   setOnFinish(fn: (state: import('../../src/types').RoomState) => void) { this.finishFn = fn }
@@ -41,11 +50,9 @@ class GameManager {
     this.clearTimer(roomId)
     const state = this.rooms.get(roomId)
     const delay = state?.timerEndsAt ? Math.max(0, state.timerEndsAt - Date.now()) : BUZZ_TIMEOUT_MS
-    console.log(`[BuzzTimer] roomId=${roomId} delay=${delay}ms timerEndsAt=${state?.timerEndsAt} now=${Date.now()}`)
     const t = setTimeout(() => {
       const s = this.rooms.get(roomId)
       if (!s || s.phase !== 'question') return
-      console.log(`[Skip] fired roomId=${roomId} idx=${s.currentQuestionIndex}`)
       const skipped = skipQuestion(s)
       this.rooms.set(roomId, skipped)
       this.broadcast(roomId)
@@ -58,7 +65,6 @@ class GameManager {
     this.clearTimer(roomId)
     const t = setTimeout(() => {
       const state = this.rooms.get(roomId)
-      console.log(`[AnswerTimer] fired roomId=${roomId} phase=${state?.phase} buzzedId=${state?.buzzedPlayerId}`)
       if (!state || state.phase !== 'answering') return
       const { nextState } = applyAnswer(state, state.buzzedPlayerId ?? '', '')
       this.rooms.set(roomId, nextState)
@@ -82,40 +88,97 @@ class GameManager {
     this.timers.set(roomId, t)
   }
 
-  createRoom(hostId: string, hostName: string): string {
+  createRoom(hostToken: string, hostName: string, socketId: string): string {
     let roomId = generateRoomId()
     while (this.rooms.has(roomId)) roomId = generateRoomId()
-    this.rooms.set(roomId, createRoom(roomId, hostId, hostName))
-    this.playerRoomMap.set(hostId, roomId)
+    this.rooms.set(roomId, createRoom(roomId, hostToken, hostName))
+    this.playerRoomMap.set(hostToken, roomId)
+    this.tokenToSocketId.set(hostToken, socketId)
     return roomId
   }
 
-  joinRoom(roomId: string, playerId: string, playerName: string): string | null {
+  joinRoom(roomId: string, token: string, playerName: string, socketId: string): string | null {
     const state = this.rooms.get(roomId)
     if (!state) return 'ルームが存在しません'
     if (state.phase !== 'lobby') return 'ゲームはすでに開始されています'
-    this.rooms.set(roomId, addPlayer(state, playerId, playerName))
-    this.playerRoomMap.set(playerId, roomId)
+    this.rooms.set(roomId, addPlayer(state, token, playerName))
+    this.playerRoomMap.set(token, roomId)
+    this.tokenToSocketId.set(token, socketId)
     return null
   }
 
-  leaveRoom(playerId: string): string | null {
-    const roomId = this.playerRoomMap.get(playerId)
+  // 完全退室（ロビー離脱・ルーム消滅時のみ使用。ゲーム中の切断はhandleDisconnectへ）
+  leaveRoom(token: string): string | null {
+    const roomId = this.playerRoomMap.get(token)
     if (!roomId) return null
     const state = this.rooms.get(roomId)
     if (!state) return null
-    let updated = removePlayer(state, playerId)
-    this.playerRoomMap.delete(playerId)
-    if (updated.players.length === 0) { this.rooms.delete(roomId); this.clearTimer(roomId); this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId); return null }
-    if (state.hostId === playerId) updated = reassignHost(updated)
+    let updated = removePlayer(state, token)
+    this.playerRoomMap.delete(token)
+    this.tokenToSocketId.delete(token)
+    reconnectManager.cancelGracePeriod(roomId, token)
+    if (updated.players.length === 0) {
+      this.rooms.delete(roomId); this.clearTimer(roomId)
+      this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId)
+      return null
+    }
+    if (state.hostId === token) updated = reassignHost(updated)
     this.rooms.set(roomId, updated)
     return roomId
   }
 
-
-  updateSettings(roomId: string, playerId: string, settings: import('../../src/types').GameSettings): boolean {
+  // ゲーム中の切断。ロビー中はleaveRoom相当に委譲される。
+  handleDisconnect(token: string): string | null {
+    const roomId = this.playerRoomMap.get(token)
+    if (!roomId) return null
     const state = this.rooms.get(roomId)
-    if (!state || state.hostId !== playerId || state.phase !== 'lobby') return false
+    if (!state) return null
+
+    if (state.phase === 'lobby') return this.leaveRoom(token)
+
+    this.tokenToSocketId.delete(token)
+    this.rooms.set(roomId, disconnectPlayer(state, token))
+    reconnectManager.startGracePeriod(roomId, token)
+    return roomId
+  }
+
+  // 猶予時間内の再接続。トークンが一致すればACTIVEに復帰する。
+  handleReconnect(roomId: string, token: string, socketId: string): boolean {
+    const state = this.rooms.get(roomId)
+    if (!state) return false
+    const player = state.players.find((p) => p.id === token)
+    if (!player) return false
+
+    this.tokenToSocketId.set(token, socketId)
+    this.playerRoomMap.set(token, roomId)
+
+    if (player.status === 'DISCONNECTED') {
+      reconnectManager.cancelGracePeriod(roomId, token)
+      this.rooms.set(roomId, reconnectPlayer(state, token))
+    }
+    return true
+  }
+
+  // 猶予切れによる不戦敗確定。ReconnectManagerから呼ばれる。
+  private finalizeDisconnect(roomId: string, token: string): void {
+    const state = this.rooms.get(roomId)
+    if (!state) return
+    const player = state.players.find((p) => p.id === token)
+    if (!player || player.status !== 'DISCONNECTED') return
+
+    let updated = finalizeDisconnect(state, token)
+    if (checkGameEnd(updated)) {
+      this.clearTimer(roomId)
+      updated = { ...updated, phase: 'finished', currentQuestion: null, timerEndsAt: null }
+    }
+    this.rooms.set(roomId, updated)
+    this.broadcast(roomId)
+    if (updated.phase === 'finished' && this.finishFn) this.finishFn(updated)
+  }
+
+  updateSettings(roomId: string, token: string, settings: import('../../src/types').GameSettings): boolean {
+    const state = this.rooms.get(roomId)
+    if (!state || state.hostId !== token || state.phase !== 'lobby') return false
     this.rooms.set(roomId, updateSettings(state, settings))
     return true
   }
@@ -130,26 +193,28 @@ class GameManager {
     return true
   }
 
-  buzz(roomId: string, playerId: string): boolean {
+  buzz(roomId: string, token: string): boolean {
     const state = this.rooms.get(roomId)
     if (!state || state.phase !== 'question') return false
+    const player = state.players.find((p) => p.id === token)
+    if (!player || player.status !== 'ACTIVE') return false
     this.clearTimer(roomId)
-    this.rooms.set(roomId, acceptBuzz(state, playerId))
+    this.rooms.set(roomId, acceptBuzz(state, token))
     this.startAnswerTimer(roomId)
     return true
   }
 
-  submitAnswer(roomId: string, playerId: string, rawAnswer: string): void {
+  submitAnswer(roomId: string, token: string, rawAnswer: string): void {
     const state = this.rooms.get(roomId)
     if (!state || state.phase !== 'answering') return
-    if (state.buzzedPlayerId !== playerId) return
+    if (state.buzzedPlayerId !== token) return
     this.clearTimer(roomId)
-    const { nextState } = applyAnswer(state, playerId, rawAnswer)
+    const { nextState } = applyAnswer(state, token, rawAnswer)
     if (state.currentQuestion) {
       if (!this.answerLogs.has(roomId)) this.answerLogs.set(roomId, new Map())
       const roomLog = this.answerLogs.get(roomId)!
-      if (!roomLog.has(playerId)) roomLog.set(playerId, [])
-      const playerLog = roomLog.get(playerId)!
+      if (!roomLog.has(token)) roomLog.set(token, [])
+      const playerLog = roomLog.get(token)!
       const isCorrect = nextState.lastJudgement === 'correct'
       playerLog.push({ text: state.currentQuestion.text, answer: (state.currentQuestion as any).displayAnswer || state.currentQuestion.answer, userAnswer: rawAnswer, isCorrect, genre: (state.currentQuestion as any).genre ?? 'ノンジャンル', questionId: (state.currentQuestion as any).id ?? null })
       const logLimit = state.settings?.questionCount ?? 30
@@ -160,10 +225,9 @@ class GameManager {
     this.startResultTimer(roomId)
   }
 
-
-  resetGame(roomId: string, playerId: string): boolean {
+  resetGame(roomId: string, token: string): boolean {
     const state = this.rooms.get(roomId)
-    if (!state || state.hostId !== playerId || state.phase !== 'finished') return false
+    if (!state || state.hostId !== token || state.phase !== 'finished') return false
     this.clearTimer(roomId)
     this.customQuestionsMap.delete(roomId)
     this.answerLogs.delete(roomId)
@@ -191,6 +255,7 @@ class GameManager {
   }
 
   getRoom(roomId: string): RoomState | undefined { return this.rooms.get(roomId) }
+  getSocketId(token: string): string | undefined { return this.tokenToSocketId.get(token) }
   setCustomQuestions(roomId: string, questions: import('../../src/types').Question[]) { this.customQuestionsMap.set(roomId, questions) }
   setRecentQuestionIds(roomId: string, ids: number[]) {
     const s = this.rooms.get(roomId)
@@ -203,7 +268,7 @@ class GameManager {
       .filter(r => r.settings?.isPublic)
       .map(r => ({ id: r.id, playerCount: r.players.length, hostName: r.players.find(p => p.id === r.hostId)?.name ?? '?', ruleId: r.settings.ruleId, questionCount: r.settings.questionCount, phase: r.phase }))
   }
-  getRoomIdByPlayer(playerId: string): string | undefined { return this.playerRoomMap.get(playerId) }
+  getRoomIdByPlayer(token: string): string | undefined { return this.playerRoomMap.get(token) }
   getAnswerLogs(roomId: string) { return this.answerLogs.get(roomId) }
 }
 

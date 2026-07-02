@@ -166,7 +166,7 @@ export function acceptBuzz(state: RoomState, playerId: string): RoomState {
   }
 }
 
-function checkGameEnd(state: RoomState): boolean {
+export function checkGameEnd(state: RoomState): boolean {
   const { winnerCount, loserCount } = state.settings
   const winners = state.players.filter(p => p.status === 'WIN').length
   const losers = state.players.filter(p => p.status === 'LOSE').length
@@ -228,3 +228,33 @@ export function reassignHost(state: RoomState): RoomState {
     players: state.players.map((p) => ({ ...p, isHost: p.id === newHost.id })),
   }
 }
+
+export function disconnectPlayer(state: RoomState, playerId: string): RoomState {
+  // ロビー中は待つ理由がないため即時退室のまま
+  if (state.phase === 'lobby') return removePlayer(state, playerId)
+  return {
+    ...state,
+    players: state.players.map((p) =>
+      p.id === playerId && p.status === 'ACTIVE' ? { ...p, status: 'DISCONNECTED' as const } : p
+    ),
+  }
+}
+
+export function reconnectPlayer(state: RoomState, playerId: string): RoomState {
+  return {
+    ...state,
+    players: state.players.map((p) =>
+      p.id === playerId && p.status === 'DISCONNECTED' ? { ...p, status: 'ACTIVE' as const } : p
+    ),
+  }
+}
+
+export function finalizeDisconnect(state: RoomState, playerId: string): RoomState {
+  return {
+    ...state,
+    players: state.players.map((p) =>
+      p.id === playerId && p.status === 'DISCONNECTED' ? { ...p, status: 'LOSE' as const } : p
+    ),
+  }
+}
+

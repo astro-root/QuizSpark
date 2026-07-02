@@ -4,6 +4,7 @@ import type { PrematchPlayer } from '../../src/types'
 
 interface QueueEntry {
   playerId: string
+  socketId: string
   playerName: string
   rate: number
   dbUserId?: string
@@ -24,7 +25,7 @@ function rateRange(waitMs: number): number {
   return Infinity
 }
 
-export async function joinQueue(playerId: string, playerName: string, dbUserId?: string) {
+export async function joinQueue(playerId: string, playerName: string, socketId: string, dbUserId?: string) {
   const idx = queue.findIndex(e => e.playerId === playerId)
   if (idx >= 0) queue.splice(idx, 1)
 
@@ -34,7 +35,7 @@ export async function joinQueue(playerId: string, playerName: string, dbUserId?:
     if (u) rate = u.rate
   }
 
-  queue.push({ playerId, playerName, rate, dbUserId, joinedAt: Date.now() })
+  queue.push({ playerId, socketId, playerName, rate, dbUserId, joinedAt: Date.now() })
   tryMatch()
 }
 
@@ -96,7 +97,7 @@ async function fetchStats(entry: QueueEntry): Promise<PrematchPlayer> {
 }
 
 async function createMatch(host: QueueEntry, guest: QueueEntry) {
-  const roomId = gameManager.createRoom(host.playerId, host.playerName)
+  const roomId = gameManager.createRoom(host.playerId, host.playerName, host.socketId)
   gameManager.updateSettings(roomId, host.playerId, {
     ruleId: 'mon',
     ruleParams: { m: 5, n: 2 },
@@ -106,7 +107,7 @@ async function createMatch(host: QueueEntry, guest: QueueEntry) {
     isPublic: false,
     questionSetId: null,
   })
-  const err = gameManager.joinRoom(roomId, guest.playerId, guest.playerName)
+  const err = gameManager.joinRoom(roomId, guest.playerId, guest.playerName, guest.socketId)
   if (err) { console.error('[Matchmaking] join failed:', err); return }
   gameManager.setMatchmaking(roomId)
 

@@ -28,6 +28,12 @@ function broadcastPublicRooms(io: IoServer) {
   io.emit('public-rooms', gameManager.getPublicRooms())
 }
 
+function getLiveSocket(io: IoServer, token: string) {
+  const socketId = gameManager.getSocketId(token)
+  if (!socketId) return undefined
+  return io.sockets.sockets.get(socketId)
+}
+
 let matchCallbackSet = false
 let finishCallbackSet = false
 
@@ -65,7 +71,7 @@ function setupFinishHandler(io: IoServer) {
   gameManager.setOnFinish(async (state) => {
     try {
       const data = state.players.flatMap(p => {
-        const pSocket = io.sockets.sockets.get(p.id)
+        const pSocket = getLiveSocket(io, p.id)
         const userId = pSocket?.data?.dbUserId ?? null
         if (!userId) return []
         return [{
@@ -83,7 +89,7 @@ function setupFinishHandler(io: IoServer) {
       })
       if (data.length > 0) {
         for (const p of state.players) {
-          const pSocket = io.sockets.sockets.get(p.id)
+          const pSocket = getLiveSocket(io, p.id)
           const userId = pSocket?.data?.dbUserId ?? null
           if (!userId) continue
           const logs = gameManager.getAnswerLogs(state.id)?.get(p.id) ?? []
@@ -102,7 +108,7 @@ function setupFinishHandler(io: IoServer) {
         if (state.isMatchmaking && data.every(d => d.result === 'ACTIVE') && data.length >= 2) {
           const byScore = [...state.players].sort((a, b) => b.score - a.score)
           data.forEach(d => {
-            const player = state.players.find(p => (io.sockets.sockets.get(p.id)?.data?.dbUserId) === d.userId)
+            const player = state.players.find(p => (getLiveSocket(io, p.id)?.data?.dbUserId) === d.userId)
             if (!player) return
             const rank = byScore.findIndex(p => p.id === player.id)
             if (rank === 0) (d as any).result = 'WIN'
@@ -130,7 +136,7 @@ function setupFinishHandler(io: IoServer) {
         }
         // rate-result を各プレイヤーに送信
         for (const p of state.players) {
-          const pSocket = io.sockets.sockets.get(p.id)
+          const pSocket = getLiveSocket(io, p.id)
           const userId = pSocket?.data?.dbUserId ?? null
           if (!userId || !pSocket) continue
           const rr = rateResultMap.get(userId)
@@ -151,10 +157,15 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
   const dbUserId = (socket.request as any).user?.id
   if (dbUserId) socket.data.dbUserId = dbUserId
 
+  const rawToken = (socket.handshake.auth as any)?.token
+  const token = typeof rawToken === 'string' && rawToken.length > 0 && rawToken.length <= 100
+    ? rawToken
+    : socket.id
+  socket.data.playerId = token
+
   socket.on('create-room', (name, callback) => {
-    const roomId = gameManager.createRoom(socket.id, name)
+    const roomId = gameManager.createRoom(token, name, socket.id)
     socket.data.roomId = roomId
-    socket.data.playerId = socket.id
     socket.join(roomId)
     broadcast(io, roomId, gameManager.getRoom(roomId)!)
     broadcastPublicRooms(io)
@@ -162,10 +173,9 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
   })
 
   socket.on('join-room', (roomId, name, callback) => {
-    const error = gameManager.joinRoom(roomId, socket.id, name)
+    const error = gameManager.joinRoom(roomId, token, name, socket.id)
     if (error) { callback(error); return }
     socket.data.roomId = roomId
-    socket.data.playerId = socket.id
     socket.join(roomId)
     broadcast(io, roomId, gameManager.getRoom(roomId)!)
     broadcastPublicRooms(io)
@@ -175,7 +185,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
   socket.on('update-settings', (settings) => {
     const roomId = socket.data.roomId
     if (!roomId) return
-    if (gameManager.updateSettings(roomId, socket.id, settings))
+    if (gameManager.updateSettings(roomId, token, settings))
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
   })
 
@@ -183,7 +193,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     const roomId = socket.data.roomId
     if (!roomId) return
     const state = gameManager.getRoom(roomId)
-    if (!state || state.hostId !== socket.id) return
+    if (!state || state.hostId !== token) return
     if (state.settings.questionSetId) {
       try {
         const qSet = await prisma.questionSet.findUnique({ where: { id: state.settings.questionSetId } })
@@ -211,7 +221,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     // 公開問題プール使用時のみ: 両プレイヤーの直近20問のquestionIdを収集して除外
     if (!state.settings.questionSetId) {
       const playerIds = state.players
-        .map(p => io.sockets.sockets.get(p.id)?.data?.dbUserId as string | undefined)
+        .map(p => getLiveSocket(io, p.id)?.data?.dbUserId as string | undefined)
         .filter(Boolean) as string[]
       if (playerIds.length > 0) {
         const histories = await prisma.questionHistory.findMany({
@@ -243,40 +253,40 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
   socket.on('buzz', () => {
     const roomId = socket.data.roomId
     if (!roomId) return
-    if (!gameManager.buzz(roomId, socket.id)) return
+    if (!gameManager.buzz(roomId, token)) return
     const state = gameManager.getRoom(roomId)!
-    io.to(roomId).emit('buzz-accepted', socket.id, state.buzzedPlayerName!)
+    io.to(roomId).emit('buzz-accepted', token, state.buzzedPlayerName!)
     broadcast(io, roomId, state)
   })
 
   socket.on('submit-answer', (answer) => {
     const roomId = socket.data.roomId
     if (!roomId) return
-    gameManager.submitAnswer(roomId, socket.id, answer)
+    gameManager.submitAnswer(roomId, token, answer)
   })
 
   socket.on('reset-game', () => {
     const roomId = socket.data.roomId
     if (!roomId) return
-    if (gameManager.resetGame(roomId, socket.id))
+    if (gameManager.resetGame(roomId, token))
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
   })
 
   socket.on('join-queue', () => {
     const name = (socket.request as any).user?.name ?? 'プレイヤー'
-    joinQueue(socket.id, name, socket.data.dbUserId)
+    joinQueue(token, name, socket.id, socket.data.dbUserId)
   })
 
-  socket.on('leave-queue', () => { leaveQueue(socket.id) })
+  socket.on('leave-queue', () => { leaveQueue(token) })
 
   socket.on('sync-state', (roomId: string) => {
+    const reconnected = gameManager.handleReconnect(roomId, token, socket.id)
     const state = gameManager.getRoom(roomId)
-    if (state) {
-      socket.data.roomId = roomId
-      socket.join(roomId)
-      // Fix A: 再接続時も sanitizeState を通して答えを隠す
-      socket.emit('room-update', sanitizeState(state))
-    }
+    if (!state) return
+    socket.data.roomId = roomId
+    socket.join(roomId)
+    socket.emit('room-update', sanitizeState(state))
+    if (reconnected) broadcast(io, roomId, state)
   })
 
   socket.on('send-stamp', (stamp: string) => {
@@ -284,7 +294,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (!roomId) return
     const state = gameManager.getRoom(roomId)
     if (!state) return
-    const player = state.players.find(p => p.id === socket.id)
+    const player = state.players.find(p => p.id === token)
     if (!player) return
     const VALID = ['👍','👏','🔥','💪','😲','🤔','😭','🎉']
     if (!VALID.includes(stamp)) return
@@ -296,15 +306,15 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (!roomId || !text?.trim()) return
     const state = gameManager.getRoom(roomId)
     if (!state) return
-    const player = state.players.find(p => p.id === socket.id)
+    const player = state.players.find(p => p.id === token)
     const name = player?.name ?? (socket.request as any).user?.name ?? 'ゲスト'
     const safe = text.trim().slice(0, 100)
     io.to(roomId).emit('chat-message', socket.id, name, safe, Date.now())
   })
 
   socket.on('disconnect', () => {
-    leaveQueue(socket.id)
-    const affectedRoomId = gameManager.leaveRoom(socket.id)
+    leaveQueue(token)
+    const affectedRoomId = gameManager.handleDisconnect(token)
     if (!affectedRoomId) return
     const state = gameManager.getRoom(affectedRoomId)
     if (state) broadcast(io, affectedRoomId, state)
