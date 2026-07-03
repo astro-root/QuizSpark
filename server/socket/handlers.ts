@@ -42,21 +42,21 @@ function ensureMatchCallback(io: IoServer) {
   matchCallbackSet = true
   setOnMatch((roomId, playerIds, stats) => {
     playerIds.forEach((pid, idx) => {
-      io.sockets.sockets.forEach(s => {
-        if (s.id === pid) {
-          s.data.roomId = roomId
-          s.data.playerId = pid
-          s.join(roomId)
-          s.emit('match-found', roomId)
-          if (stats) {
-            s.emit('prematch-info', {
-              myPlayer: stats[idx],
-              opponent: stats[1 - idx],
-              startsIn: 6000,
-            })
-          }
-        }
-      })
+      const s = getLiveSocket(io, pid)
+      if (!s) {
+        console.warn('[Matchmaking] socket not found for token:', pid)
+        return
+      }
+      s.data.roomId = roomId
+      s.join(roomId)
+      s.emit('match-found', roomId)
+      if (stats) {
+        s.emit('prematch-info', {
+          myPlayer: stats[idx],
+          opponent: stats[1 - idx],
+          startsIn: 6000,
+        })
+      }
     })
     gameManager.setMatchmaking(roomId)
     const state = gameManager.getRoom(roomId)
