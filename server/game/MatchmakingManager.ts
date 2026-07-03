@@ -36,10 +36,12 @@ export async function joinQueue(playerId: string, playerName: string, socketId: 
   }
 
   queue.push({ playerId, socketId, playerName, rate, dbUserId, joinedAt: Date.now() })
+  console.log('[Matchmaking] queue joined:', playerId, 'queue size:', queue.length)
   tryMatch()
 }
 
 function tryMatch() {
+  console.log('[Matchmaking] tryMatch called, queue size:', queue.length)
   if (queue.length < 2) return
   const now = Date.now()
   let bestI = -1, bestJ = -1, bestDiff = Infinity
@@ -53,8 +55,12 @@ function tryMatch() {
     }
   }
 
-  if (bestI < 0) return
+  if (bestI < 0) {
+    console.log('[Matchmaking] no match found, rate diffs too large')
+    return
+  }
   const [a, b] = [queue[bestI], queue[bestJ]]
+  console.log('[Matchmaking] match found:', a.playerId, 'vs', b.playerId)
   queue.splice(bestJ, 1)
   queue.splice(bestI, 1)
   createMatch(a, b)
