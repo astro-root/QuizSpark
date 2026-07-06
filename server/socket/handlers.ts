@@ -162,6 +162,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     ? rawToken
     : socket.id
   socket.data.playerId = token
+  gameManager.registerSocket(token, socket.id)
 
   socket.on('create-room', (name, callback) => {
     const roomId = gameManager.createRoom(token, name, socket.id)

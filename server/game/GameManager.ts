@@ -255,6 +255,8 @@ class GameManager {
   }
 
   getRoom(roomId: string): RoomState | undefined { return this.rooms.get(roomId) }
+  // 接続確立の都度呼ばれる。キュー中・対戦中を問わず、常に最新のsocket.idへ追従させる
+  registerSocket(token: string, socketId: string) { this.tokenToSocketId.set(token, socketId) }
   getSocketId(token: string): string | undefined { return this.tokenToSocketId.get(token) }
   setCustomQuestions(roomId: string, questions: import('../../src/types').Question[]) { this.customQuestionsMap.set(roomId, questions) }
   setRecentQuestionIds(roomId: string, ids: number[]) {
