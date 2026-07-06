@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { socket } from '../lib/socket'
+import { socket, getOrCreateToken } from '../lib/socket'
 import type { RoomState, GameSettings, PublicRoom, PrematchInfo, RateResult } from '../types'
 
 export function useSocket() {
@@ -18,7 +18,7 @@ export function useSocket() {
   useEffect(() => {
     function onConnect() {
       setConnected(true)
-      setMyId(socket.id ?? '')
+      setMyId(getOrCreateToken())
       setReconnecting(false)
       if (savedRoomId.current) {
         socket.emit('sync-state', savedRoomId.current)
@@ -28,8 +28,9 @@ export function useSocket() {
     function onReconnectAttempt() { setReconnecting(true) }
     function onRoomUpdate(state: RoomState) {
       setRoomState(state)
-      if (state && socket.id) {
-        const me = state.players.find(p => p.id === socket.id)
+      if (state) {
+        const myToken = getOrCreateToken()
+        const me = state.players.find(p => p.id === myToken)
         if (me) {
           savedRoomId.current = state.id
           savedName.current = me.name

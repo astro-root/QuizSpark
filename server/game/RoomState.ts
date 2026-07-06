@@ -183,12 +183,14 @@ export function applyAnswer(
   if (state.buzzedPlayerId !== playerId) return { nextState: state, correct: false }
 
   const actual = normalizeAnswer(rawAnswer)
+  // 空文字（未回答・タイムアウト）は問答無用で不正解とする
+  const isBlank = actual === ''
   // answerフィールド（ひらがな）は必ず含める
   const base = state.currentQuestion?.answer ?? ''
   const arr = state.currentQuestion?.answers ?? []
   const acceptedAnswers = [...new Set([base, ...arr].filter(Boolean))]
   console.log('[Judge] actual:', actual, 'accepted:', acceptedAnswers.map(a => normalizeAnswer(a)))
-  const correct = acceptedAnswers.some((a) => normalizeAnswer(a) === actual)
+  const correct = !isBlank && acceptedAnswers.some((a) => normalizeAnswer(a) === actual)
 
   const rule = getRuleDef(state.settings.ruleId)
   const players: Player[] = state.players.map((p) => {

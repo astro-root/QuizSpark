@@ -5,7 +5,7 @@ const BACKEND = import.meta.env.VITE_API_URL ?? ''
 
 const TOKEN_KEY = 'quizspark_player_token'
 
-function getOrCreateToken(): string {
+export function getOrCreateToken(): string {
   let token = localStorage.getItem(TOKEN_KEY)
   if (!token) {
     token = crypto.randomUUID()
