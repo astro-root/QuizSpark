@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma'
+import { validateAdminNotification, validateAnnouncementActive } from '../lib/validation'
 
 const router = Router()
 
@@ -74,8 +75,10 @@ router.post('/announcements', async (req, res) => {
 router.patch('/announcements/:id', async (req, res) => {
   const id = parseInt(req.params.id)
   if (!Number.isInteger(id)) { res.status(400).end(); return }
+  const validated = validateAnnouncementActive(req.body)
+  if (!validated.ok) { res.status(400).json({ error: validated.error }); return }
   try {
-    res.json(await prisma.announcement.update({ where: { id }, data: { active: req.body.active } }))
+    res.json(await prisma.announcement.update({ where: { id }, data: { active: validated.value } }))
   } catch { res.status(404).json({ error: 'お知らせが見つかりません' }) }
 })
 
@@ -149,17 +152,18 @@ router.patch('/users/:id/title', async (req, res) => {
 
 router.post('/notifications', async (req, res) => {
   try {
-    const { userIds, title, body, type } = req.body
-    if (!title?.trim() || !body?.trim()) { res.status(400).json({ error: '必須項目不足' }); return }
+    const v = validateAdminNotification(req.body)
+    if (!v.ok) { res.status(400).json({ error: v.error }); return }
+    const { userIds, title, body, type } = v.value
     const targetIds: string[] = userIds === 'all'
       ? (await prisma.user.findMany({ select: { id: true } })).map((u: {id:string}) => u.id)
-      : Array.isArray(userIds) ? userIds : []
+      : userIds
     if (targetIds.length === 0) { res.status(400).json({ error: '送信先がいません' }); return }
     await prisma.notification.createMany({
       data: targetIds.map((userId: string) => ({
         userId,
-        type: type || 'admin',
-        data: JSON.stringify({ title: title.trim(), body: body.trim() }),
+        type,
+        data: JSON.stringify({ title, body }),
         read: false,
       }))
     })

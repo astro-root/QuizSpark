@@ -1,18 +1,19 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma'
+import { requireAdmin, requireAuth } from '../lib/guards'
+import { buildSubmittedQuestionData, validateQuestionInput } from '../lib/validation'
 
 const router = Router()
-const GENRES = ['文学','歴史','地理','公民','自然科学','言葉','芸能','スポーツ','漫アゲ','音楽','生活','ノンジャンル']
 
-router.get('/', async (_req, res) => {
+// 正解を含む全問題を返すため管理者限定(以前は未認証で取得できた)
+router.get('/', requireAdmin, async (_req, res) => {
   try {
     const questions = await prisma.question.findMany({ where: { approved: true }, orderBy: { createdAt: 'desc' } })
     res.json(questions)
   } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 
-router.get('/export.csv', async (req, res) => {
-  if (!(req.user as any)?.isAdmin) { res.status(403).end(); return }
+router.get('/export.csv', requireAdmin, async (_req, res) => {
   const questions = await prisma.question.findMany({ orderBy: { id: 'asc' } })
   const header = 'id,問題文,答え,表示用答え,ジャンル,別解,承認済み'
   const rows = questions.map(q => {
@@ -24,36 +25,29 @@ router.get('/export.csv', async (req, res) => {
   res.send('\uFEFF' + [header, ...rows].join('\n'))
 })
 
-router.post('/import', async (req, res) => {
-  if (!(req.user as any)?.isAdmin) { res.status(403).end(); return }
-  const { rows } = req.body as { rows: { text:string; answer:string; displayAnswer:string; genre?:string; answers?:string[] }[] }
+router.post('/import', requireAdmin, async (req, res) => {
+  const rows = (req.body as { rows?: unknown } | undefined)?.rows
   if (!Array.isArray(rows) || rows.length === 0) { res.status(400).json({ error: '行がありません' }); return }
-  let imported = 0
-  for (const r of rows) {
-    if (!r.text?.trim() || !r.answer?.trim()) continue
-    const genre = GENRES.includes(r.genre ?? '') ? r.genre! : 'ノンジャンル'
-    const answers = r.answers?.length ? r.answers : [r.answer]
-    await prisma.question.create({
-      data: { text: r.text.trim(), answer: r.answer.trim(), displayAnswer: r.displayAnswer?.trim() || r.answer.trim(), genre, answers, approved: true }
-    })
-    imported++
-  }
-  res.json({ imported })
+  if (rows.length > 1000) { res.status(400).json({ error: '一度にインポートできるのは1000件までです' }); return }
+  const data = rows.flatMap(r => {
+    const v = validateQuestionInput(r)
+    return v.ok ? [{ ...v.value, approved: true }] : []
+  })
+  try {
+    if (data.length > 0) await prisma.question.createMany({ data })
+    res.json({ imported: data.length, skipped: rows.length - data.length })
+  } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 
-router.post('/', async (req, res) => {
-  if (!req.user) { res.status(401).json({ error: 'ログインが必要です' }); return }
-  const { text, answer, answers, displayAnswer, genre } = req.body ?? {}
-  if (!text?.trim() || text.trim().length > 500)
-    { res.status(400).json({ error: '問題文は1〜500文字で入力してください' }); return }
-  if (!answer?.trim() || answer.trim().length > 100)
-    { res.status(400).json({ error: '答えは1〜100文字で入力してください' }); return }
+router.post('/', requireAuth, async (req, res) => {
+  const v = validateQuestionInput(req.body)
+  if (!v.ok) { res.status(400).json({ error: v.error }); return }
   try {
-    const g = GENRES.includes(genre) ? genre : 'ノンジャンル'
+    // 承認制: 投稿は常に未承認で保存し、管理者の承認後に出題プールへ入る
     const q = await prisma.question.create({
-      data: { text: text.trim(), answer: answer.trim(), answers: answers ?? [answer.trim()], displayAnswer: displayAnswer?.trim() || answer.trim(), genre: g, authorId: (req.user as any).id }
+      data: buildSubmittedQuestionData(v.value, (req.user as { id: string }).id),
     })
-    res.json(q)
+    res.status(201).json({ id: q.id, approved: q.approved })
   } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
 

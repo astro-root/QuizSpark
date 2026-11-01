@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma'
+import { parseAnswers, validateQuestionInput } from '../lib/validation'
 
 const router = Router()
 
@@ -76,13 +77,18 @@ router.post('/:id/items', requireAuth, async (req, res) => {
   try {
     const set = await prisma.questionSet.findUnique({ where: { id: req.params.id } })
     if (!set || set.userId !== (req.user as any).id) { res.status(403).json({ error: '権限がありません' }); return }
-    const { text, answer, answers, displayAnswer, order, genre } = req.body ?? {}
-    if (!text?.trim() || !answer?.trim() || !displayAnswer?.trim())
+    const { displayAnswer, order, genre } = req.body ?? {}
+    if (typeof displayAnswer !== 'string' || !displayAnswer.trim())
       { res.status(400).json({ error: '必須項目不足' }); return }
-    if (text.length > 500 || answer.length > 100)
-      { res.status(400).json({ error: '入力が長すぎます' }); return }
+    const v = validateQuestionInput(req.body)
+    if (!v.ok) { res.status(400).json({ error: v.error }); return }
     const item = await prisma.questionSetItem.create({
-      data: { setId: req.params.id, text: text.trim(), answer: answer.trim(), answers: answers ?? [answer.trim()], displayAnswer: displayAnswer.trim(), genre: genre?.trim() || 'ノンジャンル', order: order ?? 0 }
+      data: {
+        setId: req.params.id, text: v.value.text, answer: v.value.answer, answers: v.value.answers,
+        displayAnswer: v.value.displayAnswer,
+        genre: typeof genre === 'string' && genre.trim() ? genre.trim().slice(0, 50) : 'ノンジャンル',
+        order: Number.isInteger(order) ? order : 0,
+      }
     })
     await prisma.questionSet.update({ where: { id: req.params.id }, data: { updatedAt: new Date() } })
     res.status(201).json(item)
@@ -101,7 +107,7 @@ router.post('/:id/import', requireAuth, async (req, res) => {
       setId: req.params.id,
       text: String(r.text ?? '').trim().slice(0, 500),
       answer: String(r.answer ?? '').trim().slice(0, 100),
-      answers: Array.isArray(r.answers) ? r.answers : [String(r.answer ?? '').trim()],
+      answers: (() => { const a = String(r.answer ?? '').trim().slice(0, 100); const p = parseAnswers(r.answers, a); return p.ok ? p.value : [a] })(),
       displayAnswer: String(r.displayAnswer ?? r.answer ?? '').trim().slice(0, 100),
       genre: String(r.genre ?? 'ノンジャンル').trim().slice(0, 50) || 'ノンジャンル',
       order: existing + i,
@@ -118,7 +124,9 @@ router.delete('/:id/items/:itemId', requireAuth, async (req, res) => {
     if (!set || set.userId !== (req.user as any).id) { res.status(403).json({ error: '権限がありません' }); return }
     const itemId = parseInt(req.params.itemId)
     if (!Number.isInteger(itemId)) { res.status(400).end(); return }
-    await prisma.questionSetItem.delete({ where: { id: itemId } })
+    // 所有確認済みのセットに属する項目だけを削除する(他人のセットの項目 ID を指定した削除を防ぐ)
+    const { count } = await prisma.questionSetItem.deleteMany({ where: { id: itemId, setId: req.params.id } })
+    if (count === 0) { res.status(404).json({ error: '見つかりません' }); return }
     res.json({ ok: true })
   } catch { res.status(500).json({ error: 'サーバーエラー' }) }
 })
