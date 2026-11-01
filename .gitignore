@@ -6,3 +6,16 @@ dist-server/
 .env
 *.bak
 *.bak2
+
+# secrets / local env (never commit)
+.env.*
+!.env.example
+*.pem
+*.key
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+
+# deploy tooling
+.vercel
+.firebase
+firebase-debug.log

@@ -6,22 +6,13 @@ import type {
 import { gameManager } from '../game/GameManager'
 import { prisma } from '../lib/prisma'
 import { joinQueue, leaveQueue, setOnMatch } from '../game/MatchmakingManager'
+import { toPublicState } from '../game/publicState'
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 type IoSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 
-function sanitizeState(state: RoomState): RoomState {
-  if (!state.currentQuestion) return state
-  return {
-    ...state,
-    currentQuestion: state.phase === 'question' || state.phase === 'answering'
-      ? { ...state.currentQuestion, answer: '', answers: [] }
-      : state.currentQuestion
-  }
-}
-
 function broadcast(io: IoServer, roomId: string, state: RoomState) {
-  io.to(roomId).emit('room-update', sanitizeState(state))
+  io.to(roomId).emit('room-update', toPublicState(state))
 }
 
 function broadcastPublicRooms(io: IoServer) {
@@ -61,7 +52,7 @@ function ensureMatchCallback(io: IoServer) {
     gameManager.setMatchmaking(roomId)
     const state = gameManager.getRoom(roomId)
     // Fix B: マッチ成立通知も sanitizeState を通す
-    if (state) io.to(roomId).emit('room-update', sanitizeState(state))
+    if (state) io.to(roomId).emit('room-update', toPublicState(state))
   })
 }
 
@@ -286,7 +277,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (!state) return
     socket.data.roomId = roomId
     socket.join(roomId)
-    socket.emit('room-update', sanitizeState(state))
+    socket.emit('room-update', toPublicState(state))
     if (reconnected) broadcast(io, roomId, state)
   })
 

@@ -10,6 +10,7 @@ import { registerHandlers } from './handlers'
 import { gameManager } from '../game/GameManager'
 import { sessionMiddleware } from '../lib/sessionMiddleware'
 import passport from '../auth/passport'
+import { toPublicState } from '../game/publicState'
 
 export function initSocketIO(httpServer: HttpServer) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
@@ -24,7 +25,7 @@ export function initSocketIO(httpServer: HttpServer) {
   )
 
   gameManager.setBroadcast((roomId, state) => {
-    io.to(roomId).emit('room-update', state)
+    io.to(roomId).emit('room-update', toPublicState(state))
   })
 
   // セッション共有

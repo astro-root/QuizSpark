@@ -1,9 +1,10 @@
-import { prisma } from '../lib/prisma'
 import type { Question } from '../../src/types'
 
 let cache: Question[] = []
 
 export async function loadQuizData(): Promise<void> {
+  // prisma は遅延読み込み(ゲームロジックのテストが DB 依存を引き込まないようにするため)
+  const { prisma } = await import('../lib/prisma')
   const rows = await prisma.question.findMany({ where: { approved: true } })
   cache = rows.map(r => ({
     id: r.id,
