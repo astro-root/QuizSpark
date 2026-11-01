@@ -7,6 +7,7 @@ import { gameManager } from '../game/GameManager'
 import { prisma } from '../lib/prisma'
 import { joinQueue, leaveQueue, setOnMatch } from '../game/MatchmakingManager'
 import { toPublicState } from '../game/publicState'
+import { settleGame, type SettleDb } from '../game/settleGame'
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 type IoSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
@@ -61,78 +62,16 @@ function setupFinishHandler(io: IoServer) {
   finishCallbackSet = true
   gameManager.setOnFinish(async (state) => {
     try {
-      const data = state.players.flatMap(p => {
-        const pSocket = getLiveSocket(io, p.id)
-        const userId = pSocket?.data?.dbUserId ?? null
-        if (!userId) return []
-        return [{
-          id: `${state.id}-${userId}`,
-          userId,
-          roomId: state.id,
-          ruleId: state.settings?.ruleId ?? 'free',
-          isMatchmaking: !!(state.isMatchmaking),
-          result: p.status === 'WIN' ? 'WIN' : p.status === 'LOSE' ? 'LOSE' : 'ACTIVE',
-          correct: (p.ruleState?.correct as number) ?? 0,
-          wrong: (p.ruleState?.wrong as number) ?? 0,
-          score: p.score,
-          playerCount: state.players.length,
-        }]
+      const { rateResults } = await settleGame(state, {
+        db: prisma as unknown as SettleDb,
+        userIdOf: (token) => gameManager.getUserId(token),
+        answerLogsOf: (token) => gameManager.getAnswerLogs(state.id)?.get(token) ?? [],
       })
-      if (data.length > 0) {
-        for (const p of state.players) {
-          const pSocket = getLiveSocket(io, p.id)
-          const userId = pSocket?.data?.dbUserId ?? null
-          if (!userId) continue
-          const logs = gameManager.getAnswerLogs(state.id)?.get(p.id) ?? []
-          if (logs.length === 0) continue
-          await prisma.questionHistory.createMany({
-            data: logs.map(l => ({ userId, text: l.text, answer: l.answer, userAnswer: l.userAnswer, isCorrect: l.isCorrect, genre: l.genre ?? 'ノンジャンル', questionId: l.questionId ?? null }))
-          })
-          const all = await prisma.questionHistory.findMany({ where: { userId }, orderBy: { playedAt: 'desc' }, select: { id: true } })
-          // Fix D: 保存上限を questionCount に合わせる（旧: 10件固定）
-          const historyLimit = (state.settings?.questionCount ?? 30) * 20
-          if (all.length > historyLimit) {
-            await prisma.questionHistory.deleteMany({ where: { id: { in: all.slice(historyLimit).map(h => h.id) } } })
-          }
-        }
-        // Fix C: ACTIVE→WIN/LOSE 変換を battleRecord 保存より先に実行
-        if (state.isMatchmaking && data.every(d => d.result === 'ACTIVE') && data.length >= 2) {
-          const byScore = [...state.players].sort((a, b) => b.score - a.score)
-          data.forEach(d => {
-            const player = state.players.find(p => (getLiveSocket(io, p.id)?.data?.dbUserId) === d.userId)
-            if (!player) return
-            const rank = byScore.findIndex(p => p.id === player.id)
-            if (rank === 0) (d as any).result = 'WIN'
-            else if (rank === byScore.length - 1) (d as any).result = 'LOSE'
-          })
-        }
-        // Fix C: 変換後の result で battleRecord を保存
-        await prisma.battleRecord.createMany({ data, skipDuplicates: true })
-        console.log('[Rate] data:', JSON.stringify(data.map(d => ({userId:d.userId,result:d.result,isMatchmaking:d.isMatchmaking}))))
-        const rateTargets = data.filter(d => d.isMatchmaking && d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
-        console.log('[Rate] targets:', rateTargets.length)
-        const rateResultMap = new Map<string, { result: string; oldRate: number; newRate: number; delta: number }>()
-        if (rateTargets.length > 0) {
-          await prisma.$transaction(async (tx) => {
-            for (const d of rateTargets) {
-              const delta = d.result === 'WIN' ? 30 : -20
-              const user = await tx.user.findUnique({ where: { id: d.userId! }, select: { rate: true } })
-              if (!user) continue
-              const oldRate = user.rate
-              const newRate = Math.max(0, user.rate + delta)
-              await tx.user.update({ where: { id: d.userId! }, data: { rate: newRate } })
-              rateResultMap.set(d.userId!, { result: d.result, oldRate, newRate, delta })
-            }
-          })
-        }
-        // rate-result を各プレイヤーに送信
-        for (const p of state.players) {
-          const pSocket = getLiveSocket(io, p.id)
-          const userId = pSocket?.data?.dbUserId ?? null
-          if (!userId || !pSocket) continue
-          const rr = rateResultMap.get(userId)
-          if (rr) pSocket.emit('rate-result', rr as any)
-        }
+      // rate-result は接続中のプレイヤーにだけ送る(切断者は次回ログイン時にレートで確認できる)
+      for (const p of state.players) {
+        const userId = gameManager.getUserId(p.id)
+        const rr = userId ? rateResults.get(userId) : undefined
+        if (rr) getLiveSocket(io, p.id)?.emit('rate-result', rr)
       }
     } catch (e) {
       console.error('[Records] save failed:', e)
@@ -153,7 +92,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     ? rawToken
     : socket.id
   socket.data.playerId = token
-  gameManager.registerSocket(token, socket.id)
+  gameManager.registerSocket(token, socket.id, dbUserId)
 
   socket.on('create-room', (name, callback) => {
     const roomId = gameManager.createRoom(token, name, socket.id)
