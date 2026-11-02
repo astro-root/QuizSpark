@@ -171,7 +171,8 @@ export default function GamePage() {
   useEffect(() => {
     if (countdown !== prevCountdown.current) {
       if (countdown <= 3 && countdown > 0 && (roomState?.phase==='question'||roomState?.phase==='answering')) {
-        countdown <= 3 ? SFX.urgent() : SFX.tick()
+        if (countdown <= 3) SFX.urgent()
+        else SFX.tick()
       }
       prevCountdown.current = countdown
     }

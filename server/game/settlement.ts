@@ -64,7 +64,8 @@ export function buildBattleRecords(
     if (!userId || seen.has(userId)) continue
     seen.add(userId)
     rows.push({
-      id: `${state.id}-${userId}`,
+      // 試合ごとの gameId をキーにする(同じルームで再戦しても戦績が重複扱いで捨てられない)
+      id: `${state.gameId ?? state.id}-${userId}`,
       userId,
       roomId: state.id,
       ruleId: state.settings?.ruleId ?? 'free',

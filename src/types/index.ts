@@ -53,6 +53,10 @@ export interface RoomState {
   isMatchmaking?: boolean
   questionStartedAt?: number
   recentQuestionIds?: number[]
+  /** 試合ごとの一意な ID(startGame で採番)。戦績の ID や終了通知の重複防止に使う */
+  gameId?: string | null
+  /** フェーズが変わるたびに増える番号。古いタイマーによる誤った状態遷移を防ぐ */
+  phaseSeq?: number
 }
 
 export interface PublicRoom {
@@ -120,6 +124,7 @@ export interface ClientToServerEvents {
   'send-stamp': (stamp: string) => void
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface InterServerEvents {}
 
 export interface SocketData {
