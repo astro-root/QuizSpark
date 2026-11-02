@@ -50,9 +50,9 @@ test('元の state を破壊しない(サーバー側の判定用データが残
   assert.equal(s.currentQuestion?.answer, SECRET.answer)
 })
 
-test('currentQuestion が null の状態はそのまま通す', () => {
+test('currentQuestion が null の状態でも例外にならず、問題は null のまま', () => {
   const s = createRoom('ROOM02', 'host', 'ホスト')
-  assert.equal(toPublicState(s), s)
+  assert.equal(toPublicState(s).currentQuestion, null)
 })
 
 test('許可リスト方式: Question に未知のフィールドがあっても漏れない', () => {

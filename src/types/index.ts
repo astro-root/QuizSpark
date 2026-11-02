@@ -85,6 +85,8 @@ export interface RateResult {
 }
 export interface ServerToClientEvents {
   'room-update': (state: RoomState) => void
+  /** 接続した本人の公開 ID(players[].id / hostId などと比較して「自分」を判定する) */
+  identity: (playerId: string) => void
   'match-found': (roomId: string) => void
   'queue-status': (position: number) => void
   'chat-message': (playerId: string, playerName: string, text: string, ts: number) => void
