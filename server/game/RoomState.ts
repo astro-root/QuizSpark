@@ -43,6 +43,8 @@ export function createRoom(roomId: string, hostId: string, hostName: string): Ro
     totalQuestions: settings.questionCount,
     questionOrder: [],
     settings,
+    gameId: null,
+    phaseSeq: 0,
   }
 }
 
@@ -195,9 +197,8 @@ export function applyAnswer(
   const players: Player[] = state.players.map((p) => {
     if (p.id !== playerId || p.status !== 'ACTIVE') return p
     const newRuleState = { ...p.ruleState }
-    correct
-      ? rule.onCorrect(newRuleState, state.settings.ruleParams)
-      : rule.onWrong(newRuleState, state.settings.ruleParams)
+    if (correct) rule.onCorrect(newRuleState, state.settings.ruleParams)
+    else rule.onWrong(newRuleState, state.settings.ruleParams)
     const newStatus = rule.getStatus(newRuleState, state.settings.ruleParams)
     // scoreはruleStateのscoreかcorrectカウントを反映
     const score = typeof newRuleState.score === 'number'

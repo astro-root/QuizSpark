@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { RoomState } from '../../src/types'
 import { getRuleDef } from './rules'
 import {
@@ -42,9 +43,32 @@ class GameManager {
 
   /** 試合終了を 1 度だけ通知する。切断猶予タイマー等による二重実行(戦績・レートの二重反映)を防ぐ。 */
   private notifyFinish(state: RoomState) {
-    if (!this.finishFn || this.finishNotified.has(state.id)) return
-    this.finishNotified.add(state.id)
+    if (!this.finishFn) return
+    const key = state.gameId ?? state.id
+    if (this.finishNotified.has(key)) return
+    this.finishNotified.add(key)
+    if (this.finishNotified.size > 5000) {
+      const oldest = this.finishNotified.values().next().value
+      if (oldest !== undefined) this.finishNotified.delete(oldest)
+    }
     this.finishFn(state)
+  }
+
+  /**
+   * 状態の唯一の書き込み口。フェーズ/問題番号/早押し者が変わったら phaseSeq を進める。
+   * タイマーは設定時点の phaseSeq を持ち、発火時に一致しなければ何もしない(古いタイマーの無効化)。
+   */
+  private commit(roomId: string, next: RoomState): RoomState {
+    const prev = this.rooms.get(roomId)
+    const transitioned = !!prev && (
+      prev.phase !== next.phase ||
+      prev.currentQuestionIndex !== next.currentQuestionIndex ||
+      prev.buzzedPlayerId !== next.buzzedPlayerId
+    )
+    const seq = (prev?.phaseSeq ?? next.phaseSeq ?? 0) + (transitioned ? 1 : 0)
+    const out = next.phaseSeq === seq ? next : { ...next, phaseSeq: seq }
+    this.rooms.set(roomId, out)
+    return out
   }
 
   private broadcast(roomId: string) {
@@ -60,12 +84,13 @@ class GameManager {
   private startBuzzTimer(roomId: string) {
     this.clearTimer(roomId)
     const state = this.rooms.get(roomId)
+    const seq = state?.phaseSeq
     const delay = state?.timerEndsAt ? Math.max(0, state.timerEndsAt - Date.now()) : BUZZ_TIMEOUT_MS
     const t = setTimeout(() => {
       const s = this.rooms.get(roomId)
-      if (!s || s.phase !== 'question') return
+      if (!s || s.phase !== 'question' || s.phaseSeq !== seq) return
       const skipped = skipQuestion(s)
-      this.rooms.set(roomId, skipped)
+      this.commit(roomId, skipped)
       this.broadcast(roomId)
       this.startResultTimer(roomId)
     }, delay)
@@ -74,11 +99,12 @@ class GameManager {
 
   private startAnswerTimer(roomId: string) {
     this.clearTimer(roomId)
+    const seq = this.rooms.get(roomId)?.phaseSeq
     const t = setTimeout(() => {
       const state = this.rooms.get(roomId)
-      if (!state || state.phase !== 'answering') return
+      if (!state || state.phase !== 'answering' || state.phaseSeq !== seq) return
       const { nextState } = applyAnswer(state, state.buzzedPlayerId ?? '', '')
-      this.rooms.set(roomId, nextState)
+      this.commit(roomId, nextState)
       this.broadcast(roomId)
       this.startResultTimer(roomId)
     }, ANSWER_TIMEOUT_MS)
@@ -87,11 +113,12 @@ class GameManager {
 
   private startResultTimer(roomId: string) {
     this.clearTimer(roomId)
+    const seq = this.rooms.get(roomId)?.phaseSeq
     const t = setTimeout(() => {
       const state = this.rooms.get(roomId)
-      if (!state || state.phase !== 'result') return
+      if (!state || state.phase !== 'result' || state.phaseSeq !== seq) return
       const next = advanceQuestion(state, this.customQuestionsMap.get(roomId))
-      this.rooms.set(roomId, next)
+      this.commit(roomId, next)
       this.broadcast(roomId)
       if (next.phase === 'question') this.startBuzzTimer(roomId)
       else if (next.phase === 'finished') this.notifyFinish(next)
@@ -102,7 +129,7 @@ class GameManager {
   createRoom(hostToken: string, hostName: string, socketId: string): string {
     let roomId = generateRoomId()
     while (this.rooms.has(roomId)) roomId = generateRoomId()
-    this.rooms.set(roomId, createRoom(roomId, hostToken, hostName))
+    this.commit(roomId, createRoom(roomId, hostToken, hostName))
     this.playerRoomMap.set(hostToken, roomId)
     this.tokenToSocketId.set(hostToken, socketId)
     return roomId
@@ -112,7 +139,7 @@ class GameManager {
     const state = this.rooms.get(roomId)
     if (!state) return 'ルームが存在しません'
     if (state.phase !== 'lobby') return 'ゲームはすでに開始されています'
-    this.rooms.set(roomId, addPlayer(state, token, playerName))
+    this.commit(roomId, addPlayer(state, token, playerName))
     this.playerRoomMap.set(token, roomId)
     this.tokenToSocketId.set(token, socketId)
     return null
@@ -130,11 +157,11 @@ class GameManager {
     reconnectManager.cancelGracePeriod(roomId, token)
     if (updated.players.length === 0) {
       this.rooms.delete(roomId); this.clearTimer(roomId)
-      this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId); this.finishNotified.delete(roomId)
+      this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId)
       return null
     }
     if (state.hostId === token) updated = reassignHost(updated)
-    this.rooms.set(roomId, updated)
+    this.commit(roomId, updated)
     return roomId
   }
 
@@ -148,7 +175,7 @@ class GameManager {
     if (state.phase === 'lobby') return this.leaveRoom(token)
 
     this.tokenToSocketId.delete(token)
-    this.rooms.set(roomId, disconnectPlayer(state, token))
+    this.commit(roomId, disconnectPlayer(state, token))
     reconnectManager.startGracePeriod(roomId, token)
     return roomId
   }
@@ -165,7 +192,7 @@ class GameManager {
 
     if (player.status === 'DISCONNECTED') {
       reconnectManager.cancelGracePeriod(roomId, token)
-      this.rooms.set(roomId, reconnectPlayer(state, token))
+      this.commit(roomId, reconnectPlayer(state, token))
     }
     return true
   }
@@ -182,7 +209,7 @@ class GameManager {
       this.clearTimer(roomId)
       updated = { ...updated, phase: 'finished', currentQuestion: null, timerEndsAt: null }
     }
-    this.rooms.set(roomId, updated)
+    this.commit(roomId, updated)
     this.broadcast(roomId)
     if (updated.phase === 'finished') this.notifyFinish(updated)
   }
@@ -190,16 +217,15 @@ class GameManager {
   updateSettings(roomId: string, token: string, settings: import('../../src/types').GameSettings): boolean {
     const state = this.rooms.get(roomId)
     if (!state || state.hostId !== token || state.phase !== 'lobby') return false
-    this.rooms.set(roomId, updateSettings(state, settings))
+    this.commit(roomId, updateSettings(state, settings))
     return true
   }
 
   startGame(roomId: string): boolean {
     const state = this.rooms.get(roomId)
     if (!state || state.phase !== 'lobby') return false
-    this.finishNotified.delete(roomId)
-    const next = advanceQuestion(state, this.customQuestionsMap.get(roomId))
-    this.rooms.set(roomId, next)
+    const next = { ...advanceQuestion(state, this.customQuestionsMap.get(roomId)), gameId: randomUUID() }
+    this.commit(roomId, next)
     this.broadcast(roomId)
     if (next.phase === 'question') this.startBuzzTimer(roomId)
     return true
@@ -211,7 +237,7 @@ class GameManager {
     const player = state.players.find((p) => p.id === token)
     if (!player || player.status !== 'ACTIVE') return false
     this.clearTimer(roomId)
-    this.rooms.set(roomId, acceptBuzz(state, token))
+    this.commit(roomId, acceptBuzz(state, token))
     this.startAnswerTimer(roomId)
     return true
   }
@@ -232,7 +258,7 @@ class GameManager {
       const logLimit = state.settings?.questionCount ?? 30
       if (playerLog.length > logLimit) playerLog.shift()
     }
-    this.rooms.set(roomId, nextState)
+    this.commit(roomId, nextState)
     this.broadcast(roomId)
     this.startResultTimer(roomId)
   }
@@ -241,7 +267,6 @@ class GameManager {
     const state = this.rooms.get(roomId)
     if (!state || state.hostId !== token || state.phase !== 'finished') return false
     this.clearTimer(roomId)
-    this.finishNotified.delete(roomId)
     this.customQuestionsMap.delete(roomId)
     this.answerLogs.delete(roomId)
     const rule = getRuleDef(state.settings.ruleId)
@@ -251,7 +276,7 @@ class GameManager {
       status: 'ACTIVE' as const,
       ruleState: rule.initState(state.settings.ruleParams),
     }))
-    this.rooms.set(roomId, {
+    this.commit(roomId, {
       ...state,
       phase: 'lobby',
       currentQuestionIndex: -1,
@@ -263,6 +288,7 @@ class GameManager {
       timerEndsAt: null,
       questionOrder: [],
       players,
+      gameId: null,
     })
     return true
   }
@@ -285,9 +311,9 @@ class GameManager {
   setCustomQuestions(roomId: string, questions: import('../../src/types').Question[]) { this.customQuestionsMap.set(roomId, questions) }
   setRecentQuestionIds(roomId: string, ids: number[]) {
     const s = this.rooms.get(roomId)
-    if (s) this.rooms.set(roomId, { ...s, recentQuestionIds: ids })
+    if (s) this.commit(roomId, { ...s, recentQuestionIds: ids })
   }
-  setMatchmaking(roomId: string) { const s = this.rooms.get(roomId); if (s) this.rooms.set(roomId, { ...s, isMatchmaking: true }) }
+  setMatchmaking(roomId: string) { const s = this.rooms.get(roomId); if (s) this.commit(roomId, { ...s, isMatchmaking: true }) }
   getCustomQuestions(roomId: string) { return this.customQuestionsMap.get(roomId) }
   getPublicRooms() {
     return [...this.rooms.values()]

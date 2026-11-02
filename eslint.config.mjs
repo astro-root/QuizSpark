@@ -13,6 +13,10 @@ export default tseslint.config(
       // 既存コードに多いため当面は警告に留める(新規コードでは使わない)
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      // 全角スペースを文字列・テンプレート・JSX テキストで使っている(意図的)
+      'no-irregular-whitespace': ['error', { skipStrings: true, skipTemplates: true, skipJSXText: true, skipComments: true }],
+      // sessionStorage / 音声 / JSON 解析など、失敗しても無視してよい箇所の空 catch は許可
+      'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
 )
