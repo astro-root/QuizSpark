@@ -10,8 +10,10 @@
     "build:client": "vite build",
     "build:server": "prisma generate && tsc -p tsconfig.server.json",
     "test": "tsx --test tests/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
-    "lint": "eslint ."
+    "typecheck": "npm run typecheck:server",
+    "lint": "eslint .",
+    "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
+    "typecheck:client": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
@@ -43,6 +45,7 @@
     "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/cors": "^2.8.19",
@@ -58,8 +61,11 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^8.2.2",
+    "eslint": "^9.39.5",
+    "globals": "^17.14.0",
     "tsx": "^4.15.7",
     "typescript": "^5.4.5",
+    "typescript-eslint": "^8.72.1",
     "vite": "^5.3.1"
   }
 }
