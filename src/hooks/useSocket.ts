@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { socket, getOrCreateToken } from '../lib/socket'
+import { socket } from '../lib/socket'
 import type { RoomState, GameSettings, PublicRoom, PrematchInfo, RateResult } from '../types'
 
 export function useSocket() {
@@ -12,25 +12,26 @@ export function useSocket() {
   const [prematchInfo, setPrematchInfo] = useState<PrematchInfo | null>(null)
   const [rateResult, setRateResult] = useState<RateResult | null>(null)
   const [stamps, setStamps] = useState<{id:string,fromId:string,fromName:string,stamp:string}[]>([])
+  // 自分の公開 ID。秘密トークンは画面側では扱わず、サーバーから identity イベントで受け取る
+  const myIdRef = useRef<string>('')
   const savedRoomId = useRef<string | null>(null)
   const savedName = useRef<string | null>(null)
 
   useEffect(() => {
     function onConnect() {
       setConnected(true)
-      setMyId(getOrCreateToken())
       setReconnecting(false)
       if (savedRoomId.current) {
         socket.emit('sync-state', savedRoomId.current)
       }
     }
+    function onIdentity(id: string) { myIdRef.current = id; setMyId(id) }
     function onDisconnect() { setConnected(false) }
     function onReconnectAttempt() { setReconnecting(true) }
     function onRoomUpdate(state: RoomState) {
       setRoomState(state)
       if (state) {
-        const myToken = getOrCreateToken()
-        const me = state.players.find(p => p.id === myToken)
+        const me = state.players.find(p => p.id === myIdRef.current)
         if (me) {
           savedRoomId.current = state.id
           savedName.current = me.name
@@ -42,6 +43,7 @@ export function useSocket() {
     }
 
     socket.on('connect', onConnect)
+    socket.on('identity', onIdentity)
     socket.on('disconnect', onDisconnect)
     socket.on('reconnect_attempt', onReconnectAttempt)
     socket.on('room-update', onRoomUpdate)
@@ -59,6 +61,7 @@ export function useSocket() {
 
     return () => {
       socket.off('connect', onConnect)
+      socket.off('identity', onIdentity)
       socket.off('disconnect', onDisconnect)
       socket.off('reconnect_attempt', onReconnectAttempt)
       socket.off('room-update', onRoomUpdate)

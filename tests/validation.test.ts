@@ -28,7 +28,7 @@ function fakeRes() {
   const res = { status(c: number) { r.code = c; return res }, json(b: unknown) { r.body = b; return res } }
   return { r, res }
 }
-const run = (guard: Function, user?: object) => {
+const run = (guard: (req: object, res: object, next: () => void) => void, user?: object) => {
   const { r, res } = fakeRes(); let nextCalled = false
   guard({ user }, res, () => { nextCalled = true })
   return { ...r, nextCalled }

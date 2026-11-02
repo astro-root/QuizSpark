@@ -7,6 +7,7 @@ import { gameManager } from '../game/GameManager'
 import { prisma } from '../lib/prisma'
 import { joinQueue, leaveQueue, setOnMatch } from '../game/MatchmakingManager'
 import { toPublicState } from '../game/publicState'
+import { toPublicId } from '../game/identity'
 import { settleGame, type SettleDb } from '../game/settleGame'
 import { sanitizeSettings } from '../game/settings'
 import { createEventLimiter, SOCKET_LIMITS } from '../lib/eventLimiter'
@@ -98,6 +99,8 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     : socket.id
   socket.data.playerId = token
   gameManager.registerSocket(token, socket.id, dbUserId)
+  // 自分の公開 ID を通知する(秘密トークンは他プレイヤーに配信される状態には含めない)
+  socket.emit('identity', toPublicId(token))
 
   // 全イベント共通: レート制限 + 例外の捕捉。
   // クライアント由来の引数は信頼せず(型は unknown 扱い)、各ハンドラで検証する。
@@ -210,7 +213,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (!roomId) return
     if (!gameManager.buzz(roomId, token)) return
     const state = gameManager.getRoom(roomId)!
-    io.to(roomId).emit('buzz-accepted', token, state.buzzedPlayerName!)
+    io.to(roomId).emit('buzz-accepted', toPublicId(token), state.buzzedPlayerName!)
     broadcast(io, roomId, state)
   }))
 
@@ -257,7 +260,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     if (!player) return
     const VALID = ['👍','👏','🔥','💪','😲','🤔','😭','🎉']
     if (!VALID.includes(stamp)) return
-    io.to(roomId).emit('stamp', { fromId: socket.id, fromName: player.name, stamp })
+    io.to(roomId).emit('stamp', { fromId: toPublicId(token), fromName: player.name, stamp })
   }))
 
   socket.on('send-chat', safe('send-chat', (text: unknown) => {
@@ -268,7 +271,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     const player = state.players.find(p => p.id === token)
     const name = player?.name ?? (socket.request as any).user?.name ?? 'ゲスト'
     const trimmed = text.trim().slice(0, 100)
-    io.to(roomId).emit('chat-message', socket.id, name, trimmed, Date.now())
+    io.to(roomId).emit('chat-message', toPublicId(token), name, trimmed, Date.now())
   }))
 
   socket.on('disconnect', () => {

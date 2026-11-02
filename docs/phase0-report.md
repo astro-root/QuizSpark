@@ -29,6 +29,6 @@ ORDER BY "createdAt" DESC;
 問題があるものは管理画面で非承認にするか、内容を確認してください(このコミットはデータを一切変更しません)。
 
 ## 未対応・次に対応する重要事項
-- **P1: プレイヤーの秘密トークンが公開 ID として配信されている**(`players[].id` / `hostId` = localStorage の `quizspark_player_token`)。同室のプレイヤーが他人のトークンを知り、なりすませる。公開 ID と秘密トークンの分離が必要(Phase 1 の最初に実施)。
+- ~~**P1: プレイヤーの秘密トークンが公開 ID として配信されている**~~ → Phase 1 で修正済み(`server/game/identity.ts`、`identity` イベント)。元の説明:(`players[].id` / `hostId` = localStorage の `quizspark_player_token`)。同室のプレイヤーが他人のトークンを知り、なりすませる。公開 ID と秘密トークンの分離が必要(Phase 1 の最初に実施)。
 - レート制限は express-rate-limit のメモリストア(プロセス単位)。Vercel(サーバーレス)では実効性が落ちるため Phase 2 で見直す。
 - `export.csv` は答え列のカンマ未エスケープ・表計算ソフトの数式注入が未対策(P3)。

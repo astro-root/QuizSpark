@@ -1,6 +1,7 @@
 import { gameManager } from './GameManager'
 import { prisma } from '../lib/prisma'
 import type { PrematchPlayer } from '../../src/types'
+import { toPublicId } from './identity'
 
 interface QueueEntry {
   playerId: string
@@ -99,7 +100,7 @@ async function fetchStats(entry: QueueEntry): Promise<PrematchPlayer> {
     }
   }
 
-  return { id: entry.playerId, name: entry.playerName, rate: entry.rate, avatarUrl, titleId, winStreak }
+  return { id: toPublicId(entry.playerId), name: entry.playerName, rate: entry.rate, avatarUrl, titleId, winStreak }
 }
 
 async function createMatch(host: QueueEntry, guest: QueueEntry) {
