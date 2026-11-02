@@ -8,6 +8,7 @@ import {
   BUZZ_TIMEOUT_MS, ANSWER_TIMEOUT_MS, RESULT_SHOW_MS,
 } from './RoomState'
 import { reconnectManager } from './ReconnectManager'
+import { emptySecret, joinState, splitState, type RoomSecret } from './secret'
 
 type BroadcastFn = (roomId: string, state: RoomState) => void
 
@@ -19,7 +20,9 @@ function generateRoomId(): string {
 }
 
 class GameManager {
+  // 保存する状態は「公開状態」のみ(答えを含まない)。答えと出題順は secrets に分けて持つ
   private rooms: Map<string, RoomState> = new Map()
+  private secrets: Map<string, RoomSecret> = new Map()
   // token(=永続プレイヤーID) → roomId
   private playerRoomMap: Map<string, string> = new Map()
   // token → 現在接続中のsocket.id（切断中はundefined相当で存在しない）
@@ -54,8 +57,15 @@ class GameManager {
     this.finishFn(state)
   }
 
+  /** 公開状態に秘密を合わせた完全な状態(ゲームロジックへ渡す用。外部へは出さない) */
+  private load(roomId: string): RoomState | undefined {
+    const pub = this.rooms.get(roomId)
+    return pub ? joinState(pub, this.secrets.get(roomId)) : undefined
+  }
+
   /**
-   * 状態の唯一の書き込み口。フェーズ/問題番号/早押し者が変わったら phaseSeq を進める。
+   * 状態の唯一の書き込み口。引数は「完全な状態(秘密を含む)」。公開状態と秘密に分けて保存する。
+   * フェーズ/問題番号/早押し者が変わったら phaseSeq を進める。
    * タイマーは設定時点の phaseSeq を持ち、発火時に一致しなければ何もしない(古いタイマーの無効化)。
    */
   private commit(roomId: string, next: RoomState): RoomState {
@@ -66,11 +76,13 @@ class GameManager {
       prev.buzzedPlayerId !== next.buzzedPlayerId
     )
     const seq = (prev?.phaseSeq ?? next.phaseSeq ?? 0) + (transitioned ? 1 : 0)
-    const out = next.phaseSeq === seq ? next : { ...next, phaseSeq: seq }
-    this.rooms.set(roomId, out)
-    return out
+    const { pub, secret } = splitState(next.phaseSeq === seq ? next : { ...next, phaseSeq: seq })
+    this.rooms.set(roomId, pub)
+    this.secrets.set(roomId, secret)
+    return pub
   }
 
+  /** クライアントへ配信する。保存されている公開状態(答えを含まない)だけを渡す */
   private broadcast(roomId: string) {
     const state = this.rooms.get(roomId)
     if (state && this.broadcastFn) this.broadcastFn(roomId, state)
@@ -83,11 +95,11 @@ class GameManager {
 
   private startBuzzTimer(roomId: string) {
     this.clearTimer(roomId)
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     const seq = state?.phaseSeq
     const delay = state?.timerEndsAt ? Math.max(0, state.timerEndsAt - Date.now()) : BUZZ_TIMEOUT_MS
     const t = setTimeout(() => {
-      const s = this.rooms.get(roomId)
+      const s = this.load(roomId)
       if (!s || s.phase !== 'question' || s.phaseSeq !== seq) return
       const skipped = skipQuestion(s)
       this.commit(roomId, skipped)
@@ -101,7 +113,7 @@ class GameManager {
     this.clearTimer(roomId)
     const seq = this.rooms.get(roomId)?.phaseSeq
     const t = setTimeout(() => {
-      const state = this.rooms.get(roomId)
+      const state = this.load(roomId)
       if (!state || state.phase !== 'answering' || state.phaseSeq !== seq) return
       const { nextState } = applyAnswer(state, state.buzzedPlayerId ?? '', '')
       this.commit(roomId, nextState)
@@ -115,7 +127,7 @@ class GameManager {
     this.clearTimer(roomId)
     const seq = this.rooms.get(roomId)?.phaseSeq
     const t = setTimeout(() => {
-      const state = this.rooms.get(roomId)
+      const state = this.load(roomId)
       if (!state || state.phase !== 'result' || state.phaseSeq !== seq) return
       const next = advanceQuestion(state, this.customQuestionsMap.get(roomId))
       this.commit(roomId, next)
@@ -136,7 +148,7 @@ class GameManager {
   }
 
   joinRoom(roomId: string, token: string, playerName: string, socketId: string): string | null {
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state) return 'ルームが存在しません'
     if (state.phase !== 'lobby') return 'ゲームはすでに開始されています'
     this.commit(roomId, addPlayer(state, token, playerName))
@@ -149,14 +161,14 @@ class GameManager {
   leaveRoom(token: string): string | null {
     const roomId = this.playerRoomMap.get(token)
     if (!roomId) return null
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state) return null
     let updated = removePlayer(state, token)
     this.playerRoomMap.delete(token)
     this.tokenToSocketId.delete(token)
     reconnectManager.cancelGracePeriod(roomId, token)
     if (updated.players.length === 0) {
-      this.rooms.delete(roomId); this.clearTimer(roomId)
+      this.rooms.delete(roomId); this.secrets.delete(roomId); this.clearTimer(roomId)
       this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId)
       return null
     }
@@ -169,7 +181,7 @@ class GameManager {
   handleDisconnect(token: string): string | null {
     const roomId = this.playerRoomMap.get(token)
     if (!roomId) return null
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state) return null
 
     if (state.phase === 'lobby') return this.leaveRoom(token)
@@ -182,7 +194,7 @@ class GameManager {
 
   // 猶予時間内の再接続。トークンが一致すればACTIVEに復帰する。
   handleReconnect(roomId: string, token: string, socketId: string): boolean {
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state) return false
     const player = state.players.find((p) => p.id === token)
     if (!player) return false
@@ -199,7 +211,7 @@ class GameManager {
 
   // 猶予切れによる不戦敗確定。ReconnectManagerから呼ばれる。
   private finalizeDisconnect(roomId: string, token: string): void {
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state) return
     const player = state.players.find((p) => p.id === token)
     if (!player || player.status !== 'DISCONNECTED') return
@@ -215,14 +227,14 @@ class GameManager {
   }
 
   updateSettings(roomId: string, token: string, settings: import('../../src/types').GameSettings): boolean {
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state || state.hostId !== token || state.phase !== 'lobby') return false
     this.commit(roomId, updateSettings(state, settings))
     return true
   }
 
   startGame(roomId: string): boolean {
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state || state.phase !== 'lobby') return false
     const next = { ...advanceQuestion(state, this.customQuestionsMap.get(roomId)), gameId: randomUUID() }
     this.commit(roomId, next)
@@ -232,7 +244,7 @@ class GameManager {
   }
 
   buzz(roomId: string, token: string): boolean {
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state || state.phase !== 'question') return false
     const player = state.players.find((p) => p.id === token)
     if (!player || player.status !== 'ACTIVE') return false
@@ -243,7 +255,7 @@ class GameManager {
   }
 
   submitAnswer(roomId: string, token: string, rawAnswer: string): void {
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state || state.phase !== 'answering') return
     if (state.buzzedPlayerId !== token) return
     this.clearTimer(roomId)
@@ -264,7 +276,7 @@ class GameManager {
   }
 
   resetGame(roomId: string, token: string): boolean {
-    const state = this.rooms.get(roomId)
+    const state = this.load(roomId)
     if (!state || state.hostId !== token || state.phase !== 'finished') return false
     this.clearTimer(roomId)
     this.customQuestionsMap.delete(roomId)
@@ -293,6 +305,7 @@ class GameManager {
     return true
   }
 
+  /** 公開状態(答えを含まない)。外部へ渡してよいのはこちらだけ */
   getRoom(roomId: string): RoomState | undefined { return this.rooms.get(roomId) }
   // 接続確立の都度呼ばれる。キュー中・対戦中を問わず、常に最新のsocket.idへ追従させる
   registerSocket(token: string, socketId: string, userId?: string | null) {
@@ -310,10 +323,10 @@ class GameManager {
   getSocketId(token: string): string | undefined { return this.tokenToSocketId.get(token) }
   setCustomQuestions(roomId: string, questions: import('../../src/types').Question[]) { this.customQuestionsMap.set(roomId, questions) }
   setRecentQuestionIds(roomId: string, ids: number[]) {
-    const s = this.rooms.get(roomId)
+    const s = this.load(roomId)
     if (s) this.commit(roomId, { ...s, recentQuestionIds: ids })
   }
-  setMatchmaking(roomId: string) { const s = this.rooms.get(roomId); if (s) this.commit(roomId, { ...s, isMatchmaking: true }) }
+  setMatchmaking(roomId: string) { const s = this.load(roomId); if (s) this.commit(roomId, { ...s, isMatchmaking: true }) }
   getCustomQuestions(roomId: string) { return this.customQuestionsMap.get(roomId) }
   getPublicRooms() {
     return [...this.rooms.values()]
