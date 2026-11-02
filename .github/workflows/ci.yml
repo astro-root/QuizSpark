@@ -18,6 +18,8 @@ jobs:
       - run: npx prisma generate
       - name: Unit tests (blocking)
         run: npm test
-      - name: Typecheck (informational until existing errors are cleared)
-        run: npm run typecheck
+      - name: Typecheck server (blocking)
+        run: npm run typecheck:server
+      - name: Typecheck client (informational until existing errors are cleared)
+        run: npm run typecheck:client
         continue-on-error: true

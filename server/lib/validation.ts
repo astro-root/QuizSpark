@@ -5,7 +5,10 @@ export const MAX_TEXT = 500
 export const MAX_ANSWER = 100
 export const MAX_ALTERNATIVE_ANSWERS = 10
 
-export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string }
+// tsconfig.server.json は strict:false のため、判別共用体(ok で絞り込み)が効かない。
+// どちらの形でも value / error に型安全にアクセスできるよう、単純なインターフェースにしている。
+// 呼び出し側は必ず ok を確認してから value を使うこと。
+export interface Parsed<T> { ok: boolean; value?: T; error?: string }
 
 export interface QuestionInput {
   text: string
@@ -49,7 +52,7 @@ export function validateQuestionInput(body: unknown): Parsed<QuestionInput> {
     if (d) displayAnswer = d
   }
   const answers = parseAnswers(b.answers, answer)
-  if (!answers.ok) return answers
+  if (!answers.ok) return { ok: false, error: answers.error }
   const g = str(b.genre)
   const genre = g && (GENRES as readonly string[]).includes(g) ? g : 'ノンジャンル'
   return { ok: true, value: { text, answer, answers: answers.value, displayAnswer, genre } }

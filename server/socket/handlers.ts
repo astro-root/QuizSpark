@@ -104,11 +104,11 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
   // 例外を捕捉しないとプロセス全体が落ちるため、必ずこのラッパー経由で登録する。
   const limiter = createEventLimiter(SOCKET_LIMITS)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const safe = (event: string, fn: (...args: any[]) => void | Promise<void>) => (...args: any[]): void => {
+  const safe = (event: string, fn: (...args: any[]) => unknown) => (...args: any[]): void => {
     if (!limiter.allow(event)) return
     try {
       const r = fn(...args)
-      if (r && typeof r.catch === 'function') r.catch((e: unknown) => console.error(`[Socket] ${event} failed:`, e))
+      if (r instanceof Promise) r.catch((e: unknown) => console.error(`[Socket] ${event} failed:`, e))
     } catch (e) { console.error(`[Socket] ${event} failed:`, e) }
   }
   const ackOf = <T,>(cb: unknown): ((v: T) => void) => typeof cb === 'function' ? (cb as (v: T) => void) : () => {}

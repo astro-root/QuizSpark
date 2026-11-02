@@ -10,8 +10,10 @@
     "build:client": "vite build",
     "build:server": "prisma generate && tsc -p tsconfig.server.json",
     "test": "tsx --test tests/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
-    "lint": "eslint ."
+    "typecheck": "npm run typecheck:server",
+    "lint": "eslint .",
+    "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
+    "typecheck:client": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
