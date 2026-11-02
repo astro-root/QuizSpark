@@ -11,16 +11,20 @@ import { gameManager } from '../game/GameManager'
 import { sessionMiddleware } from '../lib/sessionMiddleware'
 import passport from '../auth/passport'
 import { toPublicState } from '../game/publicState'
+import { allowedOrigins, isOriginAllowed } from '../lib/origin'
 
 export function initSocketIO(httpServer: HttpServer) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
     httpServer,
     {
       cors: {
-        origin: ['https://quiz.astro-root.com', 'http://localhost:5173'],
+        origin: allowedOrigins,
         credentials: true,
         methods: ['GET', 'POST'],
       },
+      // WebSocket のハンドシェイクは CORS の対象外のため、Origin を明示的に検査する
+      // (Cookie セッションを使うので、他サイトからの接続乗っ取りを防ぐ)
+      allowRequest: (req, callback) => callback(null, isOriginAllowed(req.headers.origin, allowedOrigins)),
     }
   )
 

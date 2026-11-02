@@ -6,6 +6,7 @@ passport.use(new GoogleStrategy({
   clientID:     process.env.GOOGLE_CLIENT_ID!,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
   callbackURL:  process.env.GOOGLE_CALLBACK_URL ?? '/auth/google/callback',
+  state: true, // ログイン CSRF 対策(OAuth state をセッションに保存して検証)
 }, async (_accessToken, _refreshToken, profile, done) => {
   try {
     const user = await prisma.user.upsert({
