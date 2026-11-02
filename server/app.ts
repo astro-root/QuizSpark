@@ -18,6 +18,7 @@ import searchRouter from './routes/search'
 import questionsRouter from './routes/questions'
 import reportsRouter from './routes/reports'
 import cors from 'cors'
+import { allowedOrigins, csrfGuard } from './lib/origin'
 import path from 'path'
 
 const authLimiter = rateLimit({
@@ -28,10 +29,37 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 })
 
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'リクエストが多すぎます。しばらくしてから再試行してください。' },
+})
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false,
+  skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
+  message: { error: '操作が多すぎます。しばらくしてから再試行してください。' },
+})
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+  message: { error: '送信回数が多すぎます。しばらくしてから再試行してください。' },
+})
+const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
+  skip: (req) => req.method !== 'POST',
+  message: { error: '報告回数が多すぎます。しばらくしてから再試行してください。' },
+})
+
 export function createApp() {
   const app = express()
   app.set('trust proxy', 1)
-  app.use(cors({ origin: ['https://quiz.astro-root.com', 'http://localhost:5173'], credentials: true }))
+  app.disable('x-powered-by')
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('X-Frame-Options', 'DENY')
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+    next()
+  })
+  app.use(cors({ origin: allowedOrigins, credentials: true }))
+  app.use(csrfGuard()) // 状態変更リクエストは許可オリジンのみ(Cookie セッションの CSRF 対策)
   app.use(express.json())
   app.use(sessionMiddleware)
   app.use(passport.initialize())
@@ -39,8 +67,9 @@ export function createApp() {
 
   app.use('/auth', authRouter)
   app.use('/auth', authLimiter, localAuthRouter)
+  app.use('/api', apiLimiter, writeLimiter)
   app.use('/api/questions', questionsRouter)
-  app.use('/api/reports', reportsRouter)
+  app.use('/api/reports', reportLimiter, reportsRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api/question-sets', questionSetsRouter)
   app.use('/api/records', recordsRouter)
@@ -48,7 +77,7 @@ export function createApp() {
   app.use('/api/ranking', rankingRouter)
   app.use('/api/follow', followRouter)
   app.use('/api/rooms', roomsRouter)
-  app.use('/api/contact', contactRouter)
+  app.use('/api/contact', contactLimiter, contactRouter)
   app.use('/api/messages', messagesRouter)
   app.use('/api/notifications', notificationsRouter)
   app.use('/api/search', searchRouter)

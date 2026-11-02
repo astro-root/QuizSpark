@@ -23,6 +23,10 @@ class GameManager {
   private playerRoomMap: Map<string, string> = new Map()
   // token → 現在接続中のsocket.id（切断中はundefined相当で存在しない）
   private tokenToSocketId: Map<string, string> = new Map()
+  // token → ログイン中ユーザーの DB id。切断後も戦績・レート処理ができるよう socket とは独立して保持する
+  private tokenToUserId: Map<string, string> = new Map()
+  // 終了通知(戦績保存)を1試合につき1回に限定するためのガード
+  private finishNotified = new Set<string>()
   private timers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private broadcastFn?: BroadcastFn
   private customQuestionsMap = new Map<string, import('../../src/types').Question[]>()
@@ -35,6 +39,13 @@ class GameManager {
 
   setBroadcast(fn: BroadcastFn) { this.broadcastFn = fn }
   setOnFinish(fn: (state: import('../../src/types').RoomState) => void) { this.finishFn = fn }
+
+  /** 試合終了を 1 度だけ通知する。切断猶予タイマー等による二重実行(戦績・レートの二重反映)を防ぐ。 */
+  private notifyFinish(state: RoomState) {
+    if (!this.finishFn || this.finishNotified.has(state.id)) return
+    this.finishNotified.add(state.id)
+    this.finishFn(state)
+  }
 
   private broadcast(roomId: string) {
     const state = this.rooms.get(roomId)
@@ -83,7 +94,7 @@ class GameManager {
       this.rooms.set(roomId, next)
       this.broadcast(roomId)
       if (next.phase === 'question') this.startBuzzTimer(roomId)
-      else if (next.phase === 'finished' && this.finishFn) this.finishFn(next)
+      else if (next.phase === 'finished') this.notifyFinish(next)
     }, RESULT_SHOW_MS)
     this.timers.set(roomId, t)
   }
@@ -119,7 +130,7 @@ class GameManager {
     reconnectManager.cancelGracePeriod(roomId, token)
     if (updated.players.length === 0) {
       this.rooms.delete(roomId); this.clearTimer(roomId)
-      this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId)
+      this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId); this.finishNotified.delete(roomId)
       return null
     }
     if (state.hostId === token) updated = reassignHost(updated)
@@ -173,7 +184,7 @@ class GameManager {
     }
     this.rooms.set(roomId, updated)
     this.broadcast(roomId)
-    if (updated.phase === 'finished' && this.finishFn) this.finishFn(updated)
+    if (updated.phase === 'finished') this.notifyFinish(updated)
   }
 
   updateSettings(roomId: string, token: string, settings: import('../../src/types').GameSettings): boolean {
@@ -186,6 +197,7 @@ class GameManager {
   startGame(roomId: string): boolean {
     const state = this.rooms.get(roomId)
     if (!state || state.phase !== 'lobby') return false
+    this.finishNotified.delete(roomId)
     const next = advanceQuestion(state, this.customQuestionsMap.get(roomId))
     this.rooms.set(roomId, next)
     this.broadcast(roomId)
@@ -229,6 +241,7 @@ class GameManager {
     const state = this.rooms.get(roomId)
     if (!state || state.hostId !== token || state.phase !== 'finished') return false
     this.clearTimer(roomId)
+    this.finishNotified.delete(roomId)
     this.customQuestionsMap.delete(roomId)
     this.answerLogs.delete(roomId)
     const rule = getRuleDef(state.settings.ruleId)
@@ -256,7 +269,18 @@ class GameManager {
 
   getRoom(roomId: string): RoomState | undefined { return this.rooms.get(roomId) }
   // 接続確立の都度呼ばれる。キュー中・対戦中を問わず、常に最新のsocket.idへ追従させる
-  registerSocket(token: string, socketId: string) { this.tokenToSocketId.set(token, socketId) }
+  registerSocket(token: string, socketId: string, userId?: string | null) {
+    this.tokenToSocketId.set(token, socketId)
+    if (userId) {
+      this.tokenToUserId.delete(token) // 挿入順を更新(古いものから間引くため)
+      this.tokenToUserId.set(token, userId)
+      if (this.tokenToUserId.size > 20000) {
+        const oldest = this.tokenToUserId.keys().next().value
+        if (oldest !== undefined) this.tokenToUserId.delete(oldest)
+      }
+    }
+  }
+  getUserId(token: string): string | null { return this.tokenToUserId.get(token) ?? null }
   getSocketId(token: string): string | undefined { return this.tokenToSocketId.get(token) }
   setCustomQuestions(roomId: string, questions: import('../../src/types').Question[]) { this.customQuestionsMap.set(roomId, questions) }
   setRecentQuestionIds(roomId: string, ids: number[]) {

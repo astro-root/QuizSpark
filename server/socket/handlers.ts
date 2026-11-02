@@ -6,22 +6,16 @@ import type {
 import { gameManager } from '../game/GameManager'
 import { prisma } from '../lib/prisma'
 import { joinQueue, leaveQueue, setOnMatch } from '../game/MatchmakingManager'
+import { toPublicState } from '../game/publicState'
+import { settleGame, type SettleDb } from '../game/settleGame'
+import { sanitizeSettings } from '../game/settings'
+import { createEventLimiter, SOCKET_LIMITS } from '../lib/eventLimiter'
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 type IoSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 
-function sanitizeState(state: RoomState): RoomState {
-  if (!state.currentQuestion) return state
-  return {
-    ...state,
-    currentQuestion: state.phase === 'question' || state.phase === 'answering'
-      ? { ...state.currentQuestion, answer: '', answers: [] }
-      : state.currentQuestion
-  }
-}
-
 function broadcast(io: IoServer, roomId: string, state: RoomState) {
-  io.to(roomId).emit('room-update', sanitizeState(state))
+  io.to(roomId).emit('room-update', toPublicState(state))
 }
 
 function broadcastPublicRooms(io: IoServer) {
@@ -61,7 +55,7 @@ function ensureMatchCallback(io: IoServer) {
     gameManager.setMatchmaking(roomId)
     const state = gameManager.getRoom(roomId)
     // Fix B: マッチ成立通知も sanitizeState を通す
-    if (state) io.to(roomId).emit('room-update', sanitizeState(state))
+    if (state) io.to(roomId).emit('room-update', toPublicState(state))
   })
 }
 
@@ -70,84 +64,25 @@ function setupFinishHandler(io: IoServer) {
   finishCallbackSet = true
   gameManager.setOnFinish(async (state) => {
     try {
-      const data = state.players.flatMap(p => {
-        const pSocket = getLiveSocket(io, p.id)
-        const userId = pSocket?.data?.dbUserId ?? null
-        if (!userId) return []
-        return [{
-          id: `${state.id}-${userId}`,
-          userId,
-          roomId: state.id,
-          ruleId: state.settings?.ruleId ?? 'free',
-          isMatchmaking: !!(state.isMatchmaking),
-          result: p.status === 'WIN' ? 'WIN' : p.status === 'LOSE' ? 'LOSE' : 'ACTIVE',
-          correct: (p.ruleState?.correct as number) ?? 0,
-          wrong: (p.ruleState?.wrong as number) ?? 0,
-          score: p.score,
-          playerCount: state.players.length,
-        }]
+      const { rateResults } = await settleGame(state, {
+        db: prisma as unknown as SettleDb,
+        userIdOf: (token) => gameManager.getUserId(token),
+        answerLogsOf: (token) => gameManager.getAnswerLogs(state.id)?.get(token) ?? [],
       })
-      if (data.length > 0) {
-        for (const p of state.players) {
-          const pSocket = getLiveSocket(io, p.id)
-          const userId = pSocket?.data?.dbUserId ?? null
-          if (!userId) continue
-          const logs = gameManager.getAnswerLogs(state.id)?.get(p.id) ?? []
-          if (logs.length === 0) continue
-          await prisma.questionHistory.createMany({
-            data: logs.map(l => ({ userId, text: l.text, answer: l.answer, userAnswer: l.userAnswer, isCorrect: l.isCorrect, genre: l.genre ?? 'ノンジャンル', questionId: l.questionId ?? null }))
-          })
-          const all = await prisma.questionHistory.findMany({ where: { userId }, orderBy: { playedAt: 'desc' }, select: { id: true } })
-          // Fix D: 保存上限を questionCount に合わせる（旧: 10件固定）
-          const historyLimit = (state.settings?.questionCount ?? 30) * 20
-          if (all.length > historyLimit) {
-            await prisma.questionHistory.deleteMany({ where: { id: { in: all.slice(historyLimit).map(h => h.id) } } })
-          }
-        }
-        // Fix C: ACTIVE→WIN/LOSE 変換を battleRecord 保存より先に実行
-        if (state.isMatchmaking && data.every(d => d.result === 'ACTIVE') && data.length >= 2) {
-          const byScore = [...state.players].sort((a, b) => b.score - a.score)
-          data.forEach(d => {
-            const player = state.players.find(p => (getLiveSocket(io, p.id)?.data?.dbUserId) === d.userId)
-            if (!player) return
-            const rank = byScore.findIndex(p => p.id === player.id)
-            if (rank === 0) (d as any).result = 'WIN'
-            else if (rank === byScore.length - 1) (d as any).result = 'LOSE'
-          })
-        }
-        // Fix C: 変換後の result で battleRecord を保存
-        await prisma.battleRecord.createMany({ data, skipDuplicates: true })
-        console.log('[Rate] data:', JSON.stringify(data.map(d => ({userId:d.userId,result:d.result,isMatchmaking:d.isMatchmaking}))))
-        const rateTargets = data.filter(d => d.isMatchmaking && d.userId && (d.result === 'WIN' || d.result === 'LOSE'))
-        console.log('[Rate] targets:', rateTargets.length)
-        const rateResultMap = new Map<string, { result: string; oldRate: number; newRate: number; delta: number }>()
-        if (rateTargets.length > 0) {
-          await prisma.$transaction(async (tx) => {
-            for (const d of rateTargets) {
-              const delta = d.result === 'WIN' ? 30 : -20
-              const user = await tx.user.findUnique({ where: { id: d.userId! }, select: { rate: true } })
-              if (!user) continue
-              const oldRate = user.rate
-              const newRate = Math.max(0, user.rate + delta)
-              await tx.user.update({ where: { id: d.userId! }, data: { rate: newRate } })
-              rateResultMap.set(d.userId!, { result: d.result, oldRate, newRate, delta })
-            }
-          })
-        }
-        // rate-result を各プレイヤーに送信
-        for (const p of state.players) {
-          const pSocket = getLiveSocket(io, p.id)
-          const userId = pSocket?.data?.dbUserId ?? null
-          if (!userId || !pSocket) continue
-          const rr = rateResultMap.get(userId)
-          if (rr) pSocket.emit('rate-result', rr as any)
-        }
+      // rate-result は接続中のプレイヤーにだけ送る(切断者は次回ログイン時にレートで確認できる)
+      for (const p of state.players) {
+        const userId = gameManager.getUserId(p.id)
+        const rr = userId ? rateResults.get(userId) : undefined
+        if (rr) getLiveSocket(io, p.id)?.emit('rate-result', rr)
       }
     } catch (e) {
       console.error('[Records] save failed:', e)
     }
   })
 }
+
+const cleanName = (v: unknown): string =>
+  (typeof v === 'string' ? v.trim().slice(0, 30) : '') || 'プレイヤー'
 
 export function registerHandlers(io: IoServer, socket: IoSocket) {
   ensureMatchCallback(io)
@@ -162,35 +97,54 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     ? rawToken
     : socket.id
   socket.data.playerId = token
-  gameManager.registerSocket(token, socket.id)
+  gameManager.registerSocket(token, socket.id, dbUserId)
 
-  socket.on('create-room', (name, callback) => {
-    const roomId = gameManager.createRoom(token, name, socket.id)
+  // 全イベント共通: レート制限 + 例外の捕捉。
+  // クライアント由来の引数は信頼せず(型は unknown 扱い)、各ハンドラで検証する。
+  // 例外を捕捉しないとプロセス全体が落ちるため、必ずこのラッパー経由で登録する。
+  const limiter = createEventLimiter(SOCKET_LIMITS)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const safe = (event: string, fn: (...args: any[]) => void | Promise<void>) => (...args: any[]): void => {
+    if (!limiter.allow(event)) return
+    try {
+      const r = fn(...args)
+      if (r && typeof r.catch === 'function') r.catch((e: unknown) => console.error(`[Socket] ${event} failed:`, e))
+    } catch (e) { console.error(`[Socket] ${event} failed:`, e) }
+  }
+  const ackOf = <T,>(cb: unknown): ((v: T) => void) => typeof cb === 'function' ? (cb as (v: T) => void) : () => {}
+
+  socket.on('create-room', safe('create-room', (name: unknown, callback: unknown) => {
+    const ack = ackOf<string>(callback)
+    const roomId = gameManager.createRoom(token, cleanName(name), socket.id)
     socket.data.roomId = roomId
     socket.join(roomId)
     broadcast(io, roomId, gameManager.getRoom(roomId)!)
     broadcastPublicRooms(io)
-    callback(roomId)
-  })
+    ack(roomId)
+  }))
 
-  socket.on('join-room', (roomId, name, callback) => {
-    const error = gameManager.joinRoom(roomId, token, name, socket.id)
-    if (error) { callback(error); return }
+  socket.on('join-room', safe('join-room', (roomId: unknown, name: unknown, callback: unknown) => {
+    const ack = ackOf<string | null>(callback)
+    if (typeof roomId !== 'string' || roomId.length === 0 || roomId.length > 12) { ack('ルームが存在しません'); return }
+    const error = gameManager.joinRoom(roomId, token, cleanName(name), socket.id)
+    if (error) { ack(error); return }
     socket.data.roomId = roomId
     socket.join(roomId)
     broadcast(io, roomId, gameManager.getRoom(roomId)!)
     broadcastPublicRooms(io)
-    callback(null)
-  })
+    ack(null)
+  }))
 
-  socket.on('update-settings', (settings) => {
+  socket.on('update-settings', safe('update-settings', (raw: unknown) => {
     const roomId = socket.data.roomId
     if (!roomId) return
+    const settings = sanitizeSettings(raw)
+    if (!settings) return
     if (gameManager.updateSettings(roomId, token, settings))
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
-  })
+  }))
 
-  socket.on('start-game', async () => {
+  socket.on('start-game', safe('start-game', async () => {
     const roomId = socket.data.roomId
     if (!roomId) return
     const state = gameManager.getRoom(roomId)
@@ -249,50 +203,54 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
       broadcastPublicRooms(io)
     }
-  })
+  }))
 
-  socket.on('buzz', () => {
+  socket.on('buzz', safe('buzz', () => {
     const roomId = socket.data.roomId
     if (!roomId) return
     if (!gameManager.buzz(roomId, token)) return
     const state = gameManager.getRoom(roomId)!
     io.to(roomId).emit('buzz-accepted', token, state.buzzedPlayerName!)
     broadcast(io, roomId, state)
-  })
+  }))
 
-  socket.on('submit-answer', (answer) => {
+  socket.on('submit-answer', safe('submit-answer', (answer: unknown) => {
     const roomId = socket.data.roomId
-    if (!roomId) return
-    gameManager.submitAnswer(roomId, token, answer)
-  })
+    if (!roomId || typeof answer !== 'string') return
+    gameManager.submitAnswer(roomId, token, answer.slice(0, 200))
+  }))
 
-  socket.on('reset-game', () => {
+  socket.on('reset-game', safe('reset-game', () => {
     const roomId = socket.data.roomId
     if (!roomId) return
     if (gameManager.resetGame(roomId, token))
       broadcast(io, roomId, gameManager.getRoom(roomId)!)
-  })
+  }))
 
-  socket.on('join-queue', () => {
+  socket.on('join-queue', safe('join-queue', () => {
     const name = (socket.request as any).user?.name ?? 'プレイヤー'
-    joinQueue(token, name, socket.id, socket.data.dbUserId)
-  })
+    return joinQueue(token, name, socket.id, socket.data.dbUserId)
+  }))
 
-  socket.on('leave-queue', () => { leaveQueue(token) })
+  socket.on('leave-queue', safe('leave-queue', () => { leaveQueue(token) }))
 
-  socket.on('sync-state', (roomId: string) => {
+  socket.on('sync-state', safe('sync-state', (roomId: unknown) => {
+    if (typeof roomId !== 'string') return
+    // 参加者でない人が任意のルームを購読(観戦・盗聴)できないよう、メンバーのみ許可する
+    const existing = gameManager.getRoom(roomId)
+    if (!existing || !existing.players.some(p => p.id === token)) return
     const reconnected = gameManager.handleReconnect(roomId, token, socket.id)
     const state = gameManager.getRoom(roomId)
     if (!state) return
     socket.data.roomId = roomId
     socket.join(roomId)
-    socket.emit('room-update', sanitizeState(state))
+    socket.emit('room-update', toPublicState(state))
     if (reconnected) broadcast(io, roomId, state)
-  })
+  }))
 
-  socket.on('send-stamp', (stamp: string) => {
+  socket.on('send-stamp', safe('send-stamp', (stamp: unknown) => {
     const roomId = socket.data.roomId
-    if (!roomId) return
+    if (!roomId || typeof stamp !== 'string') return
     const state = gameManager.getRoom(roomId)
     if (!state) return
     const player = state.players.find(p => p.id === token)
@@ -300,18 +258,18 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
     const VALID = ['👍','👏','🔥','💪','😲','🤔','😭','🎉']
     if (!VALID.includes(stamp)) return
     io.to(roomId).emit('stamp', { fromId: socket.id, fromName: player.name, stamp })
-  })
+  }))
 
-  socket.on('send-chat', (text) => {
+  socket.on('send-chat', safe('send-chat', (text: unknown) => {
     const roomId = socket.data.roomId
-    if (!roomId || !text?.trim()) return
+    if (!roomId || typeof text !== 'string' || !text.trim()) return
     const state = gameManager.getRoom(roomId)
     if (!state) return
     const player = state.players.find(p => p.id === token)
     const name = player?.name ?? (socket.request as any).user?.name ?? 'ゲスト'
-    const safe = text.trim().slice(0, 100)
-    io.to(roomId).emit('chat-message', socket.id, name, safe, Date.now())
-  })
+    const trimmed = text.trim().slice(0, 100)
+    io.to(roomId).emit('chat-message', socket.id, name, trimmed, Date.now())
+  }))
 
   socket.on('disconnect', () => {
     leaveQueue(token)

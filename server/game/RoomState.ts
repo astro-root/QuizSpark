@@ -189,7 +189,6 @@ export function applyAnswer(
   const base = state.currentQuestion?.answer ?? ''
   const arr = state.currentQuestion?.answers ?? []
   const acceptedAnswers = [...new Set([base, ...arr].filter(Boolean))]
-  console.log('[Judge] actual:', actual, 'accepted:', acceptedAnswers.map(a => normalizeAnswer(a)))
   const correct = !isBlank && acceptedAnswers.some((a) => normalizeAnswer(a) === actual)
 
   const rule = getRuleDef(state.settings.ruleId)
