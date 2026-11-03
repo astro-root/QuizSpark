@@ -1,6 +1,7 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { gameManager } from '../server/game/GameManager'
+import { InMemoryScheduler } from '../server/game/scheduler'
 import { buildBattleRecords, resolveResults } from '../server/game/settlement'
 import { DEFAULT_SETTINGS } from '../server/game/rules'
 import type { Question, RoomState } from '../src/types'
@@ -61,24 +62,57 @@ test('phaseSeq: 遷移のたびに単調増加し、設定変更など遷移を�
   } finally { mock.timers.reset() }
 })
 
-test('古いタイマー: phaseSeq が進んでいれば、残っていたタイマーが発火しても状態遷移しない', () => {
+test('advanceIfDue: 期限前・重複呼び出しは何もせず(冪等)、期限後に 1 段階だけ進む', () => {
   mock.timers.enable({ apis: ['setTimeout', 'Date'] })
+  gameManager.setScheduler({ schedule: () => {}, cancel: () => {} })   // 時計を進めても自動では進まない(tick 経由のみ)
   try {
-    // 対照: 何もしなければ、早押し制限時間の経過で問題がスキップされ result になる
-    const control = setupRoom('T_A', 'T_B', 3)
+    const room = setupRoom('D_A', 'D_B', 3)
     gameManager.setOnFinish(() => {})
-    gameManager.startGame(control)
-    mock.timers.tick(7_000) /* 表示1.5s + 3文字×0.12s + 制限5s ≈ 6.9s */
-    assert.equal(gameManager.getRoom(control)!.phase, 'result')
-
-    // 本番: タイマーを残したまま別の遷移(phaseSeq の更新)が起きた状況を作る
-    const room = setupRoom('U_A', 'U_B', 3)
     gameManager.startGame(room)
-    const st = gameManager.getRoom(room)!
-    internals.commit(room, { ...st, buzzedPlayerId: 'U_A' })   // 早押し者が変わる = 遷移 → phaseSeq が進む
-    internals.commit(room, { ...gameManager.getRoom(room)!, buzzedPlayerId: null })
-    assert.ok(gameManager.getRoom(room)!.phaseSeq! > st.phaseSeq!)
-    mock.timers.tick(7_000) /* 表示1.5s + 3文字×0.12s + 制限5s ≈ 6.9s */                                    // 旧 phaseSeq のタイマーが発火
-    assert.equal(gameManager.getRoom(room)!.phase, 'question', '古いタイマーが誤ってスキップさせた')
-  } finally { mock.timers.reset() }
+    const toDeadline = () => mock.timers.tick(Math.max(0, gameManager.getRoom(room)!.timerEndsAt! - Date.now()))
+
+    assert.equal(gameManager.advanceIfDue(room), false, '期限前は進めない')
+    assert.equal(gameManager.getRoom(room)!.phase, 'question')
+    toDeadline()
+    assert.equal(gameManager.advanceIfDue(room), true)
+    assert.equal(gameManager.getRoom(room)!.phase, 'result')
+    assert.equal(gameManager.getRoom(room)!.lastJudgement, 'skip')
+    // 別プレイヤーの tick・古いタイマーなど、同時刻の重複呼び出しでは二重に進まない
+    assert.equal(gameManager.advanceIfDue(room), false)
+    assert.equal(gameManager.advanceIfDue(room), false)
+    assert.equal(gameManager.getRoom(room)!.phase, 'result')
+
+    toDeadline()
+    assert.equal(gameManager.advanceIfDue(room), true)
+    assert.equal(gameManager.getRoom(room)!.currentQuestionIndex, 1)
+    assert.equal(gameManager.advanceIfDue(room), false)
+    assert.equal(gameManager.getRoom(room)!.currentQuestionIndex, 1, '問題が飛ばされていない')
+  } finally {
+    gameManager.setScheduler(new InMemoryScheduler(id => { gameManager.advanceIfDue(id) }))
+    mock.timers.reset()
+  }
+})
+
+test('サーバーレス相当: スケジューラ無し(tick のみ)でも 1 試合を最後まで進められ、終了通知は 1 回', () => {
+  const armed: Array<[string, number]> = []
+  gameManager.setScheduler({ schedule: (r, at) => { armed.push([r, at]) }, cancel: () => {} })
+  try {
+    const room = setupRoom('V_A', 'V_B', 3)
+    const finished: RoomState[] = []
+    gameManager.setOnFinish(st => { finished.push(st) })
+    gameManager.startGame(room)
+    let guard = 0
+    while (gameManager.getRoom(room)!.phase !== 'finished' && guard++ < 50) {
+      const st = gameManager.getRoom(room)!
+      if (st.phase === 'question' && guard === 2) { gameManager.buzz(room, 'V_A'); gameManager.submitAnswer(room, 'V_A', 'x'); continue }
+      gameManager.advanceIfDue(room, st.timerEndsAt!)           // クライアントの「期限が来た」リクエスト相当
+      gameManager.advanceIfDue(room, st.timerEndsAt!)           // 別プレイヤーからの重複リクエスト
+    }
+    assert.equal(gameManager.getRoom(room)!.phase, 'finished')
+    assert.equal(finished.length, 1)
+    assert.ok(armed.length >= 6, '各フェーズで期限が予約されている(外部スケジューラへ渡せる)')
+    assert.ok(armed.every(([r, at]) => r === room && Number.isFinite(at)))
+  } finally {
+    gameManager.setScheduler(new InMemoryScheduler(id => { gameManager.advanceIfDue(id) }))
+  }
 })
