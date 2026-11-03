@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { socket } from '../lib/socket'
+import { socket, getOrCreateToken } from '../lib/socket'
 import type { RoomState, GameSettings, PublicRoom, PrematchInfo, RateResult } from '../types'
 
 export function useSocket() {
@@ -21,6 +21,9 @@ export function useSocket() {
     function onConnect() {
       setConnected(true)
       setReconnecting(false)
+      // 互換: identity を送らない旧サーバーに接続した場合は、従来どおり自分のトークンを自分の ID として使う。
+      // 新サーバーなら、直後に届く identity(公開 ID)で上書きされる。
+      if (!myIdRef.current) { const t = getOrCreateToken(); myIdRef.current = t; setMyId(t) }
       if (savedRoomId.current) {
         socket.emit('sync-state', savedRoomId.current)
       }

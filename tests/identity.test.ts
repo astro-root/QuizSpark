@@ -73,4 +73,8 @@ test('回帰ガード: トークンを配信するイベントは toPublicId を
   const m = fs.readFileSync(path.join(root, 'game/MatchmakingManager.ts'), 'utf8')
   assert.match(m, /id: toPublicId\(entry\.playerId\)/)
   assert.match(h, /socket\.emit\('identity', toPublicId\(token\)\)/)
+  // クライアント: 旧サーバー(identity 非対応)でも動くフォールバックと、identity での上書き
+  const hook = fs.readFileSync(path.resolve(__dirname, '../src/hooks/useSocket.ts'), 'utf8')
+  assert.match(hook, /if \(!myIdRef\.current\) \{ const t = getOrCreateToken\(\)/)
+  assert.match(hook, /socket\.on\('identity', onIdentity\)/)
 })
