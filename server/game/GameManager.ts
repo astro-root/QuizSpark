@@ -5,12 +5,15 @@ import {
   createRoom, addPlayer, removePlayer,
   advanceQuestion, skipQuestion, acceptBuzz, applyAnswer, reassignHost, updateSettings,
   disconnectPlayer, reconnectPlayer, finalizeDisconnect, checkGameEnd,
-  BUZZ_TIMEOUT_MS, ANSWER_TIMEOUT_MS, RESULT_SHOW_MS,
 } from './RoomState'
 import { reconnectManager } from './ReconnectManager'
-import { emptySecret, joinState, splitState, type RoomSecret } from './secret'
+import { joinState, splitState, type RoomSecret } from './secret'
+import { InMemoryScheduler, type Scheduler } from './scheduler'
 
 type BroadcastFn = (roomId: string, state: RoomState) => void
+
+/** setTimeout の早め発火や、クライアントの時計のわずかなずれを許容する幅(ms) */
+const DEADLINE_SLACK_MS = 50
 
 function generateRoomId(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' // 0/O/1/I/L除外
@@ -31,7 +34,8 @@ class GameManager {
   private tokenToUserId: Map<string, string> = new Map()
   // 終了通知(戦績保存)を1試合につき1回に限定するためのガード
   private finishNotified = new Set<string>()
-  private timers: Map<string, ReturnType<typeof setTimeout>> = new Map()
+  // 期限になったら advanceIfDue を呼ぶ。サーバーレス移行時は差し替える(setScheduler)
+  private scheduler: Scheduler = new InMemoryScheduler((roomId) => { this.advanceIfDue(roomId) })
   private broadcastFn?: BroadcastFn
   private customQuestionsMap = new Map<string, import('../../src/types').Question[]>()
   private finishFn?: (state: import('../../src/types').RoomState) => void
@@ -79,6 +83,10 @@ class GameManager {
     const { pub, secret } = splitState(next.phaseSeq === seq ? next : { ...next, phaseSeq: seq })
     this.rooms.set(roomId, pub)
     this.secrets.set(roomId, secret)
+    // 期限のあるフェーズでは期限を予約し、それ以外(ロビー・終了)では予約を外す
+    const timed = pub.timerEndsAt != null && (pub.phase === 'question' || pub.phase === 'answering' || pub.phase === 'result')
+    if (timed) this.scheduler.schedule(roomId, pub.timerEndsAt as number)
+    else this.scheduler.cancel(roomId)
     return pub
   }
 
@@ -88,54 +96,39 @@ class GameManager {
     if (state && this.broadcastFn) this.broadcastFn(roomId, state)
   }
 
-  private clearTimer(roomId: string) {
-    const t = this.timers.get(roomId)
-    if (t) { clearTimeout(t); this.timers.delete(roomId) }
-  }
+  setScheduler(scheduler: Scheduler) { this.scheduler = scheduler }
 
-  private startBuzzTimer(roomId: string) {
-    this.clearTimer(roomId)
-    const state = this.load(roomId)
-    const seq = state?.phaseSeq
-    const delay = state?.timerEndsAt ? Math.max(0, state.timerEndsAt - Date.now()) : BUZZ_TIMEOUT_MS
-    const t = setTimeout(() => {
-      const s = this.load(roomId)
-      if (!s || s.phase !== 'question' || s.phaseSeq !== seq) return
-      const skipped = skipQuestion(s)
-      this.commit(roomId, skipped)
+  /**
+   * 期限が来ていれば状態を 1 段階進める。期限は状態(timerEndsAt)に保存されており、判断はそれだけで行う。
+   *  - question  で期限切れ → 誰も押さなかったのでスキップ(result)
+   *  - answering で期限切れ → 時間切れの誤答(result)
+   *  - result    で期限切れ → 次の問題へ / 終了
+   * 古いタイマー・重複呼び出し・早すぎる呼び出しは何もしない(冪等)。
+   * 戻り値: 状態を進めたか。
+   */
+  advanceIfDue(roomId: string, now: number = Date.now()): boolean {
+    const s = this.load(roomId)
+    if (!s || s.timerEndsAt == null) return false
+    if (now + DEADLINE_SLACK_MS < s.timerEndsAt) {
+      this.scheduler.schedule(roomId, s.timerEndsAt) // 早すぎる呼び出し: 本来の期限で予約し直す
+      return false
+    }
+    if (s.phase === 'question') {
+      this.commit(roomId, skipQuestion(s))
       this.broadcast(roomId)
-      this.startResultTimer(roomId)
-    }, delay)
-    this.timers.set(roomId, t)
-  }
-
-  private startAnswerTimer(roomId: string) {
-    this.clearTimer(roomId)
-    const seq = this.rooms.get(roomId)?.phaseSeq
-    const t = setTimeout(() => {
-      const state = this.load(roomId)
-      if (!state || state.phase !== 'answering' || state.phaseSeq !== seq) return
-      const { nextState } = applyAnswer(state, state.buzzedPlayerId ?? '', '')
+    } else if (s.phase === 'answering') {
+      const { nextState } = applyAnswer(s, s.buzzedPlayerId ?? '', '')
       this.commit(roomId, nextState)
       this.broadcast(roomId)
-      this.startResultTimer(roomId)
-    }, ANSWER_TIMEOUT_MS)
-    this.timers.set(roomId, t)
-  }
-
-  private startResultTimer(roomId: string) {
-    this.clearTimer(roomId)
-    const seq = this.rooms.get(roomId)?.phaseSeq
-    const t = setTimeout(() => {
-      const state = this.load(roomId)
-      if (!state || state.phase !== 'result' || state.phaseSeq !== seq) return
-      const next = advanceQuestion(state, this.customQuestionsMap.get(roomId))
-      this.commit(roomId, next)
+    } else if (s.phase === 'result') {
+      const next = advanceQuestion(s, this.customQuestionsMap.get(roomId))
+      const stored = this.commit(roomId, next)
       this.broadcast(roomId)
-      if (next.phase === 'question') this.startBuzzTimer(roomId)
-      else if (next.phase === 'finished') this.notifyFinish(next)
-    }, RESULT_SHOW_MS)
-    this.timers.set(roomId, t)
+      if (stored.phase === 'finished') this.notifyFinish(stored)
+    } else {
+      return false
+    }
+    return true
   }
 
   createRoom(hostToken: string, hostName: string, socketId: string): string {
@@ -168,7 +161,7 @@ class GameManager {
     this.tokenToSocketId.delete(token)
     reconnectManager.cancelGracePeriod(roomId, token)
     if (updated.players.length === 0) {
-      this.rooms.delete(roomId); this.secrets.delete(roomId); this.clearTimer(roomId)
+      this.rooms.delete(roomId); this.secrets.delete(roomId); this.scheduler.cancel(roomId)
       this.answerLogs.delete(roomId); this.customQuestionsMap.delete(roomId)
       return null
     }
@@ -218,7 +211,7 @@ class GameManager {
 
     let updated = finalizeDisconnect(state, token)
     if (checkGameEnd(updated)) {
-      this.clearTimer(roomId)
+      this.scheduler.cancel(roomId)
       updated = { ...updated, phase: 'finished', currentQuestion: null, timerEndsAt: null }
     }
     this.commit(roomId, updated)
@@ -239,7 +232,6 @@ class GameManager {
     const next = { ...advanceQuestion(state, this.customQuestionsMap.get(roomId)), gameId: randomUUID() }
     this.commit(roomId, next)
     this.broadcast(roomId)
-    if (next.phase === 'question') this.startBuzzTimer(roomId)
     return true
   }
 
@@ -248,9 +240,8 @@ class GameManager {
     if (!state || state.phase !== 'question') return false
     const player = state.players.find((p) => p.id === token)
     if (!player || player.status !== 'ACTIVE') return false
-    this.clearTimer(roomId)
+    this.scheduler.cancel(roomId)
     this.commit(roomId, acceptBuzz(state, token))
-    this.startAnswerTimer(roomId)
     return true
   }
 
@@ -258,7 +249,7 @@ class GameManager {
     const state = this.load(roomId)
     if (!state || state.phase !== 'answering') return
     if (state.buzzedPlayerId !== token) return
-    this.clearTimer(roomId)
+    this.scheduler.cancel(roomId)
     const { nextState } = applyAnswer(state, token, rawAnswer)
     if (state.currentQuestion) {
       if (!this.answerLogs.has(roomId)) this.answerLogs.set(roomId, new Map())
@@ -272,13 +263,12 @@ class GameManager {
     }
     this.commit(roomId, nextState)
     this.broadcast(roomId)
-    this.startResultTimer(roomId)
   }
 
   resetGame(roomId: string, token: string): boolean {
     const state = this.load(roomId)
     if (!state || state.hostId !== token || state.phase !== 'finished') return false
-    this.clearTimer(roomId)
+    this.scheduler.cancel(roomId)
     this.customQuestionsMap.delete(roomId)
     this.answerLogs.delete(roomId)
     const rule = getRuleDef(state.settings.ruleId)
