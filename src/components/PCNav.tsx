@@ -1,10 +1,10 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Home, Trophy, MessageCircle, User, PenLine, Bell, HelpCircle, Sun, Moon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useIsPC } from '../hooks/useMediaQuery'
 import { useTheme } from '../context/ThemeContext'
 import { apiFetch } from '../lib/api'
+import { Icon, IconButton, type IconName } from './ui'
 
 export default function PCNav() {
   const navigate = useNavigate()
@@ -26,59 +26,35 @@ export default function PCNav() {
   if (!user) return null
   if (pathname.startsWith('/room/')) return null
 
-  const tabs = [
-    { path: '/',        Icon: Home,          label: 'ホーム' },
-    { path: '/ranking', Icon: Trophy,        label: 'ランキング' },
-    { path: '/create',  Icon: PenLine,       label: '作問' },
-    { path: '/chat',    Icon: MessageCircle, label: 'チャット', badge: unread },
-    { path: '/profile', Icon: User,          label: 'マイページ' },
+  const tabs: Array<{ path: string; icon: IconName; label: string; badge?: number }> = [
+    { path: '/',        icon: 'home',    label: 'ホーム' },
+    { path: '/ranking', icon: 'trophy',  label: 'ランキング' },
+    { path: '/create',  icon: 'pencil',  label: '作問' },
+    { path: '/chat',    icon: 'message', label: 'チャット', badge: unread },
+    { path: '/profile', icon: 'user',    label: 'マイページ' },
   ]
 
   return (
-    <nav style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
-      background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-      height: 52, display: 'flex', alignItems: 'center',
-      padding: '0 24px', gap: 4,
-    }}>
-      <button onClick={() => navigate('/')}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, marginRight: 16, padding: '4px 8px', borderRadius: 8 }}>
-        <span style={{ fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 15, letterSpacing: 1 }}>
-          <span style={{ color: 'var(--accent)' }}>Quiz</span><span style={{ color: 'var(--text)' }}>Spark</span>
-        </span>
-        <span style={{ fontSize: 14 }}>⚡</span>
+    <nav className="qs-topnav" aria-label="メインメニュー">
+      <button className="qs-logo" onClick={() => navigate('/')} aria-label="QuizSpark ホーム">
+        <span><b>Quiz</b>Spark</span>
+        <Icon name="zap" size={16} />
       </button>
-      <div style={{ display: 'flex', gap: 2, flex: 1 }}>
+      <div style={{ display: 'flex', gap: 2, flex: 1, marginLeft: 12 }}>
         {tabs.map(t => {
           const active = t.path === '/' ? pathname === '/' : pathname.startsWith(t.path)
-          const { Icon } = t
           return (
-            <button key={t.path} onClick={() => navigate(t.path)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8,
-                background: active ? 'var(--surface2)' : 'none', border: 'none', cursor: 'pointer',
-                color: active ? 'var(--accent)' : 'var(--muted)', fontWeight: active ? 800 : 500,
-                fontSize: 13, position: 'relative' }}>
-              <Icon size={16} />
+            <button key={t.path} className="qs-navtab" aria-current={active ? 'page' : undefined} onClick={() => navigate(t.path)}>
+              <Icon name={t.icon} size={16} />
               {t.label}
-              {(t.badge ?? 0) > 0 && (
-                <span style={{ position: 'absolute', top: 4, right: 8, width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)' }} />
-              )}
+              {(t.badge ?? 0) > 0 && <span className="qs-dot" role="img" aria-label="未読あり" />}
             </button>
           )
         })}
       </div>
-      <button onClick={() => navigate('/help')}
-        style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 8, display: 'flex' }}>
-        <HelpCircle size={18} />
-      </button>
-      <button onClick={toggle}
-        style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 8, display: 'flex' }}>
-        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-      </button>
-      <button onClick={() => navigate('/notifications')}
-        style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 8, display: 'flex' }}>
-        <Bell size={18} />
-      </button>
+      <IconButton icon="help" label="ヘルプ" onClick={() => navigate('/help')} />
+      <IconButton icon={theme === 'dark' ? 'sun' : 'moon'} label={theme === 'dark' ? 'ライトテーマに切り替え' : 'ダークテーマに切り替え'} onClick={toggle} />
+      <IconButton icon="bell" label="通知" onClick={() => navigate('/notifications')} />
     </nav>
   )
 }

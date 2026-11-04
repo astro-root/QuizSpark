@@ -1,0 +1,63 @@
+/* デザイントークン。色・余白・文字・角丸・影を、ここだけで定義する。
+   旧変数名(--bg, --surface, --accent など)は既存ページが使っているので維持し、値を新パレットに更新する。 */
+:root {
+  --bg:       #0b0f17;
+  --surface:  #131a26;
+  --surface2: #1b2433;
+  --border:   rgba(255,255,255,0.09);
+  --accent:   #8b5cf6;
+  --accent2:  #7c3aed;
+  --accent3:  #c4b5fd;
+  --buzz:     #f43f5e;
+  --buzz2:    #e11d48;
+  --correct:  #34d399;
+  --wrong:    #fb7185;
+  --gold:     #fbbf24;
+  --text:     #f1f5f9;
+  --muted:    #8b98ad;   /* 本文背景に対し 4.5:1 以上 */
+  --sub:      #a3b0c4;
+  --w:        800px;
+
+  --accent-soft: rgba(139,92,246,0.16);
+  --win-soft:    rgba(52,211,153,0.14);
+  --lose-soft:   rgba(244,63,94,0.14);
+  --gold-soft:   rgba(251,191,36,0.16);
+
+  /* 余白(4px 刻み) */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+  /* 文字 */
+  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 18px; --fs-xl: 22px; --fs-2xl: 28px;
+  /* 角丸・影 */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-full: 999px;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.25);
+  --shadow-2: 0 8px 24px rgba(0,0,0,.35);
+  /* タップ領域・ナビ */
+  --tap: 44px;
+  --nav-top-h: 52px;
+  --nav-bottom-h: 64px;
+}
+
+[data-theme="light"] {
+  --bg:       #f4f6fb;
+  --surface:  #ffffff;
+  --surface2: #eef1f8;
+  --border:   rgba(15,23,42,0.1);
+  --accent:   #7c3aed;
+  --accent2:  #6d28d9;
+  --accent3:  #6d28d9;
+  --buzz:     #e11d48;
+  --buzz2:    #be123c;
+  --correct:  #047857;
+  --wrong:    #be123c;
+  --gold:     #b45309;
+  --text:     #0f172a;
+  --muted:    #55657d;
+  --sub:      #3d4b61;
+
+  --accent-soft: rgba(124,58,237,0.1);
+  --win-soft:    rgba(4,120,87,0.1);
+  --lose-soft:   rgba(190,18,60,0.1);
+  --gold-soft:   rgba(180,83,9,0.12);
+  --shadow-2: 0 8px 24px rgba(15,23,42,.12);
+}

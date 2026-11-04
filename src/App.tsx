@@ -29,7 +29,7 @@ const CreatePage       = lazy(() => import('./pages/CreatePage'))
 
 
 const TITLES: Record<string, string> = {
-  '/':             'QuizSpark ⚡',
+  '/':             'QuizSpark',
   '/lobby':        'フリーマッチ | QuizSpark',
   '/create':       '作問 | QuizSpark',
   '/ranking':      'ランキング | QuizSpark',
@@ -52,7 +52,7 @@ function TitleUpdater() {
     if (pathname.startsWith('/chat/'))   { document.title = 'チャット | QuizSpark'; return }
     if (pathname.startsWith('/user/'))   { document.title = 'ユーザー | QuizSpark'; return }
     if (pathname.startsWith('/sets/'))   { document.title = '問題セット | QuizSpark'; return }
-    document.title = 'QuizSpark ⚡'
+    document.title = 'QuizSpark'
   }, [pathname])
   return null
 }
