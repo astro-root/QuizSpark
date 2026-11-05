@@ -29,7 +29,7 @@ function emojiInSource(): Array<{ file: string; glyph: string }> {
 test('アイコン定義: すべて空でなく、SVG パスに使える文字だけで書かれている', () => {
   for (const [name, nodes] of Object.entries(ICONS)) {
     assert.ok(nodes.length > 0, `${name} が空`)
-    for (const n of nodes) if (n[0] === 'path') assert.match(n[1], /^[MmLlHhVvCcSsQqTtAaZz0-9 .,\-]+$/, `${name} のパスに不正な文字`)
+    for (const n of nodes) if (n[0] === 'path') assert.match(n[1], /^[MmLlHhVvCcSsQqTtAaZz0-9 .,-]+$/, `${name} のパスに不正な文字`)
   }
 })
 
