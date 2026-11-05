@@ -1,41 +1,8 @@
+@import './styles/tokens.css';
+@import './styles/ui.css';
+@import './styles/layout.css';
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:       #0d1117;
-  --surface:  #161b22;
-  --surface2: #21262d;
-  --border:   rgba(255,255,255,0.09);
-  --accent:   #7c3aed;
-  --accent2:  #6d28d9;
-  --accent3:  #a78bfa;
-  --buzz:     #f43f5e;
-  --buzz2:    #e11d48;
-  --correct:  #10b981;
-  --wrong:    #f43f5e;
-  --gold:     #fbbf24;
-  --text:     #f0f6fc;
-  --muted:    #6e7681;
-  --sub:      #8b949e;
-  --w:        800px;
-}
-
-[data-theme="light"] {
-  --bg:       #f1f5f9;
-  --surface:  #ffffff;
-  --surface2: #f4f6fb;
-  --border:   rgba(0,0,0,0.09);
-  --accent:   #7c3aed;
-  --accent2:  #6d28d9;
-  --accent3:  #a78bfa;
-  --buzz:     #f43f5e;
-  --buzz2:    #e11d48;
-  --correct:  #059669;
-  --wrong:    #dc2626;
-  --gold:     #d97706;
-  --text:     #0f172a;
-  --muted:    #64748b;
-  --sub:      #475569;
-}
 
 html, body, #root {
   height: 100%;
@@ -47,8 +14,9 @@ html, body, #root {
   transition: background 0.2s, color 0.2s;
 }
 
-::-webkit-scrollbar { display: none; }
-* { scrollbar-width: none; -ms-overflow-style: none; }
+* { scrollbar-width: thin; scrollbar-color: var(--surface2) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 8px; }
 
 button {
   font-family: inherit;
@@ -116,4 +84,10 @@ img { max-width: 100%; }
   30%  { transform: translateX(-50%) scale(1); }
   70%  { opacity: 1; transform: translateX(-50%) translateY(0); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-80px); }
+}
+
+/* キーボード操作時のフォーカス表示(outline:none の既存指定を上書き) */
+:focus-visible { outline: 2px solid var(--accent3); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

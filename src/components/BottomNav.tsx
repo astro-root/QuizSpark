@@ -3,7 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useIsPC } from '../hooks/useMediaQuery'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
-import { Home, Trophy, MessageCircle, User, PenLine } from 'lucide-react'
+import { Icon, type IconName } from './ui'
+
+interface Tab { path: string | null; icon: IconName; label: string; fab?: boolean; badge?: number }
 
 export default function BottomNav() {
   const navigate = useNavigate()
@@ -28,85 +30,34 @@ export default function BottomNav() {
   if (pathname.startsWith('/chat/')) return null
   if (isPC) return null
 
-  const tabs = [
-    { path: '/',        Icon: Home,          label: 'ホーム',    color: '#7c3aed' },
-    { path: '/ranking', Icon: Trophy,        label: 'ランキング', color: '#f59e0b' },
-    { path: null,       Icon: PenLine,       label: '作問',      color: '#fff', fab: true },
-    { path: '/chat',    Icon: MessageCircle, label: 'チャット',   color: '#10b981', badge: unread },
-    { path: '/profile', Icon: User,          label: 'マイページ', color: '#38bdf8' },
+  const tabs: Tab[] = [
+    { path: '/',        icon: 'home',    label: 'ホーム' },
+    { path: '/ranking', icon: 'trophy',  label: 'ランキング' },
+    { path: null,       icon: 'pencil',  label: '作問', fab: true },
+    { path: '/chat',    icon: 'message', label: 'チャット', badge: unread },
+    { path: '/profile', icon: 'user',    label: 'マイページ' },
   ]
 
   return (
-    <nav style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
-      background: 'var(--surface)',
-      borderTop: '1px solid var(--border)',
-      paddingBottom: 'env(safe-area-inset-bottom)',
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
-    }}>
-      <div style={{ display: 'flex', maxWidth: 'var(--w)', margin: '0 auto' }}>
-        {tabs.map((t) => {
+    <nav className="qs-bottomnav" aria-label="メインメニュー">
+      <div className="qs-bottomnav__row">
+        {tabs.map(t => {
           if (t.fab) return (
-            <div key="fab" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: '8px 0 10px' }}>
-              <button onClick={() => navigate('/create')}
-                style={{
-                  width: 52, height: 52, borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#7c3aed,#6d28d9)',
-                  color: '#fff', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 16px rgba(124,58,237,0.5)',
-                  transform: 'translateY(-10px)',
-                }}>
-                <PenLine size={22} strokeWidth={2.5} />
+            <div key="fab" className="qs-bottomnav__item" style={{ justifyContent: 'flex-end' }}>
+              <button className="qs-fab" aria-label="作問" onClick={() => navigate('/create')}>
+                <Icon name="pencil" size={22} />
               </button>
-              <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', marginTop: -6 }}>作問</span>
+              <span style={{ marginTop: -6 }} aria-hidden="true">{t.label}</span>
             </div>
           )
-
           const active = t.path === '/' ? pathname === '/' : pathname.startsWith(t.path!)
-          const { Icon } = t
           return (
-            <button key={t.path} onClick={() => navigate(t.path!)}
-              style={{
-                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', padding: '10px 0 10px', gap: 4,
-                background: 'none', border: 'none', cursor: 'pointer',
-                position: 'relative',
-              }}>
-              {active && (
-                <span style={{
-                  position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-                  width: 32, height: 3, borderRadius: '0 0 4px 4px',
-                  background: t.color,
-                }} />
-              )}
-              <span style={{
-                position: 'relative',
-                width: 36, height: 36, borderRadius: 10,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: active ? `${t.color}22` : 'transparent',
-                transition: 'all .2s',
-              }}>
-                <Icon size={22} strokeWidth={active ? 2.5 : 1.8}
-                  color={active ? t.color : 'var(--muted)'} />
-                {(t.badge ?? 0) > 0 && (
-                  <span style={{
-                    position: 'absolute', top: 2, right: 2,
-                    background: '#e53e3e', color: '#fff',
-                    borderRadius: 99, fontSize: 9, fontWeight: 800,
-                    padding: '1px 4px', lineHeight: 1.4, minWidth: 14, textAlign: 'center'
-                  }}>
-                    {(t.badge ?? 0) > 99 ? '99+' : t.badge}
-                  </span>
-                )}
+            <button key={t.path} className="qs-bottomnav__item" aria-current={active ? 'page' : undefined} onClick={() => navigate(t.path!)}>
+              <span className="qs-bottomnav__icon">
+                <Icon name={t.icon} size={22} strokeWidth={active ? 2.4 : 1.8} />
+                {(t.badge ?? 0) > 0 && <span className="qs-badge" aria-label={`未読 ${t.badge}件`}>{(t.badge ?? 0) > 99 ? '99+' : t.badge}</span>}
               </span>
-              <span style={{
-                fontSize: 10, fontWeight: active ? 800 : 500,
-                color: active ? t.color : 'var(--muted)',
-                transition: 'all .2s',
-              }}>
-                {t.label}
-              </span>
+              {t.label}
             </button>
           )
         })}

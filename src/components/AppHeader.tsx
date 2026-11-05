@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
-import { Bell, ChevronLeft, Sun, Moon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { useIsPC } from '../hooks/useMediaQuery'
+import { Icon, IconButton } from './ui'
 
 interface Props {
   title?: string
@@ -22,10 +22,9 @@ export default function AppHeader({ title, back, right, left }: Props) {
 
   useEffect(() => {
     if (!user) return
-    apiFetch('/api/notifications/unread').then(r => r.ok ? r.json() : {count:0}).then(d => setUnread(d.count ?? 0)).catch(() => {})
-    const t = setInterval(() => {
-      apiFetch('/api/notifications/unread').then(r => r.ok ? r.json() : {count:0}).then(d => setUnread(d.count ?? 0)).catch(() => {})
-    }, 30000)
+    const load = () => apiFetch('/api/notifications/unread').then(r => r.ok ? r.json() : { count: 0 }).then(d => setUnread(d.count ?? 0)).catch(() => {})
+    load()
+    const t = setInterval(load, 30000)
     return () => clearInterval(t)
   }, [user])
 
@@ -37,49 +36,24 @@ export default function AppHeader({ title, back, right, left }: Props) {
   }
 
   return (
-    <header style={{
-      position: 'sticky', top: 0, zIndex: 100,
-      background: 'var(--surface)',
-      borderBottom: '1px solid var(--border)',
-      display: 'flex',
-      alignItems: 'center',
-      height: 56,
-      padding: '0 12px',
-    }}>
-      <div style={{ width: 120, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+    <header className="qs-appheader">
+      <div className="qs-appheader__side">
         {left ?? (back !== undefined ? (
-          <button onClick={handleBack}
-            style={{ background: 'none', border: 'none', padding: '8px 4px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-            <ChevronLeft size={22} />
-          </button>
+          <IconButton icon="chevron-left" label="戻る" onClick={handleBack} />
         ) : (
-          <button onClick={() => navigate('/')}
-            style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 16, letterSpacing: 1 }}>
-              <span style={{ color: 'var(--accent)' }}>Quiz</span><span style={{ color: 'var(--text)' }}>Spark</span>
-            </span>
-            <span style={{ fontSize: 16 }}>⚡</span>
+          <button className="qs-logo" onClick={() => navigate('/')} aria-label="QuizSpark ホーム">
+            <span><b>Quiz</b>Spark</span>
+            <Icon name="zap" size={16} />
           </button>
         ))}
       </div>
-      <div style={{ flex: 1, textAlign: 'center' }}>
-        {title && <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{title}</span>}
-      </div>
-      <div style={{ width: 120, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}>
+      {title ? <h1 className="qs-appheader__title">{title}</h1> : <div className="qs-appheader__title" />}
+      <div className="qs-appheader__side qs-appheader__side--right">
         {right ?? (
-          <div style={{ display:'flex', alignItems:'center', gap:2 }}>
-            {user && (
-              <button onClick={() => navigate('/notifications')}
-                style={{ background:'none', border:'none', padding:8, color:'var(--muted)', display:'flex', cursor:'pointer', position:'relative' }}>
-                <Bell size={18} />
-                {unread > 0 && <span style={{ position:'absolute', top:4, right:4, width:8, height:8, borderRadius:'50%', background:'var(--buzz)' }} />}
-              </button>
-            )}
-            <button onClick={toggle}
-              style={{ background:'none', border:'none', padding:8, color:'var(--muted)', display:'flex', cursor:'pointer' }}>
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-          </div>
+          <>
+            {user && <IconButton icon="bell" label={unread > 0 ? `通知(未読${unread}件)` : '通知'} badge={unread} onClick={() => navigate('/notifications')} />}
+            <IconButton icon={theme === 'dark' ? 'sun' : 'moon'} label={theme === 'dark' ? 'ライトテーマに切り替え' : 'ダークテーマに切り替え'} onClick={toggle} />
+          </>
         )}
       </div>
     </header>

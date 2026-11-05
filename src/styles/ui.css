@@ -1,0 +1,66 @@
+/* 共通コンポーネントのスタイル(クラス名はすべて qs- で始める) */
+.qs-icon { display: inline-block; vertical-align: middle; }
+
+/* ---- ボタン ---- */
+.qs-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  min-height: var(--tap); padding: 0 var(--sp-4); border-radius: var(--r-md);
+  font-weight: 700; font-size: var(--fs-md); line-height: 1; white-space: nowrap;
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+}
+.qs-btn--sm { min-height: 36px; padding: 0 var(--sp-3); font-size: var(--fs-sm); }
+.qs-btn--lg { min-height: 52px; padding: 0 var(--sp-6); font-size: var(--fs-lg); border-radius: var(--r-lg); }
+.qs-btn--block { width: 100%; }
+.qs-btn--primary { background: var(--accent); border-color: transparent; color: #fff; }
+.qs-btn--ghost { background: transparent; border-color: transparent; color: var(--sub); }
+.qs-btn--danger { background: var(--lose-soft); border-color: transparent; color: var(--wrong); }
+.qs-btn--buzz { background: linear-gradient(180deg, #fb7185, var(--buzz2)); border-color: transparent; color: #fff; box-shadow: 0 8px 24px rgba(244,63,94,.35); }
+.qs-btn:disabled { opacity: .45; cursor: not-allowed; }
+.qs-btn:not(:disabled):hover { filter: brightness(1.08); }
+
+.qs-iconbtn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: var(--tap); height: var(--tap); min-height: var(--tap); border-radius: var(--r-md); color: var(--sub); background: transparent; }
+.qs-iconbtn--secondary { background: var(--surface2); color: var(--text); }
+.qs-iconbtn:hover { color: var(--text); }
+.qs-badge { position: absolute; top: 4px; right: 4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--r-full); background: var(--buzz); color: #fff; font-size: 10px; font-weight: 800; line-height: 16px; text-align: center; }
+
+/* ---- チップ・カード・アバター・進捗 ---- */
+.qs-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: var(--r-full); font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; }
+.qs-chip--accent  { background: var(--accent-soft); color: var(--accent3); }
+.qs-chip--win     { background: var(--win-soft);  color: var(--correct); }
+.qs-chip--lose    { background: var(--lose-soft); color: var(--wrong); }
+.qs-chip--gold    { background: var(--gold-soft); color: var(--gold); }
+.qs-chip--neutral { background: var(--surface2);  color: var(--sub); }
+
+.qs-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); }
+.qs-card--pad { padding: var(--sp-4); }
+.qs-card--accent { border-color: var(--accent); background: linear-gradient(180deg, var(--accent-soft), var(--surface)); }
+
+.qs-avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 800; object-fit: cover; overflow: hidden; }
+
+.qs-progress { height: 8px; border-radius: var(--r-full); background: var(--surface2); overflow: hidden; }
+.qs-progress__fill { height: 100%; border-radius: var(--r-full); transition: width .2s linear; }
+.qs-progress__fill--accent { background: var(--accent); }
+.qs-progress__fill--timer  { background: linear-gradient(90deg, var(--accent), var(--buzz)); }
+
+/* ---- ナビゲーション ---- */
+.qs-topnav { position: fixed; inset: 0 0 auto 0; z-index: 200; height: var(--nav-top-h); display: flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-6); background: var(--surface); border-bottom: 1px solid var(--border); }
+.qs-logo { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: var(--r-sm); background: none; font-family: Orbitron, sans-serif; font-weight: 900; letter-spacing: 1px; color: var(--text); }
+.qs-logo b { color: var(--accent); font-weight: 900; }
+.qs-logo .qs-icon { color: var(--accent); }
+.qs-navtab { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: var(--r-sm); background: none; color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
+.qs-navtab[aria-current="page"] { background: var(--accent-soft); color: var(--accent3); font-weight: 800; }
+.qs-navtab .qs-dot { position: absolute; top: 5px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--buzz); }
+
+.qs-bottomnav { position: fixed; inset: auto 0 0 0; z-index: 200; background: var(--surface); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
+.qs-bottomnav__row { display: flex; max-width: var(--w); margin: 0 auto; }
+.qs-bottomnav__item { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: var(--nav-bottom-h); padding: 6px 0; background: none; color: var(--muted); font-size: 11px; font-weight: 500; }
+.qs-bottomnav__item[aria-current="page"] { color: var(--accent3); font-weight: 800; }
+.qs-bottomnav__item[aria-current="page"]::before { content: ''; position: absolute; top: 0; left: 50%; width: 32px; height: 3px; transform: translateX(-50%); border-radius: 0 0 4px 4px; background: var(--accent); }
+.qs-bottomnav__icon { position: relative; display: grid; place-items: center; width: 40px; height: 28px; border-radius: var(--r-full); }
+.qs-bottomnav__item[aria-current="page"] .qs-bottomnav__icon { background: var(--accent-soft); }
+.qs-fab { width: 52px; height: 52px; min-height: 52px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 4px 16px rgba(124,58,237,.5); transform: translateY(-10px); }
+
+.qs-appheader { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; height: 56px; padding: 0 var(--sp-2); background: var(--surface); border-bottom: 1px solid var(--border); }
+.qs-appheader__side { width: 120px; display: flex; align-items: center; flex: none; }
+.qs-appheader__side--right { justify-content: flex-end; }
+.qs-appheader__title { flex: 1; min-width: 0; text-align: center; font-weight: 800; font-size: var(--fs-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
