@@ -1,7 +1,7 @@
 import { apiFetch } from '../lib/api'
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 
-interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string }
+interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string; email?: string; rate?: number; titleId?: string | null }
 
 interface AuthCtx {
   user: User | null

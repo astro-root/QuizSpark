@@ -45,7 +45,7 @@ test('移行の網羅性: ソース内の絵文字がすべて対応表に載っ
 })
 
 // ラチェット: 絵文字は増やさない。ページを移行するたびに、この値を下げる(最終的に 0)。
-const EMOJI_BASELINE = Number(process.env.EMOJI_BASELINE ?? 0) || 131
+const EMOJI_BASELINE = Number(process.env.EMOJI_BASELINE ?? 0) || 120
 test(`絵文字の残数は ${EMOJI_BASELINE} 以下(移行が進むたびに下げる)`, () => {
   const found = emojiInSource()
   assert.ok(found.length <= EMOJI_BASELINE, `絵文字が増えています: ${found.length} > ${EMOJI_BASELINE}`)
