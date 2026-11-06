@@ -8,6 +8,7 @@ import { prisma } from '../lib/prisma'
 import { joinQueue, leaveQueue, setOnMatch } from '../game/MatchmakingManager'
 import { toPublicState } from '../game/publicState'
 import { toPublicId } from '../game/identity'
+import { isValidStamp } from '../../src/lib/stamps'
 import { settleGame, type SettleDb } from '../game/settleGame'
 import { sanitizeSettings } from '../game/settings'
 import { createEventLimiter, SOCKET_LIMITS } from '../lib/eventLimiter'
@@ -253,7 +254,7 @@ export function registerHandlers(io: IoServer, socket: IoSocket) {
 
   socket.on('send-stamp', safe('send-stamp', (stamp: unknown) => {
     const roomId = socket.data.roomId
-    if (!roomId || typeof stamp !== 'string') return
+    if (!roomId || !isValidStamp(stamp)) return  // 許可したスタンプ以外(任意の文字列)は中継しない
     const state = gameManager.getRoom(roomId)
     if (!state) return
     const player = state.players.find(p => p.id === token)

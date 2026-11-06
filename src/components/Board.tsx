@@ -1,31 +1,27 @@
-import type { Player } from "../types"
-import { scoreLabel } from "../utils/scoreLabel"
+import type { Player } from '../types'
+import Score from './Score'
+import { Icon } from './ui'
+
 export default function Board({ players, myId, ruleId }: { players: Player[]; myId: string; ruleId: string }) {
   return (
-    <div style={{ width:"100%",maxWidth:400,display:"flex",flexDirection:"column",gap:6 }}>
-      {players.map((p,i)=>{
-        const win=p.status==="WIN", lose=p.status==="LOSE"
+    <ol className="qs-board" style={{ listStyle: 'none', maxWidth: 400 }} aria-label="スコアボード">
+      {players.map((p, i) => {
+        const win = p.status === 'WIN', lose = p.status === 'LOSE'
+        const cls = ['qs-board__row', p.id === myId && 'qs-board__row--me', win && 'qs-board__row--win', lose && 'qs-board__row--lose'].filter(Boolean).join(' ')
         return (
-          <div key={p.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"11px 16px",
-            background:p.id===myId?"rgba(99,102,241,0.1)":win?"rgba(16,185,129,0.07)":lose?"rgba(244,63,94,0.07)":"var(--surface)",
-            borderRadius:12,border:`1px solid ${p.id===myId?"rgba(99,102,241,0.3)":win?"rgba(16,185,129,0.2)":lose?"rgba(244,63,94,0.2)":"var(--border)"}`,
-            transition:"all 0.3s ease",
-            boxShadow: win ? "0 0 12px rgba(16,185,129,0.2)" : undefined }}>
-            <span style={{ fontFamily:"Orbitron,sans-serif",fontSize:11,color:i===0?"var(--gold)":"var(--muted)",width:18,textAlign:"center" }}>
-              {i===0?"▲":`${i+1}`}
+          <li key={p.id} className={cls}>
+            <span className={`qs-board__rank${i === 0 ? ' qs-board__rank--first' : ''}`}>
+              {i === 0 ? <Icon name="chevron-up" size={16} strokeWidth={3} label="1位" /> : <span aria-label={`${i + 1}位`}>{i + 1}</span>}
             </span>
-            <span style={{ flex:1,fontSize:14,fontWeight:p.id===myId?800:400,
-              color:win?"var(--correct)":lose?"var(--wrong)":"var(--text)",
-              textDecoration:lose?"line-through":undefined }}>
-              {p.name}{p.isHost?" 👑":""}
+            <span className={`qs-board__name${win ? ' is-win' : lose ? ' is-lose' : ''}`}>
+              {p.name}
+              {p.isHost && <Icon name="crown" size={14} label="ホスト" />}
             </span>
-            {(win||lose)&&<span style={{ fontSize:11,fontWeight:700,color:win?"var(--correct)":"var(--wrong)" }}>{win?"勝抜":"失格"}</span>}
-            <span style={{ fontFamily:"Orbitron,sans-serif",fontSize:12,fontWeight:700,color:"var(--accent)" }}>
-              {scoreLabel(p,ruleId)}
-            </span>
-          </div>
+            {(win || lose) && <span className={win ? 'is-win' : 'is-lose'} style={{ fontSize: 11, fontWeight: 700 }}>{win ? '勝抜' : '失格'}</span>}
+            <Score player={p} ruleId={ruleId} />
+          </li>
         )
       })}
-    </div>
+    </ol>
   )
 }
