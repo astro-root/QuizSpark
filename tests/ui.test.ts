@@ -21,6 +21,8 @@ function emojiInSource(): Array<{ file: string; glyph: string }> {
   for (const f of walk(SRC)) {
     // 対応表そのもの(移行用の辞書)は検査対象外
     if (f.endsWith(path.join('ui', 'iconPaths.ts'))) continue
+    // 旧クライアントが送る絵文字スタンプを受け付けるための互換表(意図的に絵文字を含む)
+    if (f.endsWith(path.join('lib', 'stamps.ts'))) continue
     for (const m of fs.readFileSync(f, 'utf8').matchAll(EMOJI)) found.push({ file: path.relative(SRC, f), glyph: m[0].replace(/\uFE0F/g, '') })
   }
   return found
@@ -43,7 +45,7 @@ test('移行の網羅性: ソース内の絵文字がすべて対応表に載っ
 })
 
 // ラチェット: 絵文字は増やさない。ページを移行するたびに、この値を下げる(最終的に 0)。
-const EMOJI_BASELINE = Number(process.env.EMOJI_BASELINE ?? 0) || 167
+const EMOJI_BASELINE = Number(process.env.EMOJI_BASELINE ?? 0) || 131
 test(`絵文字の残数は ${EMOJI_BASELINE} 以下(移行が進むたびに下げる)`, () => {
   const found = emojiInSource()
   assert.ok(found.length <= EMOJI_BASELINE, `絵文字が増えています: ${found.length} > ${EMOJI_BASELINE}`)
@@ -61,4 +63,15 @@ test('アイコンだけのボタンは読み上げ用の名前を必須にし�
   const s = fs.readFileSync(path.join(SRC, 'components/ui/index.tsx'), 'utf8')
   assert.match(s, /label: string/)
   assert.match(s, /aria-label=\{label\}/)
+})
+
+test('対戦画面(GamePage / Board / Score / RoomChat)は絵文字を使わない', () => {
+  for (const f of ['pages/GamePage.tsx', 'components/Board.tsx', 'components/Score.tsx', 'components/RoomChat.tsx', 'utils/scoreLabel.ts'])
+    assert.equal([...fs.readFileSync(path.join(SRC, f), 'utf8').matchAll(EMOJI)].length, 0, f)
+})
+test('対戦画面: スペースキーでの早押しと、解答入力欄のラベルがある', () => {
+  const s = fs.readFileSync(path.join(SRC, 'pages/GamePage.tsx'), 'utf8')
+  assert.match(s, /e\.code !== 'Space'/)
+  assert.match(s, /aria-label="解答"/)
+  assert.match(s, /role="timer"/)
 })

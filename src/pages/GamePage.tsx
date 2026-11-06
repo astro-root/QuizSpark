@@ -3,10 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useSocketContext } from '../context/SocketContext'
 import RoomChat from '../components/RoomChat'
 import Board from '../components/Board'
+import Score from '../components/Score'
+import { Avatar, Button, Icon } from '../components/ui'
 import { useCountdown } from '../hooks/useCountdown'
 import { useTypewriter } from '../hooks/useTypewriter'
-import { scoreLabel } from '../utils/scoreLabel'
+import { STAMPS, resolveStamp } from '../lib/stamps'
 import type { Player } from '../types'
+import '../styles/game.css'
 
 const SFX = {
   buzz:    () => { playTone(150,'sawtooth',0.05,0.5); playTone(300,'square',0.06,0.35,0.03); playTone(450,'sine',0.08,0.2,0.06) },
@@ -18,23 +21,6 @@ const SFX = {
   urgent:  () => { playTone(960,'square',0.1,0.07); playTone(720,'square',0.08,0.06,0.06) },
   win:     () => { [523,659,784,880,1047,1319,1568].forEach((f,i) => playTone(f,'sine',0.6,0.4,i*0.07)) },
 }
-
-/* ─── CSS animations ─── */
-const STYLES = `
-@keyframes buzzPop{0%{transform:scale(1)}30%{transform:scale(0.93)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
-@keyframes resultIn{0%{transform:scale(0.7) translateY(20px);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
-@keyframes correctFlash{0%,100%{background:rgba(16,185,129,0)}30%{background:rgba(16,185,129,0.25)}}
-@keyframes wrongFlash{0%,100%{background:rgba(244,63,94,0)}30%{background:rgba(244,63,94,0.22)}}
-@keyframes qnumIn{0%{transform:scale(0.4);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
-@keyframes urgentPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
-@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
-@keyframes slideUp{0%{transform:translateY(16px);opacity:0}100%{transform:translateY(0);opacity:1}}
-@keyframes winStar{0%{transform:scale(0) rotate(-20deg);opacity:0}60%{transform:scale(1.2) rotate(5deg)}100%{transform:scale(1) rotate(0);opacity:1}}
-@keyframes progressBar{0%{background-position:0% 50%}100%{background-position:200% 50%}}
-`
-
-
-
 
 function playTone(freq: number, type: OscillatorType = 'sine', gain = 0.2, duration = 0.3, delay = 0) {
   try {
@@ -52,41 +38,42 @@ function playTone(freq: number, type: OscillatorType = 'sine', gain = 0.2, durat
 }
 
 
-function VSHud({ players, myId, ruleId }: { players: import('../types').Player[], myId: string, ruleId: string }) {
+
+/** 2 人対戦のとき、画面上部に出す自分 vs 相手 */
+function VSHud({ players, myId, ruleId }: { players: Player[]; myId: string; ruleId: string }) {
   const me = players.find(p => p.id === myId)
   const opp = players.find(p => p.id !== myId)
   if (!me || !opp) return null
-  const getScore = (p: import('../types').Player) => scoreLabel(p, ruleId)
-  const isWin = (p: import('../types').Player) => p.status === 'WIN'
-  const isLose = (p: import('../types').Player) => p.status === 'LOSE'
+  const tone = (p: Player) => p.status === 'WIN' ? 'is-win' : p.status === 'LOSE' ? 'is-lose' : ''
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
-      {/* 自分 */}
-      <div style={{ flex:1, display:'flex', alignItems:'center', gap:8 }}>
-        <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))',
-          display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:900, color:'#fff', flexShrink:0,
-          boxShadow: isWin(me) ? '0 0 12px rgba(16,185,129,0.6)' : isLose(me) ? '0 0 12px rgba(244,63,94,0.4)' : undefined }}>
-          {me.name[0]}
-        </div>
-        <div style={{ minWidth:0 }}>
-          <p style={{ fontSize:12, fontWeight:800, color: isWin(me)?'var(--correct)':isLose(me)?'var(--wrong)':'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{me.name}</p>
-          <p style={{ fontFamily:'Orbitron,sans-serif', fontSize:14, fontWeight:900, color:'var(--accent)' }}>{getScore(me)}</p>
+    <div className="qg-hud">
+      <div className="qg-hud__p">
+        <Avatar name={me.name} size={32} />
+        <div style={{ minWidth: 0 }}>
+          <p className={`qg-hud__name ${tone(me)}`}>{me.name}</p>
+          <Score className="qg-hud__score" player={me} ruleId={ruleId} />
         </div>
       </div>
-      {/* VS */}
-      <div style={{ fontSize:11, fontWeight:900, color:'var(--muted)', letterSpacing:1, flexShrink:0 }}>VS</div>
-      {/* 相手 */}
-      <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, flexDirection:'row-reverse' }}>
-        <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg,#f43f5e,#e11d48)',
-          display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:900, color:'#fff', flexShrink:0,
-          boxShadow: isWin(opp) ? '0 0 12px rgba(16,185,129,0.6)' : isLose(opp) ? '0 0 12px rgba(244,63,94,0.4)' : undefined }}>
-          {opp.name[0]}
-        </div>
-        <div style={{ minWidth:0, textAlign:'right' }}>
-          <p style={{ fontSize:12, fontWeight:800, color: isWin(opp)?'var(--correct)':isLose(opp)?'var(--wrong)':'var(--sub)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{opp.name}</p>
-          <p style={{ fontFamily:'Orbitron,sans-serif', fontSize:14, fontWeight:900, color:'#f43f5e' }}>{getScore(opp)}</p>
+      <div className="qg-hud__vs" aria-hidden="true">VS</div>
+      <div className="qg-hud__p qg-hud__p--opp">
+        <Avatar name={opp.name} size={32} className="qg-hud__avatar--opp" />
+        <div style={{ minWidth: 0 }}>
+          <p className={`qg-hud__name ${tone(opp)}`}>{opp.name}</p>
+          <Score className="qg-hud__score" player={opp} ruleId={ruleId} />
         </div>
       </div>
+    </div>
+  )
+}
+
+function StampPicker({ onSend }: { onSend: (id: string) => void }) {
+  return (
+    <div className="qg__stamps" role="group" aria-label="スタンプ">
+      {STAMPS.map(s => (
+        <button key={s.id} className="qg__stamp" aria-label={s.label} title={s.label} onClick={() => onSend(s.id)}>
+          <Icon name={s.icon} size={22} />
+        </button>
+      ))}
     </div>
   )
 }
@@ -126,14 +113,6 @@ export default function GamePage() {
   const [showQNum, setShowQNum] = useState(false)
   const prevIdx = useRef(-1)
   const qNumTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
-
-  // inject styles once
-  useEffect(() => {
-    const el = document.createElement('style')
-    el.textContent = STYLES
-    document.head.appendChild(el)
-    return () => el.remove()
-  }, [])
 
   // Q番号表示 + qstart音
   useEffect(() => {
@@ -211,322 +190,244 @@ export default function GamePage() {
     buzz()
   }, [buzz])
 
-  if (!roomState) return <div style={{ minHeight:'100dvh',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted)',maxWidth:'var(--w)',margin:'0 auto' }}>接続中...</div>
+  // PC: スペースキーでも早押しできる(入力欄・変換中・修飾キー付きは除く)
+  useEffect(() => {
+    if (roomState?.phase !== 'question') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Space' || e.repeat || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      e.preventDefault()
+      handleBuzz()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [roomState?.phase, handleBuzz])
+
+  if (!roomState) return <div className="qg-center" role="status" style={{ color: 'var(--muted)' }}>接続中...</div>
 
   const { phase, currentQuestion, players, buzzedPlayerName, lastJudgement, currentQuestionIndex, totalQuestions, settings } = roomState
   const isBuzzed = roomState.buzzedPlayerId === myId
   const ruleId = settings?.ruleId ?? 'free'
-  const sorted = [...players].sort((a,b) => {
-    const o = {WIN:0,ACTIVE:1,LOSE:2}
-    const d = (o[a.status]??1) - (o[b.status]??1)
+  const statusOrder: Record<string, number> = { WIN: 0, ACTIVE: 1, LOSE: 2 }
+  const sorted = [...players].sort((a, b) => {
+    const d = (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
     return d !== 0 ? d : b.score - a.score
   })
-  const shownText = (phase==='answering'||phase==='result') ? frozen : qText
-  const showCD = (phase==='question' && twDone) || phase==='answering'
+  const shownText = (phase === 'answering' || phase === 'result') ? frozen : qText
+  const showCD = (phase === 'question' && twDone) || phase === 'answering'
   const urgent = countdown <= 3
 
-  function submit() { const t=answer.trim(); if(!t) return; submitAnswer(t); setAnswer('') }
+  function submit() { const t = answer.trim(); if (!t) return; submitAnswer(t); setAnswer('') }
 
   /* Q番号 */
   if (showQNum) return (
-    <div style={{ minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:40,padding:24,maxWidth:'var(--w)',margin:'0 auto' }}>
-      <div style={{ textAlign:'center', animation:'qnumIn 0.5s cubic-bezier(.34,1.56,.64,1) both' }}>
-        <p style={{ fontFamily:'Orbitron,sans-serif',color:'var(--muted)',fontSize:11,letterSpacing:4,marginBottom:12 }}>QUESTION</p>
-        <p style={{ fontFamily:'Orbitron,sans-serif',fontSize:100,fontWeight:900,color:'var(--accent)',lineHeight:1,
-          textShadow:'0 0 40px rgba(99,102,241,0.6)' }}>{currentQuestionIndex+1}</p>
-        <p style={{ color:'var(--muted)',fontSize:16,marginTop:8 }}>/ {totalQuestions}</p>
+    <div className="qg-center">
+      <div className="qg-qnum" role="status">
+        <small>QUESTION</small>
+        <strong>{currentQuestionIndex + 1}</strong>
+        <span>/ {totalQuestions}</span>
       </div>
       <Board players={sorted} myId={myId} ruleId={ruleId} />
     </div>
   )
 
-  /* 終了 */
-
   // プレマッチ画面
   if (prematchInfo && roomState?.phase === 'lobby') {
     const { myPlayer, opponent } = prematchInfo
+    const total = prematchInfo.startsIn / 1000
     return (
-      <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center',
-        background:'linear-gradient(135deg,#0f0c29,#302b63,#24243e)', padding:'24px' }}>
-        <div style={{ width:'100%', maxWidth:480 }}>
-          {/* カウントダウン */}
-          <div style={{ textAlign:'center', marginBottom:32 }}>
-            <p style={{ color:'rgba(255,255,255,0.5)', fontSize:13, fontWeight:700, letterSpacing:3, textTransform:'uppercase', marginBottom:8 }}>
-              MATCH FOUND
-            </p>
-            <p style={{ color:'#fff', fontSize:16, fontWeight:700 }}>
-              {prematchCountdown > 0 ? `${prematchCountdown}秒後にスタート` : '読み込み中...'}
-            </p>
-          </div>
-          {/* VS */}
-          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+      <div className="qg-pre">
+        <div className="qg-pre__in">
+          <p className="qg-pre__label">MATCH FOUND</p>
+          <p className="qg-pre__sub" role="status">{prematchCountdown > 0 ? `${prematchCountdown}秒後にスタート` : '読み込み中...'}</p>
+          <div className="qg-pre__vs">
             {[myPlayer, opponent].map((pl, i) => (
-              <div key={pl.id} style={{ flex:1, background:'rgba(255,255,255,0.06)', borderRadius:16, padding:'20px 16px', textAlign:'center',
-                border: i===0 ? '1.5px solid rgba(99,102,241,0.5)' : '1.5px solid rgba(244,63,94,0.4)' }}>
-                <div style={{ width:64, height:64, borderRadius:'50%', margin:'0 auto 12px',
-                  background:'rgba(255,255,255,0.1)', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28 }}>
-                  {pl.avatarUrl
-                    ? <img src={pl.avatarUrl} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                    : '👤'}
-                </div>
-                <p style={{ color:'#fff', fontWeight:800, fontSize:15, marginBottom:4 }}>{pl.name}</p>
-                <p style={{ color:'rgba(255,255,255,0.6)', fontSize:22, fontWeight:900, marginBottom:8 }}>{pl.rate}</p>
-                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                  {pl.winStreak > 0 && (
-                    <span style={{ background:'rgba(251,191,36,0.15)', color:'#fbbf24', borderRadius:6, fontSize:12, fontWeight:700, padding:'3px 8px' }}>
-                      🔥 {pl.winStreak}連勝中
-                    </span>
-                  )}
-                  <span style={{ color:'rgba(255,255,255,0.35)', fontSize:11 }}>
-                    {i===0 ? 'あなた' : '相手'}
-                  </span>
-                </div>
+              <div key={pl.id} className={`qg-pre__card${i === 1 ? ' qg-pre__card--opp' : ''}`}>
+                <Avatar name={pl.name} src={pl.avatarUrl} size={64} />
+                <p className="qg-pre__name">{pl.name}</p>
+                <p className="qg-pre__rate">{pl.rate}</p>
+                {pl.winStreak > 0 && <span className="qg-pre__tag"><Icon name="flame" size={14} />{pl.winStreak}連勝中</span>}
+                <span className="qg-pre__who">{i === 0 ? 'あなた' : '相手'}</span>
               </div>
             ))}
-            <div style={{ position:'absolute', left:'50%', transform:'translateX(-50%)',
-              background:'linear-gradient(135deg,var(--accent),var(--accent2))', borderRadius:'50%',
-              width:40, height:40, display:'flex', alignItems:'center', justifyContent:'center',
-              color:'#fff', fontWeight:900, fontSize:14, boxShadow:'0 0 24px rgba(99,102,241,0.5)' }}>
-              VS
-            </div>
+            <div className="qg-pre__badge" aria-hidden="true">VS</div>
           </div>
-          {/* プログレスバー */}
-          <div style={{ marginTop:28, height:4, background:'rgba(255,255,255,0.1)', borderRadius:2, overflow:'hidden' }}>
-            <div style={{ height:'100%', background:'var(--accent)', borderRadius:2,
-              width: `${((prematchInfo.startsIn/1000 - prematchCountdown) / (prematchInfo.startsIn/1000)) * 100}%`,
-              transition:'width 1s linear' }} />
+          <div className="qg-pre__bar" role="progressbar" aria-label="開始までの時間" aria-valuemin={0} aria-valuemax={100}
+            aria-valuenow={Math.round(((total - prematchCountdown) / total) * 100)}>
+            <i style={{ width: `${((total - prematchCountdown) / total) * 100}%` }} />
           </div>
         </div>
       </div>
     )
   }
 
-  if (phase==='finished') return (
-    <div style={{ minHeight:'100dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px 20px',maxWidth:'var(--w)',margin:'0 auto' }}>
-      <div style={{ width:'100%',maxWidth:400 }}>
-        <div style={{ textAlign:'center',marginBottom:32,animation:'winStar 0.6s cubic-bezier(.34,1.56,.64,1) both' }}>
-          <div style={{ fontSize:72 }}>🏆</div>
-          <p style={{ fontFamily:'Orbitron,sans-serif',fontSize:22,fontWeight:900,color:'var(--gold)',marginTop:8,
-            textShadow:'0 0 20px rgba(251,191,36,0.6)' }}>GAME OVER</p>
+  /* 終了 */
+  if (phase === 'finished') return (
+    <div className="qg-end">
+      <div className="qg-end__in">
+        <div className="qg-end__title">
+          <Icon name="trophy" size={72} strokeWidth={1.5} />
+          <h1>GAME OVER</h1>
+        </div>
+        <ol className="qg-end__list">
+          {sorted.map((p, i) => (
+            <li key={p.id} className={`qg-end__row${p.status === 'WIN' ? ' qg-end__row--win' : p.status === 'LOSE' ? ' qg-end__row--lose' : ''}${p.id === myId ? ' qg-end__row--me' : ''}`}
+              style={{ animationDelay: `${i * 0.07}s` }}>
+              <span className={`qg-end__rank qg-end__rank--${i + 1}`}>
+                {i < 3 ? <Icon name="medal" size={26} label={`${i + 1}位`} /> : <span aria-label={`${i + 1}位`}>{i + 1}</span>}
+              </span>
+              <span className="qg-end__name">{p.name}</span>
+              <span style={{ fontSize: 13, fontWeight: 700 }} className={p.status === 'WIN' ? 'is-win' : p.status === 'LOSE' ? 'is-lose' : ''}>
+                {p.status === 'WIN' ? '勝ち抜け' : p.status === 'LOSE' ? '失格' : <Score player={p} ruleId={ruleId} />}
+              </span>
+            </li>
+          ))}
+        </ol>
+        <div className="qg-end__actions">
+          {isHost && !isMatchmakingGame.current && (
+            <Button variant="primary" size="lg" block onClick={resetGame}>もう一度遊ぶ</Button>
+          )}
+          <Button size="lg" block onClick={() => navigate('/')}>トップに戻る</Button>
+        </div>
+      </div>
 
-      {/* レートResult オーバーレイ */}
+      {/* レート結果 */}
       {rateResult && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100, padding:24 }}>
-          <div style={{ background:'var(--surface)', borderRadius:20, padding:'36px 32px', textAlign:'center', maxWidth:320, width:'100%',
-            boxShadow:'0 0 60px rgba(99,102,241,0.3)', animation:'slideUp 0.5s ease' }}>
-            <p style={{ fontSize:13, fontWeight:700, color:'var(--muted)', letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>RESULT</p>
-            <p style={{ fontSize:52, fontWeight:900, marginBottom:4,
-              color: rateResult.result==='WIN' ? 'var(--correct)' : 'var(--wrong)',
-              textShadow: rateResult.result==='WIN' ? '0 0 30px rgba(16,185,129,0.5)' : '0 0 30px rgba(244,63,94,0.5)' }}>
-              {rateResult.result==='WIN' ? '勝利' : '敗北'}
-            </p>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, margin:'20px 0' }}>
-              <span style={{ fontSize:28, fontWeight:900, color:'var(--muted)' }}>{rateResult.oldRate}</span>
-              <span style={{ fontSize:18, color:'var(--muted)' }}>→</span>
-              <span style={{ fontSize:36, fontWeight:900, color:'var(--text)' }}>{rateResult.newRate}</span>
+        <div className="qg-modal" role="dialog" aria-modal="true" aria-labelledby="rate-title">
+          <div className="qg-modal__box">
+            <p className="qg-modal__label" id="rate-title">RESULT</p>
+            <p className={`qg-modal__result ${rateResult.result === 'WIN' ? 'is-win' : 'is-lose'}`}>{rateResult.result === 'WIN' ? '勝利' : '敗北'}</p>
+            <div className="qg-modal__rate">
+              <span style={{ fontSize: 28, fontWeight: 900 }}>{rateResult.oldRate}</span>
+              <Icon name="arrow-right" size={20} label="から" />
+              <b>{rateResult.newRate}</b>
             </div>
-            <p style={{ fontSize:22, fontWeight:900, marginBottom:24,
-              color: rateResult.delta > 0 ? 'var(--correct)' : 'var(--wrong)' }}>
-              {rateResult.delta > 0 ? `+${rateResult.delta}` : rateResult.delta}
-            </p>
-            <button onClick={() => { setRateResult(null); setPrematchInfo(null) }}
-              style={{ width:'100%', padding:'13px', borderRadius:12, fontSize:15, fontWeight:800,
-                background:'linear-gradient(135deg,var(--accent),var(--accent2))', color:'#fff', border:'none', cursor:'pointer' }}>
-              結果を見る
-            </button>
+            <p className={`qg-modal__delta ${rateResult.delta > 0 ? 'is-win' : 'is-lose'}`}>{rateResult.delta > 0 ? `+${rateResult.delta}` : rateResult.delta}</p>
+            <Button variant="primary" size="lg" block autoFocus onClick={() => { setRateResult(null); setPrematchInfo(null) }}>結果を見る</Button>
           </div>
         </div>
       )}
-
-        </div>
-        <div style={{ display:'flex',flexDirection:'column',gap:8,marginBottom:28 }}>
-          {sorted.map((p,i) => (
-            <div key={p.id} style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 18px',
-              background: p.status==='WIN'?'rgba(16,185,129,0.1)':p.status==='LOSE'?'rgba(244,63,94,0.08)':'var(--surface)',
-              borderRadius:12,border:`1px solid ${p.status==='WIN'?'rgba(16,185,129,0.3)':p.status==='LOSE'?'rgba(244,63,94,0.2)':'var(--border)'}`,
-              animation:`slideUp 0.4s ease both`,animationDelay:`${i*0.07}s` }}>
-              <span style={{ fontSize:i<3?24:15,width:32,textAlign:'center' }}>{i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`}</span>
-              <span style={{ flex:1,fontWeight:p.id===myId?800:400,color:p.id===myId?'var(--text)':'var(--sub)' }}>{p.name}</span>
-              <span style={{ fontSize:13,fontWeight:700,color:p.status==='WIN'?'var(--correct)':p.status==='LOSE'?'var(--wrong)':'var(--muted)' }}>
-                {p.status==='WIN'?'勝ち抜け':p.status==='LOSE'?'失格':scoreLabel(p,ruleId)}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
-          {isHost && !isMatchmakingGame.current && (
-            <button onClick={resetGame} style={{ width:'100%',padding:'15px',background:'linear-gradient(135deg,var(--accent),var(--accent2))',color:'#fff',borderRadius:12,fontSize:15,fontWeight:700,border:'none',boxShadow:'0 4px 16px rgba(99,102,241,0.35)' }}>
-              もう一度遊ぶ
-            </button>
-          )}
-          <button onClick={() => navigate('/')} style={{ width:'100%',padding:'15px',background:'var(--surface)',color:'var(--text)',borderRadius:12,fontSize:15,fontWeight:700,border:'1px solid var(--border)' }}>
-            トップに戻る
-          </button>
-        </div>
-      </div>
     </div>
   )
 
   const progress = totalQuestions > 0 ? (currentQuestionIndex / totalQuestions) * 100 : 0
+  const questionCls = `qg__q${phase === 'answering' ? ' qg__q--answering' : phase === 'result' && lastJudgement === 'correct' ? ' qg__q--ok' : phase === 'result' && lastJudgement === 'incorrect' ? ' qg__q--ng' : ''}`
 
   /* ゲーム */
   return (
     <>
-    <div style={{ minHeight:'100dvh',display:'flex',flexDirection:'column',maxWidth:'var(--w)',margin:'0 auto',
-      animation: screenFlash ? `${screenFlash==='correct'?'correctFlash':'wrongFlash'} 0.6s ease` : undefined,
-      paddingBottom: phase==='question' ? 160 : 0 }}>
-      {/* ヘッダー */}
-      <div style={{ background:'var(--surface)',borderBottom:'1px solid var(--border)' }}>
-        <div style={{ height:3,background:'var(--border)',overflow:'hidden' }}>
-          <div style={{ height:'100%',width:`${progress}%`,
-            background:'linear-gradient(90deg,var(--accent),var(--gold),var(--accent))',
-            backgroundSize:'200% 100%',
-            animation:'progressBar 2s linear infinite',
-            transition:'width .5s ease' }}/>
-        </div>
-        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 20px' }}>
-          <span style={{ fontFamily:'Orbitron,sans-serif',fontWeight:700,fontSize:14 }}>
-            Q.{currentQuestionIndex+1}<span style={{ color:'var(--muted)',fontWeight:400,fontSize:12 }}> / {totalQuestions}</span>
-          </span>
-          <span style={{ fontSize:11,color:'var(--muted)',fontWeight:600,letterSpacing:1 }}>{ruleId.toUpperCase()}</span>
-          {showCD && (
-            <div style={{ fontFamily:'Orbitron,sans-serif',fontSize:20,fontWeight:900,
-              color:urgent?'var(--wrong)':'var(--gold)',
-              padding:'4px 12px',borderRadius:8,
-              background:urgent?'rgba(244,63,94,0.12)':'rgba(251,191,36,0.1)',
-              border:`1px solid ${urgent?'rgba(244,63,94,0.3)':'rgba(251,191,36,0.2)'}`,
-              animation: urgent ? 'urgentPulse 0.4s ease infinite' : undefined,
-              transition:'all .3s' }}>
-              {countdown}
-            </div>
-          )}
-        </div>
-      </div>
-      {players.length === 2 && <VSHud players={players} myId={myId} ruleId={ruleId} />}
-
-      <div style={{ flex:1,width:'100%',padding:'16px 20px 40px',display:'flex',flexDirection:'column',gap:12 }}>
-
-        {/* 問題文 */}
-        <div style={{ background:'var(--surface)',borderRadius:14,padding:'22px 20px',minHeight:96,
-          boxShadow: phase==='answering' ? '0 0 0 2px var(--accent), 0 0 24px rgba(124,58,237,0.2)' : phase==='result' && lastJudgement==='correct' ? '0 0 0 2px var(--correct)' : phase==='result' && lastJudgement==='incorrect' ? '0 0 0 2px var(--wrong)' : '0 0 0 1px var(--border)' }}>
-          <p style={{ fontSize:20,lineHeight:1.8,fontWeight:500 }}>{shownText||'\u00A0'}</p>
-        </div>
-
-        {/* 早押し：画面下部固定 */}
-        {phase==='question' && (
-          <div style={{ position:'fixed', bottom:0, left:0, right:0, padding:'12px 16px',
-            paddingBottom:'calc(12px + env(safe-area-inset-bottom))',
-            background:'linear-gradient(to top, var(--bg) 80%, transparent)',
-            zIndex:100 }}>
-            <button onClick={handleBuzz}
-              style={{ width:'100%', height:120,
-                background:'linear-gradient(135deg,var(--buzz),#f97316)',
-                color:'#fff',borderRadius:20,fontSize:28,fontWeight:900,
-                boxShadow:'0 8px 32px rgba(244,63,94,0.5)',
-                letterSpacing:2,
-                animation: buzzAnim ? 'buzzPop 0.35s cubic-bezier(.34,1.56,.64,1)' : undefined,
-                transition:'box-shadow 0.15s,transform 0.1s',
-                WebkitTapHighlightColor:'transparent',
-                userSelect:'none',
-              }}>
-              ⚡ 早押し！
-            </button>
+      <div className={`qg${screenFlash ? ` qg--${screenFlash}` : ''}`}>
+        <header className="qg__head">
+          <div className="qg__progress"><i style={{ width: `${progress}%` }} /></div>
+          <div className="qg__bar">
+            <span className="qg__qno">Q.{currentQuestionIndex + 1}<small> / {totalQuestions}</small></span>
+            <span className="qg__rule">{ruleId.toUpperCase()}</span>
+            {showCD && <div className={`qg__timer${urgent ? ' qg__timer--urgent' : ''}`} role="timer" aria-label="残り秒数">{countdown}</div>}
+            <RoomChat myId={myId} inline />
           </div>
-        )}
+        </header>
+        {players.length === 2 && <div className="qg-narrow"><VSHud players={players} myId={myId} ruleId={ruleId} /></div>}
 
-        {/* 解答 */}
-        {phase==='answering' && (
-          <div style={{ background:'var(--surface)',borderRadius:14,padding:'18px 20px',
-            animation:'slideUp 0.3s ease both',
-            border: isBuzzed ? '2px solid var(--accent)' : '1px solid var(--border)',
-            boxShadow: isBuzzed ? '0 0 20px rgba(99,102,241,0.25)' : undefined,
-            position: isBuzzed ? 'sticky' : undefined,
-            bottom: isBuzzed ? 8 : undefined }}>
-            <p style={{ fontWeight:700,fontSize:15,marginBottom:isBuzzed?14:0,color:isBuzzed?'var(--accent)':'var(--muted)' }}>
-              {isBuzzed?'⚡ あなたの番！':`⏳ ${buzzedPlayerName} が解答中...`}
-            </p>
-            {isBuzzed && (
-              <div style={{ display:'flex',flexDirection:'column',gap:10,animation:'shake 0.3s ease' }}>
-                <input ref={inputRef} value={answer} onChange={e=>setAnswer(e.target.value)}
-                  onCompositionStart={()=>{ isComposing.current=true }}
-                  onCompositionEnd={e=>{ isComposing.current=false; setAnswer((e.target as HTMLInputElement).value) }}
-                  onKeyDown={e=>{ if(e.key==='Enter'&&!e.nativeEvent.isComposing) submit() }}
-                  placeholder="ひらがなで入力"
-                  autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false}
-                  style={{ width:'100%',padding:'14px 16px',background:'var(--surface2)',border:'2px solid var(--accent)',borderRadius:12,fontSize:18,color:'var(--text)',boxSizing:'border-box' }}/>
-                <button onClick={submit}
-                  style={{ width:'100%',padding:'16px',background:'linear-gradient(135deg,var(--accent),var(--accent2))',
-                    color:'#fff',borderRadius:12,fontSize:18,fontWeight:900,
-                    boxShadow:'0 4px 20px rgba(99,102,241,0.4)',
-                    WebkitTapHighlightColor:'transparent' }}>
-                  送信 →
-                </button>
+        <div className={`qg__body${phase === 'question' ? ' qg__body--buzz' : ''}`}>
+          <div className="qg__layout">
+            <div className="qg__main">
+              {/* 問題文 */}
+              <div className={questionCls}>
+                <p>{shownText || '\u00A0'}</p>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* 結果 */}
-        {phase==='result' && (()=>{
-          const ok=lastJudgement==='correct', sk=lastJudgement==='skip'
-          const answerer = players.find(p=>p.id===roomState.lastAnswerPlayerId)
-          return (
-            <div style={{ background:'var(--surface)',borderRadius:14,padding:'24px 20px',textAlign:'center',
-              borderLeft:`4px solid ${ok?'var(--correct)':sk?'var(--muted)':'var(--wrong)'}`,
-              animation: resultAnim ? 'resultIn 0.45s cubic-bezier(.34,1.56,.64,1) both' : undefined,
-              boxShadow: ok ? '0 0 30px rgba(16,185,129,0.2)' : !sk ? '0 0 30px rgba(244,63,94,0.15)' : undefined }}>
-              <div style={{ fontSize:52,marginBottom:8,
-                filter: ok ? 'drop-shadow(0 0 12px rgba(16,185,129,0.6))' : !sk ? 'drop-shadow(0 0 12px rgba(244,63,94,0.5))' : undefined }}>
-                {ok?'⭕':sk?'⏭':'❌'}
-              </div>
-              <p style={{ fontSize:22,fontWeight:900,color:ok?'var(--correct)':sk?'var(--muted)':'var(--wrong)',marginBottom:6 }}>
-                {ok?'正解！':sk?'スルー':'不正解'}
-              </p>
-              {!sk&&answerer&&<p style={{ color:'var(--muted)',fontSize:13,marginBottom:8 }}>{answerer.name}</p>}
-              {!sk&&answerer&&answerer.status!=='ACTIVE'&&(
-                <p style={{ fontSize:13,fontWeight:700,color:answerer.status==='WIN'?'var(--correct)':'var(--wrong)',marginBottom:8,
-                  animation:'winStar 0.5s cubic-bezier(.34,1.56,.64,1) both' }}>
-                  {answerer.status==='WIN'?'🎉 勝ち抜け！':'💀 失格'}
-                </p>
+              {/* 早押し: スマホは画面下に固定、PC は問題の下 */}
+              {phase === 'question' && (
+                <div className="qg__buzzbar">
+                  <Button variant="buzz" className={`qg__buzz${buzzAnim ? ' qg__buzz--pop' : ''}`} onClick={handleBuzz} aria-keyshortcuts="Space">
+                    <Icon name="zap" size={30} />早押し！
+                  </Button>
+                  <p className="qg__hint qg-wide">スペースキーでも押せます</p>
+                </div>
               )}
-              <div style={{ background:'var(--surface2)',borderRadius:8,padding:'8px 20px',display:'inline-block',marginTop:4 }}>
-                <span style={{ color:'var(--muted)',fontSize:13 }}>答え：</span>
-                <span style={{ fontWeight:900,fontSize:18 }}>{currentQuestion?.displayAnswer}</span>
+
+              {/* 解答 */}
+              {phase === 'answering' && (
+                <div className={`qg__answer${isBuzzed ? ' qg__answer--mine' : ''}`} role="status">
+                  <h2>
+                    {isBuzzed ? <><Icon name="zap" size={18} />あなたの番！</> : <><Icon name="hourglass" size={18} />{buzzedPlayerName} が解答中...</>}
+                  </h2>
+                  {isBuzzed && (
+                    <div className="qg__answerform">
+                      <input ref={inputRef} className="qg__input" value={answer} onChange={e => setAnswer(e.target.value)} aria-label="解答"
+                        onCompositionStart={() => { isComposing.current = true }}
+                        onCompositionEnd={e => { isComposing.current = false; setAnswer((e.target as HTMLInputElement).value) }}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit() }}
+                        placeholder="ひらがなで入力"
+                        autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} />
+                      <Button variant="primary" size="lg" block onClick={submit}>送信<Icon name="arrow-right" size={20} /></Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 結果 */}
+              {phase === 'result' && (() => {
+                const ok = lastJudgement === 'correct', sk = lastJudgement === 'skip'
+                const answerer = players.find(p => p.id === roomState.lastAnswerPlayerId)
+                return (
+                  <div className={`qg__result qg__result--${ok ? 'ok' : sk ? 'skip' : 'ng'}${resultAnim ? ' qg__result--in' : ''}`} role="status">
+                    <Icon className="qg__mark" name={ok ? 'circle' : sk ? 'skip' : 'x'} size={56} strokeWidth={2.4} />
+                    <h2>{ok ? '正解！' : sk ? 'スルー' : '不正解'}</h2>
+                    {!sk && answerer && <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 8 }}>{answerer.name}</p>}
+                    {!sk && answerer && answerer.status !== 'ACTIVE' && (
+                      <p className={`qg__status ${answerer.status === 'WIN' ? 'is-win' : 'is-lose'}`}>
+                        {answerer.status === 'WIN' ? <><Icon name="sparkles" size={16} />勝ち抜け！</> : <><Icon name="skull" size={16} />失格</>}
+                      </p>
+                    )}
+                    <div className="qg__rightans">
+                      <span style={{ color: 'var(--muted)', fontSize: 13 }}>答え：</span>
+                      <b>{currentQuestion?.displayAnswer}</b>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* スマホ: スタンプと、3 人以上のスコア */}
+              <div className="qg-narrow">
+                <StampPicker onSend={sendStamp} />
+                {players.length > 2 && (
+                  <div className="qs-panel" style={{ marginTop: 12 }}>
+                    <h3>Score</h3>
+                    <Board players={sorted} myId={myId} ruleId={ruleId} />
+                  </div>
+                )}
               </div>
-
             </div>
-          )
-        })()}
 
-        {/* スコア（多人数のみ）*/}
-        {players.length > 2 && (
-          <div>
-            <p style={{ fontSize:11,fontWeight:700,letterSpacing:2,color:'var(--muted)',marginBottom:10,textTransform:'uppercase' }}>Score</p>
-            <Board players={sorted} myId={myId} ruleId={ruleId}/>
+            {/* PC: 右カラム */}
+            <aside className="qg__side qg-wide" aria-label="対戦者とスタンプ">
+              <div className="qs-panel">
+                <h3>Players</h3>
+                <Board players={sorted} myId={myId} ruleId={ruleId} />
+              </div>
+              <div className="qs-panel">
+                <h3>Stamp</h3>
+                <StampPicker onSend={sendStamp} />
+              </div>
+            </aside>
           </div>
-        )}
-      </div>
-    </div>
-    {/* スタンプ */}
-    <div style={{ position:'fixed', bottom: 80, right: 16, zIndex: 300, display:'flex', flexDirection:'column', gap:6 }}>
-      {['👍','👏','🔥','💪','😲','🤔','😭','🎉'].map(s => (
-        <button key={s} onClick={() => sendStamp(s)}
-          style={{ width:44, height:44, borderRadius:'50%', border:'none', background:'var(--surface)', boxShadow:'0 2px 8px rgba(0,0,0,0.3)', fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          {s}
-        </button>
-      ))}
-    </div>
-    {/* スタンプ表示 */}
-    <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:400, overflow:'hidden' }}>
-      {stamps.map(s => (
-        <div key={s.id} style={{ position:'absolute', left:'50%', top:'30%', transform:'translateX(-50%)', textAlign:'center', animation:'stampPop 3s ease-out forwards' }}>
-          <div style={{ fontSize:64 }}>{s.stamp}</div>
-          <p style={{ fontSize:13, fontWeight:800, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.8)', marginTop:4 }}>{s.fromName}</p>
         </div>
-      ))}
-    </div>
-    <RoomChat myId={myId} />
+      </div>
+
+      {/* スタンプ表示 */}
+      <div className="qg__stampfx" aria-hidden="true">
+        {stamps.map(s => {
+          const st = resolveStamp(s.stamp)
+          return st ? (
+            <div key={s.id}>
+              <Icon name={st.icon} size={64} strokeWidth={1.6} />
+              <p>{s.fromName}</p>
+            </div>
+          ) : null
+        })}
+      </div>
     </>
   )
 }
-
