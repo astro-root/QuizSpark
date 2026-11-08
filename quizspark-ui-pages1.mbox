@@ -1,0 +1,865 @@
+From 22449f6ac209f053962db2f1169baef52bd3b1fb Mon Sep 17 00:00:00 2001
+From: QuizSpark Dev <dev@quizspark.local>
+Date: Fri, 6 Nov 2026 13:35:36 +0000
+Subject: [PATCH] feat(ui): redesigned Home, Ranking and My Page shell; fix
+ auth loading bug
+
+Home: two-column on desktop (cards + sticky profile card), stacked on mobile; accessible login/register dialog
+(labels, role=dialog, autocomplete, role=alert); no emoji; theme/notification/admin use labelled IconButtons.
+Ranking: rows are real buttons; tier shown with SVG icons; rank bands in src/lib/rank.ts (checked against server).
+My Page: header card with avatar, @id, rank chip and rate; tabs are a proper tablist with SVG icons.
+
+Bug fix: Home and My Page read 'authLoading' from useAuth(), which does not exist (the context exposes 'loading'),
+so (a) logged-in users saw the login dialog flash on load and (b) reloading /profile redirected to home before the
+user was fetched. Regression guard test added. Also: User type gains email/rate/titleId; removed dead quickJoin().
+Docs finding: HelpPage rank table disagrees with the server thresholds (to be fixed with the Help page).
+Emoji baseline 131 -> 120.
+---
+ src/context/AuthContext.tsx |   2 +-
+ src/index.css               |   1 +
+ src/lib/rank.ts             |  27 ++++
+ src/pages/HomePage.tsx      | 260 ++++++++++++++----------------------
+ src/pages/ProfilePage.tsx   |  61 ++++-----
+ src/pages/RankingPage.tsx   | 111 ++++++++-------
+ src/styles/pages.css        | 107 +++++++++++++++
+ tests/pages.test.ts         |  51 +++++++
+ tests/ui.test.ts            |   2 +-
+ 9 files changed, 371 insertions(+), 251 deletions(-)
+ create mode 100644 src/lib/rank.ts
+ create mode 100644 src/styles/pages.css
+ create mode 100644 tests/pages.test.ts
+
+diff --git a/src/context/AuthContext.tsx b/src/context/AuthContext.tsx
+index 5657234..70a99ec 100644
+--- a/src/context/AuthContext.tsx
++++ b/src/context/AuthContext.tsx
+@@ -1,7 +1,7 @@
+ import { apiFetch } from '../lib/api'
+ import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+ 
+-interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string }
++interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string; email?: string; rate?: number; titleId?: string | null }
+ 
+ interface AuthCtx {
+   user: User | null
+diff --git a/src/index.css b/src/index.css
+index fb5af29..acffc7f 100644
+--- a/src/index.css
++++ b/src/index.css
+@@ -1,6 +1,7 @@
+ @import './styles/tokens.css';
+ @import './styles/ui.css';
+ @import './styles/layout.css';
++@import './styles/pages.css';
+ 
+ *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+diff --git a/src/lib/rank.ts b/src/lib/rank.ts
+new file mode 100644
+index 0000000..1321db8
+--- /dev/null
++++ b/src/lib/rank.ts
+@@ -0,0 +1,27 @@
++import type { IconName } from '../components/ui/iconPaths'
++
++/**
++ * ランク帯の表示用定義。基準値は server/routes/ranking.ts の getRankLabel が正で、
++ * tests/pages.test.ts が両者の一致を検査する。
++ */
++export interface RankBand { label: string; min: number; max: number | null; color: string; icon: IconName }
++
++export const RANK_BANDS: readonly RankBand[] = [
++  { label: 'ブロンズ', min: 0,    max: 599,  color: '#b45309', icon: 'medal' },
++  { label: 'シルバー', min: 600,  max: 899,  color: '#cbd5e1', icon: 'medal' },
++  { label: 'ゴールド', min: 900,  max: 1199, color: '#f59e0b', icon: 'medal' },
++  { label: 'プラチナ', min: 1200, max: 1499, color: '#94a3b8', icon: 'circle' },
++  { label: 'ダイヤ',   min: 1500, max: 1999, color: '#38bdf8', icon: 'gem' },
++  { label: 'マスター', min: 2000, max: null, color: '#a855f7', icon: 'crown' },
++]
++
++export const bandRange = (b: RankBand) => (b.max == null ? `${b.min}〜` : `${b.min}〜${b.max}`)
++
++export function bandForRate(rate: number): RankBand {
++  for (let i = RANK_BANDS.length - 1; i >= 0; i--) if (rate >= RANK_BANDS[i].min) return RANK_BANDS[i]
++  return RANK_BANDS[0]
++}
++
++export function bandForLabel(label: string): RankBand {
++  return RANK_BANDS.find(b => b.label === label) ?? RANK_BANDS[0]
++}
+diff --git a/src/pages/HomePage.tsx b/src/pages/HomePage.tsx
+index 04a3dd2..e00a77b 100644
+--- a/src/pages/HomePage.tsx
++++ b/src/pages/HomePage.tsx
+@@ -1,13 +1,13 @@
+ import { getTitleById } from '../lib/titles'
++import { bandForRate } from '../lib/rank'
+ import { apiFetch } from '../lib/api'
+ import { useEffect, useState } from 'react'
+ import { useNavigate } from 'react-router-dom'
+-import { useSocketContext } from '../context/SocketContext'
+ import { useAuth } from '../context/AuthContext'
+ import { useTheme } from '../context/ThemeContext'
+-import { Shuffle, Users, Sun, Moon, Settings, Swords, Zap, Star, Bell } from 'lucide-react'
+ import MatchmakingModal from '../components/MatchmakingModal'
+ import AppHeader from '../components/AppHeader'
++import { Avatar, Button, Chip, Icon, IconButton } from '../components/ui'
+ 
+ export default function HomePage() {
+   const [showAuth, setShowAuth] = useState(false)
+@@ -21,10 +21,11 @@ export default function HomePage() {
+   const [announcements, setAnnouncements] = useState<{id:number;title:string;body:string}[]>([])
+   const [stats, setStats] = useState({ total: 0, wins: 0, correct: 0 })
+   const [unread, setUnread] = useState(0)
+-  const { user, authLoading, loginWithPassword, loginWithGoogle, register, logout } = useAuth()
++  // 注意: AuthContext が公開しているのは `loading`。以前は存在しない `authLoading`(常に undefined)を読んでいたため、
++  //       ログイン済みでも読み込み中にログイン画面が一瞬開いていた。
++  const { user, loading: authLoading, loginWithPassword, loginWithGoogle, register } = useAuth()
+   const { theme, toggle: toggleTheme } = useTheme()
+   const navigate = useNavigate()
+-  const { joinRoom, createRoom } = useSocketContext()
+ 
+   useEffect(() => {
+     apiFetch('/api/announcements').then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
+@@ -58,185 +59,131 @@ export default function HomePage() {
+     else setShowAuth(false)
+   }
+ 
+-  async function quickJoin(roomId: string) {
+-    if (!user) { setShowAuth(true); return }
+-    const err = await joinRoom(roomId, user.name)
+-    if (!err) navigate('/room/' + roomId)
+-  }
+-
+-  if (authLoading) return (
+-    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--muted)', maxWidth: 'var(--w)', margin: '0 auto' }}>読み込み中...</div>
+-  )
++  if (authLoading) return <div className="qg-center" role="status" style={{ color: 'var(--muted)' }}>読み込み中...</div>
+ 
+   const headerRight = (
+-    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+-      {user && (
+-        <button onClick={() => navigate('/notifications')}
+-          style={{ background:'none', border:'none', padding:8, color:'var(--muted)', display:'flex', cursor:'pointer', position:'relative' }}>
+-          <Bell size={18} />
+-          {unread > 0 && <span style={{ position:'absolute', top:4, right:4, width:8, height:8, borderRadius:'50%', background:'var(--buzz)' }} />}
+-        </button>
+-      )}
+-      {(user as any)?.isAdmin && (
+-        <button onClick={() => navigate('/admin')}
+-          style={{ background: 'none', border: 'none', padding: 8, color: 'var(--accent)', display: 'flex' }}>
+-          <Settings size={18} />
+-        </button>
+-      )}
+-      <button onClick={toggleTheme}
+-        style={{ background: 'none', border: 'none', padding: 8, color: 'var(--muted)', display: 'flex' }}>
+-        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+-      </button>
+-    </div>
++    <>
++      {user && <IconButton icon="bell" label={unread > 0 ? `通知(未読${unread}件)` : '通知'} badge={unread} onClick={() => navigate('/notifications')} />}
++      {user?.isAdmin && <IconButton icon="settings" label="管理画面" onClick={() => navigate('/admin')} />}
++      <IconButton icon={theme === 'dark' ? 'sun' : 'moon'} label={theme === 'dark' ? 'ライトテーマに切り替え' : 'ダークテーマに切り替え'} onClick={toggleTheme} />
++    </>
+   )
+ 
++  const onEnter = (e: React.KeyboardEvent) => { if (e.key === 'Enter') handleAuth() }
++  const band = bandForRate(user?.rate ?? 0)
++
+   return (
+-    <div className='page'>
++    <div className="page">
+       <AppHeader right={headerRight} />
+ 
+-      <div className='inner' style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
++      <main className="qh">
++        <div className="qh__main">
++          {user && (
++            <h1 className="qh__greet qs-hide-mobile">
++              おかえりなさい、{user.name}
++              <small>今日も一問、早押ししよう。</small>
++            </h1>
++          )}
++
++          {/* 対戦の入口 */}
++          <div className="qh__cards">
++            <button className="qh-card qh-card--random" onClick={() => user ? setShowMatchmaking(true) : setShowAuth(true)}>
++              <span className="qh-card__icon"><Icon name="zap" size={28} strokeWidth={2.4} /></span>
++              <span className="qh-card__text"><b>ランダムマッチ</b><small>レーティング戦・今すぐ対戦</small></span>
++              <Icon name="arrow-right" size={20} />
++            </button>
++            <button className="qh-card qh-card--free" onClick={() => navigate('/lobby')}>
++              <span className="qh-card__icon"><Icon name="swords" size={28} strokeWidth={2.4} /></span>
++              <span className="qh-card__text"><b>フリーマッチ</b><small>ルーム作成・フレンドと対戦</small></span>
++              <Icon name="arrow-right" size={20} />
++            </button>
++          </div>
+ 
+-        {/* プレイヤーHUD */}
+-        {user && (
+-          <div style={{ position: 'relative', padding: '16px', background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--border)', overflow: 'hidden' }}>
+-            <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle,rgba(124,58,237,0.18) 0%,transparent 70%)' }} />
+-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+-              <div style={{ position: 'relative', flexShrink: 0 }}>
+-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--accent),var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: '#fff', overflow: 'hidden', boxShadow: '0 0 0 3px rgba(124,58,237,0.35)' }}>
+-                  {user.avatarUrl ? <img src={user.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : user.name[0]}
+-                </div>
+-              </div>
+-              <div style={{ flex: 1 }}>
+-                <p style={{ fontWeight: 900, fontSize: 16, marginBottom: 2 }}>{user.name}</p>
+-                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', background: 'rgba(124,58,237,0.15)', padding: '2px 8px', borderRadius: 20 }}>{getTitleById((user as any)?.titleId).label}</span>
+-              </div>
+-              <div style={{ textAlign: 'right' }}>
+-                <p style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, letterSpacing: 1 }}>RATE</p>
+-                <p style={{ fontSize: 26, fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>{(user as any)?.rate ?? 0}</p>
+-              </div>
+-            </div>
+-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+-              {[
+-                { label: '対戦', value: stats.total },
+-                { label: '勝利', value: stats.wins },
+-                { label: '正解', value: stats.correct },
+-              ].map(s => (
+-                <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '8px 4px', background: 'var(--surface2)', borderRadius: 10 }}>
+-                  <p style={{ fontSize: 16, fontWeight: 900 }}>{s.value}</p>
+-                  <p style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700 }}>{s.label}</p>
++          {/* お知らせ */}
++          {announcements.length > 0 && (
++            <section className="qh-news" aria-label="お知らせ">
++              <h2><Icon name="megaphone" size={14} />お知らせ</h2>
++              {announcements.map(a => (
++                <div key={a.id} className="qh-news__item">
++                  <b>{a.title}</b>
++                  <p>{a.body}</p>
+                 </div>
+               ))}
+-            </div>
+-          </div>
+-        )}
+-
+-        {/* バトルボタン */}
+-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+-          <button onClick={() => user ? setShowMatchmaking(true) : setShowAuth(true)}
+-            style={{ width: '100%', padding: '0', borderRadius: 20, border: 'none', cursor: 'pointer', overflow: 'hidden', position: 'relative',
+-              background: 'linear-gradient(135deg,#4c1d95,#7c3aed,#a855f7)',
+-              boxShadow: '0 8px 32px rgba(124,58,237,0.45)' }}>
+-            <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+-            <div style={{ position: 'absolute', bottom: -20, left: 20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 24px', position: 'relative' }}>
+-              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+-                <Shuffle size={26} color="#fff" strokeWidth={2.5} />
+-              </div>
+-              <div style={{ textAlign: 'left', flex: 1 }}>
+-                <p style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 0.5 }}>ランダムマッチ</p>
+-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 3 }}>レーティング戦・今すぐ対戦</p>
+-              </div>
+-              <Zap size={20} color="rgba(255,255,255,0.5)" />
+-            </div>
+-          </button>
++            </section>
++          )}
++        </div>
+ 
+-          <button onClick={() => navigate('/lobby')}
+-            style={{ width: '100%', padding: '0', borderRadius: 20, border: 'none', cursor: 'pointer', overflow: 'hidden', position: 'relative',
+-              background: 'linear-gradient(135deg,#064e3b,#0f766e,#14b8a6)',
+-              boxShadow: '0 8px 32px rgba(20,184,166,0.3)' }}>
+-            <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 24px', position: 'relative' }}>
+-              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+-                <Swords size={26} color="#fff" strokeWidth={2.5} />
++        {/* 自分のカード */}
++        {user && (
++          <aside className="qh__hud" aria-label="あなたの成績">
++            <div className="qh-me">
++              <div className="qh-me__top">
++                <Avatar name={user.name} src={user.avatarUrl} size={56} />
++                <div style={{ minWidth: 0 }}>
++                  <p className="qh-me__name">{user.name}</p>
++                  <div className="qh-me__chips">
++                    <Chip>{getTitleById(user.titleId).label}</Chip>
++                    <Chip tone="gold" icon={band.icon}>{band.label}</Chip>
++                  </div>
++                </div>
++                <div className="qh-me__rate"><small>RATE</small><b>{user.rate ?? 0}</b></div>
+               </div>
+-              <div style={{ textAlign: 'left', flex: 1 }}>
+-                <p style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 0.5 }}>フリーマッチ</p>
+-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 3 }}>ルーム作成・フレンドと対戦</p>
++              <div className="qh-stats">
++                {[
++                  { label: '対戦', value: stats.total },
++                  { label: '勝利', value: stats.wins },
++                  { label: '正解', value: stats.correct },
++                ].map(s => (
++                  <div key={s.label} className="qh-stat"><b>{s.value}</b><small>{s.label}</small></div>
++                ))}
+               </div>
+-              <Star size={20} color="rgba(255,255,255,0.5)" />
++              <Button block onClick={() => navigate('/profile')} icon="user">マイページを開く</Button>
+             </div>
+-          </button>
+-        </div>
+-
+-        {/* お知らせ */}
+-        {announcements.length > 0 && (
+-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: 1, textTransform: 'uppercase' }}>📢 お知らせ</p>
+-            {announcements.map(a => (
+-              <div key={a.id} style={{ padding: '12px 14px', background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 12 }}>
+-                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>{a.title}</p>
+-                <p style={{ fontSize: 12, color: 'var(--sub)' }}>{a.body}</p>
+-              </div>
+-            ))}
+-          </div>
++          </aside>
+         )}
++      </main>
+ 
+-
+-
+-      </div>
+-
+-      {/* Auth Modal */}
++      {/* ログイン / 新規登録 */}
+       {showAuth && (
+-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 }}
+-          onClick={e => { if (e.target === e.currentTarget && user) setShowAuth(false) }}>
+-          <div style={{ width: '100%', maxWidth: 380, background: 'var(--surface)', borderRadius: 20, padding: '28px 24px' }}>
+-            <p style={{ fontWeight: 900, fontSize: 17, marginBottom: 4 }}>QuizSparkへようこそ</p>
+-            <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20 }}>ゲームに参加するにはアカウントが必要です</p>
+-            <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 10, padding: 4, gap: 4, marginBottom: 20 }}>
++        <div className="qa" onClick={e => { if (e.target === e.currentTarget && user) setShowAuth(false) }}>
++          <div className="qa__box" role="dialog" aria-modal="true" aria-labelledby="qa-title">
++            <h2 id="qa-title">QuizSparkへようこそ</h2>
++            <p className="qa__sub">ゲームに参加するにはアカウントが必要です</p>
++            <div className="qa__tabs" role="tablist" aria-label="ログインと新規登録">
+               {(['login','register'] as const).map(t => (
+-                <button key={t} onClick={() => { setAuthTab(t); setAuthError('') }}
+-                  style={{ flex: 1, padding: '9px', borderRadius: 8, fontSize: 14, fontWeight: 700,
+-                    background: authTab === t ? 'var(--accent)' : 'transparent',
+-                    color: authTab === t ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer' }}>
++                <button key={t} role="tab" aria-selected={authTab === t} onClick={() => { setAuthTab(t); setAuthError('') }}>
+                   {t === 'login' ? 'ログイン' : '新規登録'}
+                 </button>
+               ))}
+             </div>
+             {authTab === 'register' && (
+               <>
+-              <div style={{ marginBottom: 14 }}>
+-                <p style={lbl}>名前</p>
+-                <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="ニックネーム" style={inp} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
+-              </div>
+-              <div style={{ marginBottom: 14 }}>
+-                <p style={lbl}>ユーザーID（@ID）<span style={{ color: 'var(--wrong)', marginLeft: 4 }}>必須</span></p>
+-                <div style={{ position: 'relative' }}>
+-                  <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', fontSize: 15 }}>@</span>
+-                  <input value={authUsername} onChange={e => setAuthUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} placeholder="your_id" style={{ ...inp, paddingLeft: 28 }} onKeyDown={e => e.key === 'Enter' && handleAuth()} maxLength={20} />
++                <label className="qa__field">
++                  <span>名前</span>
++                  <input className="qa__input" value={authName} onChange={e => setAuthName(e.target.value)} placeholder="ニックネーム" autoComplete="nickname" onKeyDown={onEnter} />
++                </label>
++                <div className="qa__field">
++                  <label htmlFor="qa-username"><span style={{ display: 'block', marginBottom: 8, fontSize: 12, fontWeight: 700, color: 'var(--sub)' }}>ユーザーID(@ID)<em>必須</em></span></label>
++                  <div className="qa__at">
++                    <input id="qa-username" className="qa__input" value={authUsername} onChange={e => setAuthUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} placeholder="your_id" autoComplete="username" onKeyDown={onEnter} maxLength={20} />
++                  </div>
++                  <p className="qa__hint">3〜20文字・英数字とアンダースコアのみ</p>
+                 </div>
+-                <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>3〜20文字・英数字とアンダースコアのみ</p>
+-              </div>
+               </>
+             )}
+-            <div style={{ marginBottom: 14 }}>
+-              <p style={lbl}>メールアドレス</p>
+-              <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="メールアドレス または @ユーザーID" style={inp} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
++            <label className="qa__field">
++              <span>メールアドレス</span>
++              <input className="qa__input" type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="メールアドレス または @ユーザーID" autoComplete="email" onKeyDown={onEnter} />
++            </label>
++            <label className="qa__field">
++              <span>パスワード{authTab === 'register' ? '(8文字以上)' : ''}</span>
++              <input className="qa__input" type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="••••••••" autoComplete={authTab === 'login' ? 'current-password' : 'new-password'} onKeyDown={onEnter} />
++            </label>
++            {authError && <p className="qa__error" role="alert">{authError}</p>}
++            <div className="qa__actions">
++              <Button variant="primary" size="lg" block onClick={handleAuth}>{authTab === 'login' ? 'ログイン' : '登録する'}</Button>
++              <Button block icon="key" onClick={loginWithGoogle}>Googleでログイン</Button>
+             </div>
+-            <div style={{ marginBottom: 16 }}>
+-              <p style={lbl}>パスワード{authTab === 'register' ? '（8文字以上）' : ''}</p>
+-              <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="••••••••" style={inp} onKeyDown={e => e.key === 'Enter' && handleAuth()} />
+-            </div>
+-            {authError && <p style={{ color: 'var(--wrong)', fontSize: 13, marginBottom: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: 8 }}>{authError}</p>}
+-            <button onClick={handleAuth}
+-              style={{ width: '100%', padding: '14px', borderRadius: 10, fontSize: 15, fontWeight: 900,
+-                background: 'linear-gradient(135deg,var(--accent),var(--accent2))', color: '#fff', marginBottom: 10, border: 'none', cursor: 'pointer' }}>
+-              {authTab === 'login' ? 'ログイン' : '登録する'}
+-            </button>
+-            <button onClick={loginWithGoogle}
+-              style={{ width: '100%', padding: '12px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+-                background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+-              🔑 Googleでログイン
+-            </button>
+           </div>
+         </div>
+       )}
+@@ -245,6 +192,3 @@ export default function HomePage() {
+     </div>
+   )
+ }
+-
+-const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }
+-const inp: React.CSSProperties = { width: '100%', padding: '13px 16px', background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 10, fontSize: 16, color: 'var(--text)' }
+diff --git a/src/pages/ProfilePage.tsx b/src/pages/ProfilePage.tsx
+index 8b0635b..8841034 100644
+--- a/src/pages/ProfilePage.tsx
++++ b/src/pages/ProfilePage.tsx
+@@ -1,16 +1,16 @@
+ import { useEffect } from 'react'
+ import { useNavigate } from 'react-router-dom'
+ import { useAuth } from '../context/AuthContext'
+-import { useTheme } from '../context/ThemeContext'
+ import AppHeader from '../components/AppHeader'
+-import { User, Trophy } from 'lucide-react'
++import { Avatar, Chip, Icon, type IconName } from '../components/ui'
++import { bandForRate } from '../lib/rank'
+ import ProfileTab from '../components/profile/ProfileTab'
+ import RecordsTab from '../components/profile/RecordsTab'
+ import QuestionHistoryTab from '../components/profile/QuestionHistoryTab'
+ import GenreRadarTab from '../components/profile/GenreRadarTab'
+ import TitleSelectTab from '../components/profile/TitleSelectTab'
+ import { apiFetch } from '../lib/api'
+-import { useState, useEffect } from 'react'
++import { useState } from 'react'
+ 
+ type Tab = 'profile' | 'records' | 'history' | 'title' | 'genre'
+ 
+@@ -21,8 +21,9 @@ export default function ProfilePage() {
+       if (d) setStats({ rate: d.rate ?? 0, total: d.stats.total, wins: d.stats.wins, correct: d.stats.totalCorrect })
+     }).catch(() => {})
+   }, [])
+-  const { user, authLoading } = useAuth()
+-  const { theme, toggle: toggleTheme } = useTheme()
++  // 注意: 公開されているのは `loading`。以前は存在しない `authLoading`(常に undefined)を読んでいたため、
++  //       /profile を再読み込みすると、ユーザー取得前にホームへ戻されていた。
++  const { user, loading: authLoading } = useAuth()
+   const navigate = useNavigate()
+   const [tab, setTab] = useState<Tab>('profile')
+ 
+@@ -33,46 +34,40 @@ export default function ProfilePage() {
+ 
+   if (!user) return null
+ 
+-  const tabs = [
+-    { key: 'profile' as Tab, Icon: User,   label: 'プロフィール' },
+-    { key: 'records' as Tab, Icon: Trophy, label: '戦績' },
+-    { key: 'history' as Tab, Icon: Trophy, label: '問題履歴' },
+-    { key: 'title'   as Tab, Icon: Trophy, label: '称号' },
+-    { key: 'genre'   as Tab, Icon: Trophy, label: 'ジャンル' },
++  const tabs: Array<{ key: Tab; icon: IconName; label: string }> = [
++    { key: 'profile', icon: 'user',      label: 'プロフィール' },
++    { key: 'records', icon: 'trophy',    label: '戦績' },
++    { key: 'history', icon: 'clipboard', label: '問題履歴' },
++    { key: 'title',   icon: 'crown',     label: '称号' },
++    { key: 'genre',   icon: 'star',      label: 'ジャンル' },
+   ]
++  const rate = stats.rate || user.rate || 0
++  const band = bandForRate(rate)
+ 
+   return (
+-    <div className='page' style={{ display:'flex', flexDirection:'column' }}>
++    <div className="page" style={{ display: 'flex', flexDirection: 'column' }}>
+       <AppHeader title="マイページ" />
+ 
+-      <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)' }}><div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', maxWidth:'var(--w)', margin:'0 auto' }}>
+-        <div style={{ width:48, height:48, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))',
+-          display:'flex', alignItems:'center', justifyContent:'center',
+-          fontSize:20, fontWeight:900, color:'#fff', overflow:'hidden', flexShrink:0 }}>
+-          {user.avatarUrl
+-            ? <img src={user.avatarUrl} style={{ width:48, height:48, objectFit:'cover' }} alt="" />
+-            : user.name[0]}
++      <div className="qp-head"><div className="qp-head__in">
++        <Avatar name={user.name} src={user.avatarUrl} size={56} />
++        <div style={{ minWidth: 0 }}>
++          <p className="qp-head__name">{user.name}</p>
++          <p className="qp-head__sub">{user.username ? `@${user.username}` : user.email}</p>
++          <div style={{ marginTop: 6 }}><Chip tone="gold" icon={band.icon}>{band.label}</Chip></div>
+         </div>
+-        <div>
+-          <p style={{ fontWeight:900, fontSize:16 }}>{user.name}</p>
+-          {(user as any).username && <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>@{(user as any).username}</p>}
+-          {!(user as any).username && <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{user.email}</p>}
+-        </div></div></div>
++        <div className="qp-head__rate"><small>RATE</small><b>{rate}</b></div>
++      </div></div>
+ 
+-      <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)' }}><div style={{ display:'flex', maxWidth:'var(--w)', margin:'0 auto' }}>
++      <div className="qp-tabs"><div className="qp-tabs__in" role="tablist" aria-label="マイページの項目">
+         {tabs.map(t => (
+-          <button key={t.key} onClick={() => setTab(t.key)}
+-            style={{ flex:1, padding:'12px 8px', fontSize:13, fontWeight:700, background:'none', border:'none', cursor:'pointer',
+-              color: tab===t.key ? 'var(--accent)' : 'var(--muted)',
+-              borderBottom: `2px solid ${tab===t.key ? 'var(--accent)' : 'transparent'}`,
+-              transition:'all .2s', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+-            <t.Icon size={18} strokeWidth={tab===t.key ? 2.5 : 1.8} />
+-            <span style={{ fontSize:11 }}>{t.label}</span>
++          <button key={t.key} role="tab" id={`tab-${t.key}`} aria-selected={tab === t.key} aria-controls="profile-panel" className="qp-tab" onClick={() => setTab(t.key)}>
++            <Icon name={t.icon} size={18} strokeWidth={tab === t.key ? 2.5 : 1.8} />
++            <span>{t.label}</span>
+           </button>
+         ))}
+       </div></div>
+ 
+-      <div className='inner profile-inner'>
++      <div className="inner profile-inner" role="tabpanel" id="profile-panel" aria-labelledby={`tab-${tab}`}>
+         {tab === 'profile' && <ProfileTab />}
+         {tab === 'records' && <RecordsTab />}
+         {tab === 'history' && <QuestionHistoryTab />}
+diff --git a/src/pages/RankingPage.tsx b/src/pages/RankingPage.tsx
+index ab07ddc..a6d105e 100644
+--- a/src/pages/RankingPage.tsx
++++ b/src/pages/RankingPage.tsx
+@@ -3,6 +3,8 @@ import AppHeader from '../components/AppHeader'
+ import { useEffect, useState } from 'react'
+ import { useNavigate } from 'react-router-dom'
+ import { useAuth } from '../context/AuthContext'
++import { Avatar, Icon } from '../components/ui'
++import { RANK_BANDS, bandForLabel, bandRange } from '../lib/rank'
+ 
+ interface Entry {
+   rank: number; id: string; name: string; username: string | null
+@@ -10,96 +12,89 @@ interface Entry {
+   winRate: number; label: string; color: string; emoji: string
+ }
+ 
++const MEDAL_COLOR = ['#f59e0b', '#cbd5e1', '#b45309']
++
+ export default function RankingPage() {
+   const { user } = useAuth()
+   const navigate = useNavigate()
+   const [top10, setTop10] = useState<Entry[]>([])
+   const [myRank, setMyRank] = useState<Entry | null>(null)
+   const [loading, setLoading] = useState(true)
++  const [error, setError] = useState(false)
+ 
+   useEffect(() => {
+     apiFetch('/api/ranking').then(r => r.json()).then(d => {
+       setTop10(d.top10 ?? [])
+       setMyRank(d.myRank ?? null)
+       setLoading(false)
+-    })
++    }).catch(() => { setError(true); setLoading(false) })
+   }, [])
+ 
+   const myInTop10 = top10.find(e => e.id === user?.id)
+   const displayMyRank = myInTop10 ?? myRank
+ 
+-  function EntryRow({ e }: { e: Entry }) {
+-    const isMe = e.id === user?.id
+-    return (
+-      <div onClick={() => navigate(`/user/${e.id}`)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+-        background: isMe ? 'rgba(56,189,248,0.1)' : 'var(--surface)', borderRadius: 12,
+-        border: `1px solid ${isMe ? 'var(--accent)' : 'var(--border)'}` }}>
+-        <div style={{ width: 32, textAlign: 'center', fontFamily: 'Orbitron,sans-serif', fontWeight: 900, fontSize: 14,
+-          color: e.rank === 1 ? '#f59e0b' : e.rank === 2 ? '#94a3b8' : e.rank === 3 ? '#b45309' : 'var(--muted)' }}>
+-          {e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : e.rank}
+-        </div>
+-        <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+-          background: 'linear-gradient(135deg,var(--accent),var(--accent2))',
+-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: '#fff' }}>
+-          {e.avatarUrl ? <img src={e.avatarUrl} style={{ width: 36, height: 36, objectFit: 'cover' }} alt="" /> : e.name[0]}
+-        </div>
+-        <div style={{ flex: 1, minWidth: 0 }}>
+-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+-            <p style={{ fontWeight: isMe ? 800 : 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</p>
+-            <span style={{ fontSize: 11, fontWeight: 700, color: e.color, background: `${e.color}18`, padding: '1px 7px', borderRadius: 10, flexShrink: 0 }}>{e.emoji} {e.label}</span>
+-          </div>
+-          <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{e.total}戦 {e.wins}勝 · 勝率{e.winRate}%</p>
+-        </div>
+-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+-          <p style={{ fontFamily: 'Orbitron,sans-serif', fontSize: 16, fontWeight: 900, color: 'var(--accent)' }}>{e.rate}</p>
+-          <p style={{ fontSize: 10, color: 'var(--muted)' }}>pt</p>
+-        </div>
+-      </div>
+-    )
+-  }
+-
+   return (
+-    <div className='page' style={{ display: 'flex', flexDirection: 'column' }}>
++    <div className="page">
+       <AppHeader title="ランキング" />
+-      <div className='inner'>
++      <main className="qr">
++        <h1 className="qs-hide-mobile">ランキング</h1>
+ 
+-        {/* 自分の順位（TOP10外の場合） */}
++        {/* 自分の順位(TOP10外の場合) */}
+         {displayMyRank && !myInTop10 && (
+-          <div style={{ background: 'linear-gradient(135deg,var(--accent),var(--accent2))', borderRadius: 16, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+-            <div style={{ fontFamily: 'Orbitron,sans-serif', fontSize: 28, fontWeight: 900, color: '#fff', width: 40, textAlign: 'center' }}>{displayMyRank.rank}</div>
+-            <div style={{ flex: 1 }}>
+-              <p style={{ fontWeight: 900, fontSize: 16, color: '#fff' }}>あなたの順位</p>
+-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>{displayMyRank.emoji} {displayMyRank.label} · {displayMyRank.rate} pt · {displayMyRank.winRate}% 勝率</p>
++          <div className="qr-me">
++            <div className="qr-me__rank">{displayMyRank.rank}</div>
++            <div>
++              <b>あなたの順位</b>
++              <small>{displayMyRank.label} · {displayMyRank.rate} pt · 勝率{displayMyRank.winRate}%</small>
+             </div>
+           </div>
+         )}
+ 
+         {/* ランク帯 */}
+-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+-          {[
+-            { label: 'ブロンズ', emoji: '🥉', range: '0-599' },
+-            { label: 'シルバー', emoji: '🥈', range: '600-899' },
+-            { label: 'ゴールド', emoji: '🥇', range: '900-1199' },
+-            { label: 'プラチナ', emoji: '⚪', range: '1200-1499' },
+-            { label: 'ダイヤ',   emoji: '💎', range: '1500-1999' },
+-            { label: 'マスター', emoji: '👑', range: '2000+' },
+-          ].map(r => (
+-            <div key={r.label} style={{ padding: '4px 10px', background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)' }}>
+-              {r.emoji} {r.label} {r.range}
+-            </div>
++        <ul className="qr-bands" aria-label="ランク帯">
++          {RANK_BANDS.map(b => (
++            <li key={b.label} className="qr-band">
++              <Icon name={b.icon} size={14} style={{ color: b.color }} />
++              {b.label} {bandRange(b)}
++            </li>
+           ))}
+-        </div>
++        </ul>
+ 
+         {/* TOP10 */}
+         {loading ? (
+-          <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>読み込み中...</p>
++          <p className="qr-empty" role="status">読み込み中...</p>
++        ) : error ? (
++          <p className="qr-empty" role="alert">ランキングを取得できませんでした。時間をおいて再度お試しください。</p>
+         ) : (
+-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+-            {top10.map(e => <EntryRow key={e.id} e={e} />)}
+-            {top10.length === 0 && <p style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>まだランキングデータがありません</p>}
+-          </div>
++          <ol className="qr-list">
++            {top10.map(e => {
++              const isMe = e.id === user?.id
++              const band = bandForLabel(e.label)
++              return (
++                <li key={e.id}>
++                  <button className={`qr-row${isMe ? ' qr-row--me' : ''}`} onClick={() => navigate(`/user/${e.id}`)}>
++                    <span className="qr-row__rank" style={e.rank <= 3 ? { color: MEDAL_COLOR[e.rank - 1] } : undefined}>
++                      {e.rank <= 3 ? <Icon name="medal" size={24} label={`${e.rank}位`} /> : <span aria-label={`${e.rank}位`}>{e.rank}</span>}
++                    </span>
++                    <Avatar name={e.name} src={e.avatarUrl} size={36} />
++                    <span className="qr-row__main">
++                      <span className="qr-row__name">
++                        <b>{e.name}</b>
++                        <span className="qr-tier" style={{ '--tier': e.color } as React.CSSProperties}>
++                          <Icon name={band.icon} size={12} />{e.label}
++                        </span>
++                      </span>
++                      <span className="qr-row__sub" style={{ display: 'block' }}>{e.total}戦 {e.wins}勝 · 勝率{e.winRate}%</span>
++                    </span>
++                    <span className="qr-row__rate">{e.rate}<small>pt</small></span>
++                  </button>
++                </li>
++              )
++            })}
++            {top10.length === 0 && <li className="qr-empty">まだランキングデータがありません</li>}
++          </ol>
+         )}
+-      </div>
++      </main>
+     </div>
+   )
+ }
+diff --git a/src/styles/pages.css b/src/styles/pages.css
+new file mode 100644
+index 0000000..481cdf5
+--- /dev/null
++++ b/src/styles/pages.css
+@@ -0,0 +1,107 @@
++/* ページ固有のスタイル: ホーム(qh)・ログイン(qa)・マイページ(qp)・ランキング(qr) */
++
++/* ===== ホーム ===== */
++.qh { max-width: 1040px; margin: 0 auto; padding: var(--sp-4); display: grid; gap: var(--sp-4); grid-template-columns: minmax(0, 1fr); }
++.qh__main { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
++.qh__hud { order: -1; }
++.qh__greet { font-size: var(--fs-2xl); font-weight: 800; }
++.qh__greet small { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-md); font-weight: 400; }
++.qh__cards { display: grid; gap: var(--sp-3); grid-template-columns: minmax(0, 1fr); }
++
++.qh-card { position: relative; display: flex; align-items: center; gap: var(--sp-4); width: 100%; min-height: 96px; padding: var(--sp-5) var(--sp-6); border-radius: var(--r-xl); color: #fff; text-align: left; overflow: hidden; }
++.qh-card::after { content: ''; position: absolute; top: -40px; right: -30px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,.07); }
++.qh-card--random { background: linear-gradient(135deg, #4c1d95, #7c3aed 55%, #a855f7); box-shadow: 0 8px 32px rgba(124,58,237,.4); }
++.qh-card--free   { background: linear-gradient(135deg, #064e3b, #0f766e 55%, #14b8a6); box-shadow: 0 8px 32px rgba(20,184,166,.28); }
++.qh-card__icon { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: var(--r-lg); background: rgba(255,255,255,.16); position: relative; z-index: 1; }
++.qh-card__text { flex: 1; min-width: 0; position: relative; z-index: 1; }
++.qh-card__text b { display: block; font-size: var(--fs-lg); font-weight: 900; letter-spacing: .5px; }
++.qh-card__text small { display: block; margin-top: 3px; font-size: var(--fs-sm); color: rgba(255,255,255,.78); }
++.qh-card > .qs-icon:last-child { opacity: .6; position: relative; z-index: 1; }
++.qh-card:hover { filter: brightness(1.06); }
++
++.qh-me { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4); border-radius: var(--r-xl); background: linear-gradient(160deg, var(--accent-soft), var(--surface) 62%); border: 1px solid var(--border); }
++.qh-me__top { display: flex; align-items: center; gap: var(--sp-3); }
++.qh-me__name { font-weight: 900; font-size: var(--fs-lg); overflow-wrap: anywhere; }
++.qh-me__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
++.qh-me__rate { margin-left: auto; text-align: right; }
++.qh-me__rate small { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--muted); }
++.qh-me__rate b { font-family: Orbitron, sans-serif; font-size: 28px; font-weight: 900; color: var(--accent3); line-height: 1.1; }
++.qh-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
++.qh-stat { padding: var(--sp-2) var(--sp-1); border-radius: var(--r-md); background: var(--surface2); text-align: center; }
++.qh-stat b { display: block; font-size: var(--fs-lg); font-weight: 900; }
++.qh-stat small { font-size: 11px; color: var(--muted); font-weight: 700; }
++
++.qh-news { display: flex; flex-direction: column; gap: var(--sp-2); }
++.qh-news h2 { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 1px; }
++.qh-news__item { padding: var(--sp-3) var(--sp-4); border-radius: var(--r-md); background: var(--accent-soft); border: 1px solid var(--border); }
++.qh-news__item b { display: block; font-size: var(--fs-sm); color: var(--accent3); margin-bottom: 2px; }
++.qh-news__item p { font-size: var(--fs-sm); color: var(--sub); overflow-wrap: anywhere; }
++
++@media (min-width: 768px) {
++  .qh__cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
++  .qh-card { flex-direction: column; align-items: flex-start; min-height: 180px; }
++  .qh-card > .qs-icon:last-child { position: absolute; right: var(--sp-5); bottom: var(--sp-5); }
++}
++@media (min-width: 1024px) {
++  .qh { grid-template-columns: minmax(0, 1fr) 340px; padding: var(--sp-8) var(--sp-8) var(--sp-10); gap: var(--sp-6); align-items: start; }
++  .qh__hud { order: 2; position: sticky; top: calc(var(--nav-top-h) + var(--sp-6)); }
++}
++
++/* ===== ログイン / 新規登録 ===== */
++.qa { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: var(--sp-5); background: rgba(0,0,0,.75); overflow-y: auto; }
++.qa__box { width: 100%; max-width: 400px; margin: auto; padding: 28px 24px; border-radius: var(--r-xl); background: var(--surface); border: 1px solid var(--border); }
++.qa__box h2 { font-size: var(--fs-lg); font-weight: 900; margin-bottom: 4px; }
++.qa__sub { font-size: var(--fs-xs); color: var(--muted); margin-bottom: var(--sp-5); }
++.qa__tabs { display: flex; gap: 4px; padding: 4px; margin-bottom: var(--sp-5); border-radius: var(--r-md); background: var(--surface2); }
++.qa__tabs button { flex: 1; min-height: 40px; border-radius: var(--r-sm); font-size: var(--fs-md); font-weight: 700; background: transparent; color: var(--muted); }
++.qa__tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
++.qa__field { display: block; margin-bottom: var(--sp-4); }
++.qa__field > span { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: var(--sub); }
++.qa__field em { margin-left: 6px; color: var(--wrong); font-style: normal; }
++.qa__input { width: 100%; min-height: 48px; padding: 0 16px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--r-md); font-size: 16px; color: var(--text); }
++.qa__input:focus { border-color: var(--accent); }
++.qa__at { position: relative; }
++.qa__at::before { content: '@'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
++.qa__at .qa__input { padding-left: 30px; }
++.qa__hint { margin-top: 6px; font-size: 12px; color: var(--muted); }
++.qa__error { margin-bottom: var(--sp-3); padding: 8px 12px; border-radius: var(--r-sm); background: var(--lose-soft); color: var(--wrong); font-size: var(--fs-sm); }
++.qa__actions { display: flex; flex-direction: column; gap: var(--sp-2); }
++
++/* ===== マイページ(枠) ===== */
++.qp-head { background: var(--surface); border-bottom: 1px solid var(--border); }
++.qp-head__in { display: flex; align-items: center; gap: var(--sp-4); max-width: var(--w); margin: 0 auto; padding: var(--sp-4); }
++.qp-head__name { font-weight: 900; font-size: var(--fs-lg); overflow-wrap: anywhere; }
++.qp-head__sub { font-size: var(--fs-xs); color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
++.qp-head__rate { margin-left: auto; text-align: right; flex: none; }
++.qp-head__rate small { display: block; font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
++.qp-head__rate b { font-family: Orbitron, sans-serif; font-size: 24px; font-weight: 900; color: var(--accent3); }
++.qp-tabs { background: var(--surface); border-bottom: 1px solid var(--border); }
++.qp-tabs__in { display: flex; max-width: var(--w); margin: 0 auto; overflow-x: auto; }
++.qp-tab { flex: 1 0 auto; min-width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: var(--sp-3) var(--sp-3); font-size: 11px; font-weight: 700; color: var(--muted); background: none; border-bottom: 2px solid transparent; border-radius: 0; }
++.qp-tab[aria-selected="true"] { color: var(--accent3); border-bottom-color: var(--accent); }
++@media (min-width: 768px) { .qp-tab { flex-direction: row; justify-content: center; gap: 8px; font-size: var(--fs-sm); } }
++
++/* ===== ランキング ===== */
++.qr { max-width: 760px; margin: 0 auto; padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); }
++.qr h1 { font-size: var(--fs-xl); font-weight: 800; }
++.qr-me { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--sp-5); border-radius: var(--r-lg); color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
++.qr-me__rank { width: 48px; text-align: center; font-family: Orbitron, sans-serif; font-size: 28px; font-weight: 900; }
++.qr-me b { display: block; font-size: var(--fs-lg); font-weight: 900; }
++.qr-me small { display: block; margin-top: 2px; font-size: var(--fs-sm); color: rgba(255,255,255,.8); }
++.qr-bands { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; }
++.qr-band { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); font-size: 12px; color: var(--sub); }
++.qr-list { display: flex; flex-direction: column; gap: 6px; list-style: none; }
++.qr-row { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 64px; padding: var(--sp-3) var(--sp-4); text-align: left; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); color: var(--text); }
++.qr-row:hover { border-color: var(--accent); }
++.qr-row--me { background: var(--accent-soft); border-color: var(--accent); }
++.qr-row__rank { flex: none; width: 32px; display: grid; place-items: center; font-family: Orbitron, sans-serif; font-weight: 900; font-size: 14px; color: var(--muted); }
++.qr-row__main { flex: 1; min-width: 0; }
++.qr-row__name { display: flex; align-items: center; gap: 6px; }
++.qr-row__name b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.qr-row--me .qr-row__name b { font-weight: 800; }
++.qr-row__sub { margin-top: 2px; font-size: 11px; color: var(--muted); }
++.qr-row__rate { flex: none; text-align: right; font-family: Orbitron, sans-serif; font-size: 16px; font-weight: 900; color: var(--accent3); }
++.qr-row__rate small { display: block; font-size: 10px; color: var(--muted); font-weight: 400; }
++.qr-tier { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 1px 8px; border-radius: var(--r-full); font-size: 11px; font-weight: 700; color: var(--tier, var(--sub)); background: color-mix(in srgb, var(--tier, #888) 14%, transparent); }
++.qr-empty { padding: var(--sp-10); text-align: center; color: var(--muted); }
++@media (min-width: 1024px) { .qr { padding: var(--sp-8); } }
+diff --git a/tests/pages.test.ts b/tests/pages.test.ts
+new file mode 100644
+index 0000000..c6f7d04
+--- /dev/null
++++ b/tests/pages.test.ts
+@@ -0,0 +1,51 @@
++import { test } from 'node:test'
++import assert from 'node:assert/strict'
++import fs from 'node:fs'
++import path from 'node:path'
++import { RANK_BANDS, bandForRate, bandForLabel, bandRange } from '../src/lib/rank'
++import { ICONS } from '../src/components/ui/iconPaths'
++
++const SRC = path.resolve(__dirname, '../src')
++const read = (f: string) => fs.readFileSync(path.join(SRC, f), 'utf8')
++const EMOJI = /[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F2FF}\u2600-\u27BF\u2B50\u23E9-\u23FF\u231A\u231B\u2190-\u2199\u25AA-\u25FE\u2139\u2122]/gu
++
++test('ランク帯: 基準値・名称がサーバー(getRankLabel)の定義と一致する', () => {
++  const server = fs.readFileSync(path.resolve(__dirname, '../server/routes/ranking.ts'), 'utf8')
++  const found = [...server.matchAll(/rate >=\s*(\d+)\)\s*return\s*\{\s*label:\s*'([^']+)'/g)].map(m => ({ min: Number(m[1]), label: m[2] }))
++  assert.equal(found.length, 5)
++  for (const f of found) assert.equal(RANK_BANDS.find(b => b.label === f.label)?.min, f.min, f.label)
++  assert.equal(RANK_BANDS[0].label, 'ブロンズ') // 最下位は条件なしで返る
++  assert.equal(RANK_BANDS[0].min, 0)
++})
++test('ランク帯: 隙間・重複がなく、境界値が正しい帯に入る', () => {
++  for (let i = 0; i < RANK_BANDS.length - 1; i++) assert.equal(RANK_BANDS[i].max! + 1, RANK_BANDS[i + 1].min)
++  assert.equal(RANK_BANDS.at(-1)!.max, null)
++  const cases: Array<[number, string]> = [[0, 'ブロンズ'], [599, 'ブロンズ'], [600, 'シルバー'], [899, 'シルバー'], [900, 'ゴールド'], [1199, 'ゴールド'], [1200, 'プラチナ'], [1499, 'プラチナ'], [1500, 'ダイヤ'], [1999, 'ダイヤ'], [2000, 'マスター'], [5000, 'マスター'], [-5, 'ブロンズ']]
++  for (const [rate, label] of cases) assert.equal(bandForRate(rate).label, label, String(rate))
++  assert.equal(bandForLabel('存在しない').label, 'ブロンズ')
++  assert.equal(bandRange(RANK_BANDS[5]), '2000〜')
++  for (const b of RANK_BANDS) assert.ok(b.icon in ICONS)
++})
++
++test('回帰ガード: useAuth() から存在しない authLoading を読んでいない(常に undefined になるバグ)', () => {
++  const offenders: string[] = []
++  const walk = (d: string) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.tsx?$/.test(e.name)) {
++    const s = fs.readFileSync(p, 'utf8')
++    for (const m of s.matchAll(/const \{([^}]*)\}\s*=\s*useAuth\(\)/g)) if (/\bauthLoading\b/.test(m[1]) && !/loading:\s*authLoading/.test(m[1])) offenders.push(path.relative(SRC, p))
++  } } }
++  walk(SRC)
++  assert.deepEqual(offenders, [])
++  assert.match(read('context/AuthContext.tsx'), /loading: boolean/)
++})
++
++test('ホーム・ランキング・マイページ枠は絵文字を使わず、ログインは role=dialog・ラベル付き', () => {
++  for (const f of ['pages/HomePage.tsx', 'pages/RankingPage.tsx', 'pages/ProfilePage.tsx', 'lib/rank.ts'])
++    assert.equal([...read(f).matchAll(EMOJI)].length, 0, f)
++  const home = read('pages/HomePage.tsx')
++  assert.match(home, /role="dialog" aria-modal="true"/)
++  assert.match(home, /autoComplete=\{authTab === 'login' \? 'current-password' : 'new-password'\}/)
++  assert.match(home, /role="alert"/)
++})
++test('ランキングの行は、キーボードで操作できる button である', () => {
++  assert.match(read('pages/RankingPage.tsx'), /<button className=\{`qr-row/)
++})
+diff --git a/tests/ui.test.ts b/tests/ui.test.ts
+index d2e51cd..0f86b35 100644
+--- a/tests/ui.test.ts
++++ b/tests/ui.test.ts
+@@ -45,7 +45,7 @@ test('移行の網羅性: ソース内の絵文字がすべて対応表に載っ
+ })
+ 
+ // ラチェット: 絵文字は増やさない。ページを移行するたびに、この値を下げる(最終的に 0)。
+-const EMOJI_BASELINE = Number(process.env.EMOJI_BASELINE ?? 0) || 131
++const EMOJI_BASELINE = Number(process.env.EMOJI_BASELINE ?? 0) || 120
+ test(`絵文字の残数は ${EMOJI_BASELINE} 以下(移行が進むたびに下げる)`, () => {
+   const found = emojiInSource()
+   assert.ok(found.length <= EMOJI_BASELINE, `絵文字が増えています: ${found.length} > ${EMOJI_BASELINE}`)
+-- 
+2.43.0
+
