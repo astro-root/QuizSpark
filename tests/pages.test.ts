@@ -49,3 +49,13 @@ test('ホーム・ランキング・マイページ枠は絵文字を使わず�
 test('ランキングの行は、キーボードで操作できる button である', () => {
   assert.match(read('pages/RankingPage.tsx'), /<button className=\{`qr-row/)
 })
+
+test('開発環境: /auth もバックエンドへ中継される(ログインが同一オリジンで動く)', () => {
+  const vite = fs.readFileSync(path.resolve(__dirname, '../vite.config.ts'), 'utf8')
+  for (const prefix of ["'/api'", "'/auth'", "'/socket.io'"]) assert.ok(vite.includes(prefix), `${prefix} がプロキシにない`)
+})
+test('Google ログインの URL は API_BASE を使う(VITE_API_URL 未設定で "undefined/auth/google" にならない)', () => {
+  const s = read('context/AuthContext.tsx')
+  assert.match(s, /\$\{API_BASE\}\/auth\/google/)
+  assert.doesNotMatch(s, /\$\{import\.meta\.env\.VITE_API_URL\}/)
+})
