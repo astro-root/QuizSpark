@@ -15,6 +15,11 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      // ログイン・プロフィールなど(Cookie を同一オリジンで扱うため、API と同じくバックエンドへ中継する)
+      '/auth': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
       '/socket.io': {
         target: 'http://localhost:3000',
         changeOrigin: true,

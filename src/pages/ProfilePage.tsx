@@ -1,16 +1,16 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useTheme } from '../context/ThemeContext'
 import AppHeader from '../components/AppHeader'
-import { User, Trophy } from 'lucide-react'
+import { Avatar, Chip, Icon, type IconName } from '../components/ui'
+import { bandForRate } from '../lib/rank'
 import ProfileTab from '../components/profile/ProfileTab'
 import RecordsTab from '../components/profile/RecordsTab'
 import QuestionHistoryTab from '../components/profile/QuestionHistoryTab'
 import GenreRadarTab from '../components/profile/GenreRadarTab'
 import TitleSelectTab from '../components/profile/TitleSelectTab'
 import { apiFetch } from '../lib/api'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 type Tab = 'profile' | 'records' | 'history' | 'title' | 'genre'
 
@@ -21,8 +21,9 @@ export default function ProfilePage() {
       if (d) setStats({ rate: d.rate ?? 0, total: d.stats.total, wins: d.stats.wins, correct: d.stats.totalCorrect })
     }).catch(() => {})
   }, [])
-  const { user, authLoading } = useAuth()
-  const { theme, toggle: toggleTheme } = useTheme()
+  // 注意: 公開されているのは `loading`。以前は存在しない `authLoading`(常に undefined)を読んでいたため、
+  //       /profile を再読み込みすると、ユーザー取得前にホームへ戻されていた。
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('profile')
 
@@ -33,46 +34,40 @@ export default function ProfilePage() {
 
   if (!user) return null
 
-  const tabs = [
-    { key: 'profile' as Tab, Icon: User,   label: 'プロフィール' },
-    { key: 'records' as Tab, Icon: Trophy, label: '戦績' },
-    { key: 'history' as Tab, Icon: Trophy, label: '問題履歴' },
-    { key: 'title'   as Tab, Icon: Trophy, label: '称号' },
-    { key: 'genre'   as Tab, Icon: Trophy, label: 'ジャンル' },
+  const tabs: Array<{ key: Tab; icon: IconName; label: string }> = [
+    { key: 'profile', icon: 'user',      label: 'プロフィール' },
+    { key: 'records', icon: 'trophy',    label: '戦績' },
+    { key: 'history', icon: 'clipboard', label: '問題履歴' },
+    { key: 'title',   icon: 'crown',     label: '称号' },
+    { key: 'genre',   icon: 'star',      label: 'ジャンル' },
   ]
+  const rate = stats.rate || user.rate || 0
+  const band = bandForRate(rate)
 
   return (
-    <div className='page' style={{ display:'flex', flexDirection:'column' }}>
+    <div className="page" style={{ display: 'flex', flexDirection: 'column' }}>
       <AppHeader title="マイページ" />
 
-      <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)' }}><div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', maxWidth:'var(--w)', margin:'0 auto' }}>
-        <div style={{ width:48, height:48, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))',
-          display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:20, fontWeight:900, color:'#fff', overflow:'hidden', flexShrink:0 }}>
-          {user.avatarUrl
-            ? <img src={user.avatarUrl} style={{ width:48, height:48, objectFit:'cover' }} alt="" />
-            : user.name[0]}
+      <div className="qp-head"><div className="qp-head__in">
+        <Avatar name={user.name} src={user.avatarUrl} size={56} />
+        <div style={{ minWidth: 0 }}>
+          <p className="qp-head__name">{user.name}</p>
+          <p className="qp-head__sub">{user.username ? `@${user.username}` : user.email}</p>
+          <div style={{ marginTop: 6 }}><Chip tone="gold" icon={band.icon}>{band.label}</Chip></div>
         </div>
-        <div>
-          <p style={{ fontWeight:900, fontSize:16 }}>{user.name}</p>
-          {(user as any).username && <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>@{(user as any).username}</p>}
-          {!(user as any).username && <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{user.email}</p>}
-        </div></div></div>
+        <div className="qp-head__rate"><small>RATE</small><b>{rate}</b></div>
+      </div></div>
 
-      <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)' }}><div style={{ display:'flex', maxWidth:'var(--w)', margin:'0 auto' }}>
+      <div className="qp-tabs"><div className="qp-tabs__in" role="tablist" aria-label="マイページの項目">
         {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            style={{ flex:1, padding:'12px 8px', fontSize:13, fontWeight:700, background:'none', border:'none', cursor:'pointer',
-              color: tab===t.key ? 'var(--accent)' : 'var(--muted)',
-              borderBottom: `2px solid ${tab===t.key ? 'var(--accent)' : 'transparent'}`,
-              transition:'all .2s', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-            <t.Icon size={18} strokeWidth={tab===t.key ? 2.5 : 1.8} />
-            <span style={{ fontSize:11 }}>{t.label}</span>
+          <button key={t.key} role="tab" id={`tab-${t.key}`} aria-selected={tab === t.key} aria-controls="profile-panel" className="qp-tab" onClick={() => setTab(t.key)}>
+            <Icon name={t.icon} size={18} strokeWidth={tab === t.key ? 2.5 : 1.8} />
+            <span>{t.label}</span>
           </button>
         ))}
       </div></div>
 
-      <div className='inner profile-inner'>
+      <div className="inner profile-inner" role="tabpanel" id="profile-panel" aria-labelledby={`tab-${tab}`}>
         {tab === 'profile' && <ProfileTab />}
         {tab === 'records' && <RecordsTab />}
         {tab === 'history' && <QuestionHistoryTab />}

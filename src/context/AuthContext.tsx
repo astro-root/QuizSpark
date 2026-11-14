@@ -1,7 +1,7 @@
-import { apiFetch } from '../lib/api'
+import { apiFetch, API_BASE } from '../lib/api'
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 
-interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string }
+interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string; email?: string; rate?: number; titleId?: string | null }
 
 interface AuthCtx {
   user: User | null
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => setLoading(false))
   }, [])
 
-  const loginWithGoogle = () => { window.location.href = `${import.meta.env.VITE_API_URL}/auth/google` }
+  const loginWithGoogle = () => { window.location.href = `${API_BASE}/auth/google` }
 
   const loginWithPassword = async (email: string, password: string) => {
     const r = await apiFetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
