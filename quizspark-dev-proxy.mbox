@@ -1,0 +1,71 @@
+From e86d3dc6d8b656b2be5ac4ae5ebb800b21fbccb4 Mon Sep 17 00:00:00 2001
+From: QuizSpark Dev <dev@quizspark.local>
+Date: Sat, 14 Nov 2026 13:07:51 +0000
+Subject: [PATCH] fix(dev): proxy /auth in vite dev server; use API_BASE for
+ Google login URL
+
+With VITE_API_URL unset, /auth/* (me, login, register, profile) hit the Vite dev server and got index.html back,
+so login never worked locally. Google login built 'undefined/auth/google'. Production is unaffected
+(VITE_API_URL is set there; the proxy is dev-only).
+---
+ src/context/AuthContext.tsx |  4 ++--
+ tests/pages.test.ts         | 10 ++++++++++
+ vite.config.ts              |  5 +++++
+ 3 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/src/context/AuthContext.tsx b/src/context/AuthContext.tsx
+index 70a99ec..68423b1 100644
+--- a/src/context/AuthContext.tsx
++++ b/src/context/AuthContext.tsx
+@@ -1,4 +1,4 @@
+-import { apiFetch } from '../lib/api'
++import { apiFetch, API_BASE } from '../lib/api'
+ import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+ 
+ interface User { id: string; name: string; avatarUrl: string | null; isAdmin?: boolean; bio?: string; username?: string; email?: string; rate?: number; titleId?: string | null }
+@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+       .catch(() => setLoading(false))
+   }, [])
+ 
+-  const loginWithGoogle = () => { window.location.href = `${import.meta.env.VITE_API_URL}/auth/google` }
++  const loginWithGoogle = () => { window.location.href = `${API_BASE}/auth/google` }
+ 
+   const loginWithPassword = async (email: string, password: string) => {
+     const r = await apiFetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
+diff --git a/tests/pages.test.ts b/tests/pages.test.ts
+index c6f7d04..e32bb7f 100644
+--- a/tests/pages.test.ts
++++ b/tests/pages.test.ts
+@@ -49,3 +49,13 @@ test('ホーム・ランキング・マイページ枠は絵文字を使わず
+ test('ランキングの行は、キーボードで操作できる button である', () => {
+   assert.match(read('pages/RankingPage.tsx'), /<button className=\{`qr-row/)
+ })
++
++test('開発環境: /auth もバックエンドへ中継される(ログインが同一オリジンで動く)', () => {
++  const vite = fs.readFileSync(path.resolve(__dirname, '../vite.config.ts'), 'utf8')
++  for (const prefix of ["'/api'", "'/auth'", "'/socket.io'"]) assert.ok(vite.includes(prefix), `${prefix} がプロキシにない`)
++})
++test('Google ログインの URL は API_BASE を使う(VITE_API_URL 未設定で "undefined/auth/google" にならない)', () => {
++  const s = read('context/AuthContext.tsx')
++  assert.match(s, /\$\{API_BASE\}\/auth\/google/)
++  assert.doesNotMatch(s, /\$\{import\.meta\.env\.VITE_API_URL\}/)
++})
+diff --git a/vite.config.ts b/vite.config.ts
+index 422cff7..30383f6 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -15,6 +15,11 @@ export default defineConfig({
+         target: 'http://localhost:3000',
+         changeOrigin: true,
+       },
++      // ログイン・プロフィールなど(Cookie を同一オリジンで扱うため、API と同じくバックエンドへ中継する)
++      '/auth': {
++        target: 'http://localhost:3000',
++        changeOrigin: true,
++      },
+       '/socket.io': {
+         target: 'http://localhost:3000',
+         changeOrigin: true,
+-- 
+2.43.0
+
