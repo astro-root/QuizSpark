@@ -1,0 +1,663 @@
+From d71c66dfe9d446d5dae73771e30d03b3085dc817 Mon Sep 17 00:00:00 2001
+From: QuizSpark Dev <dev@quizspark.local>
+Date: Thu, 19 Nov 2026 00:17:34 +0000
+Subject: [PATCH] feat(ui): redesigned My Page tabs (profile, records, question
+ history, titles, genres)
+
+- shared qt-* styles; form fields use real <label>s; avatar change is a keyboard-operable button
+- titles are a radiogroup (aria-checked, locked ones disabled); records list uses SVG medals/skull and circle/x marks
+- fix: RecordsTab declared a type named Record that shadowed TypeScript's Record (type error)
+- fix: GenreRadarTab tooltip formatter typing; user.bio/username/titleId now typed (no 'as any')
+- behaviour unchanged: API calls, confirm() dialogs, save flows kept as-is
+- emoji baseline 120 -> 99
+---
+ src/components/profile/GenreRadarTab.tsx      |  22 ++--
+ src/components/profile/ProfileTab.tsx         | 114 ++++++------------
+ src/components/profile/QuestionHistoryTab.tsx |  56 +++------
+ src/components/profile/RecordsTab.tsx         | 104 ++++++++--------
+ src/components/profile/TitleSelectTab.tsx     |  56 ++++-----
+ src/styles/pages.css                          |  68 +++++++++++
+ tests/pages.test.ts                           |  11 ++
+ tests/ui.test.ts                              |   2 +-
+ 8 files changed, 222 insertions(+), 211 deletions(-)
+
+diff --git a/src/components/profile/GenreRadarTab.tsx b/src/components/profile/GenreRadarTab.tsx
+index f94118c..6fd465c 100644
+--- a/src/components/profile/GenreRadarTab.tsx
++++ b/src/components/profile/GenreRadarTab.tsx
+@@ -15,8 +15,8 @@ export default function GenreRadarTab({ userId }: { userId?: string }) {
+     apiFetch(url).then(r => r.ok ? r.json() : []).then(setStats).finally(() => setLoading(false))
+   }, [userId])
+ 
+-  if (loading) return <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 24 }}>読み込み中...</p>
+-  if (stats.every(s => s.total === 0)) return <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 24 }}>対戦履歴がありません</p>
++  if (loading) return <p className="qt-empty" role="status">読み込み中...</p>
++  if (stats.every(s => s.total === 0)) return <p className="qt-empty">対戦履歴がありません</p>
+ 
+   const rawData = GENRES.map(g => {
+     const s = stats.find(x => x.genre === g)
+@@ -28,8 +28,8 @@ export default function GenreRadarTab({ userId }: { userId?: string }) {
+   ]
+ 
+   return (
+-    <div style={{ padding: '16px 0' }}>
+-      <p style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginBottom: 12 }}>ジャンル別正答率</p>
++    <div className="qt-card">
++      <h2 style={{ textAlign: 'center' }}>ジャンル別正答率</h2>
+       <ResponsiveContainer width="100%" height={280}>
+         <RadarChart data={data}>
+           <PolarGrid stroke="var(--border)" />
+@@ -37,19 +37,19 @@ export default function GenreRadarTab({ userId }: { userId?: string }) {
+           <Radar name="正答率" dataKey="正答率" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.3} />
+           <Tooltip
+             contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+-            formatter={(v: number, _: string, entry: any) => [`${v}% (${entry.payload['問題数']}問)`, '正答率']}
++            formatter={(v, _name, entry) => [`${v}% (${(entry.payload as { 問題数: number }).問題数}問)`, '正答率']}
+           />
+         </RadarChart>
+       </ResponsiveContainer>
+-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 }}>
++      <ul className="qt-genres" style={{ listStyle: 'none' }}>
+         {rawData.map(d => (
+-          <div key={d.genre} style={{ background: 'var(--surface2)', borderRadius: 8, padding: '6px 12px', fontSize: 12 }}>
++          <li key={d.genre} className="qt-genre">
+             <span style={{ color: 'var(--muted)' }}>{d.genre}</span>
+-            <span style={{ color: 'var(--accent)', fontWeight: 800, marginLeft: 6 }}>{d['正答率']}%</span>
+-            <span style={{ color: 'var(--muted)', fontSize: 10, marginLeft: 4 }}>({d['問題数']}問)</span>
+-          </div>
++            <b>{d['正答率']}%</b>
++            <small>({d['問題数']}問)</small>
++          </li>
+         ))}
+-      </div>
++      </ul>
+     </div>
+   )
+ }
+diff --git a/src/components/profile/ProfileTab.tsx b/src/components/profile/ProfileTab.tsx
+index 92147bd..a398bca 100644
+--- a/src/components/profile/ProfileTab.tsx
++++ b/src/components/profile/ProfileTab.tsx
+@@ -2,18 +2,16 @@ import { apiFetch } from '../../lib/api'
+ import { useNavigate } from 'react-router-dom'
+ import { useState, useRef } from 'react'
+ import { useAuth } from '../../context/AuthContext'
+-
+-const lbl: React.CSSProperties = { fontSize:11, fontWeight:700, color:'var(--muted)', letterSpacing:1, textTransform:'uppercase', marginBottom:8 }
+-const inp: React.CSSProperties = { width:'100%', padding:'13px 16px', background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:10, fontSize:15, color:'var(--text)' }
++import { Avatar, Button, Icon } from '../ui'
+ 
+ export default function ProfileTab() {
+   const { user, updateProfile, updateAvatar, deleteAvatar, logout } = useAuth()
+   const navigate = useNavigate()
+-  const isAdmin = !!(user as any)?.isAdmin
++  const isAdmin = !!user?.isAdmin
+   const avatarRef = useRef<HTMLInputElement>(null)
+   const [name, setName] = useState(user?.name ?? '')
+-  const [bio, setBio] = useState((user as any)?.bio ?? '')
+-  const [username, setUsername] = useState((user as any)?.username ?? '')
++  const [bio, setBio] = useState(user?.bio ?? '')
++  const [username, setUsername] = useState(user?.username ?? '')
+   const [error, setError] = useState('')
+   const [ok, setOk] = useState(false)
+   const [avatarUploading, setAvatarUploading] = useState(false)
+@@ -27,29 +25,16 @@ export default function ProfileTab() {
+ 
+   if (!user) return null
+   return (
+-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+-      <div style={{ position:'relative', alignSelf:'center', marginBottom:4 }} onClick={() => avatarRef.current?.click()}>
+-        <div style={{ width:72, height:72, borderRadius:'50%', border:'3px solid var(--border)',
+-          background:'var(--surface2)', display:'flex', alignItems:'center', justifyContent:'center',
+-          fontSize:28, fontWeight:900, color:'var(--text)', overflow:'hidden', cursor:'pointer' }}>
+-          {avatarUploading
+-            ? <span style={{ fontSize:20 }}>⏳</span>
+-            : user.avatarUrl
+-              ? <img src={user.avatarUrl} style={{ width:72, height:72, objectFit:'cover' }} alt="" />
+-              : user.name[0]}
+-        </div>
+-        <div style={{ position:'absolute', bottom:0, right:0, width:22, height:22, borderRadius:'50%',
+-          background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }}>
+-          📷
+-        </div>
+-      </div>
++    <div className="qt">
++      <button className="qt-avatar" aria-label={avatarUploading ? 'アップロード中' : 'アバター画像を変更'} onClick={() => avatarRef.current?.click()} disabled={avatarUploading}>
++        <Avatar name={user.name} src={user.avatarUrl} size={80} />
++        <span className="qt-avatar__cam"><Icon name={avatarUploading ? 'hourglass' : 'camera'} size={15} /></span>
++      </button>
+       {user.avatarUrl && (
+-        <button onClick={async () => { if (confirm('アバターを削除しますか？')) await deleteAvatar() }}
+-          style={{ alignSelf:'center', background:'none', border:'none', color:'var(--muted)', fontSize:12, cursor:'pointer', marginTop:-8 }}>
+-          🗑 アバターを削除
+-        </button>
++        <Button variant="ghost" size="sm" icon="trash" style={{ alignSelf: 'center' }}
++          onClick={async () => { if (confirm('アバターを削除しますか？')) await deleteAvatar() }}>アバターを削除</Button>
+       )}
+-      <input ref={avatarRef} type="file" accept="image/*" style={{ display:'none' }}
++      <input ref={avatarRef} type="file" accept="image/*" hidden aria-hidden="true" tabIndex={-1}
+         onChange={async e => {
+           const file = e.target.files?.[0]; if (!file) return
+           setAvatarUploading(true)
+@@ -58,63 +43,42 @@ export default function ProfileTab() {
+           e.target.value = ''
+         }} />
+ 
+-      <div style={{ background:'var(--surface)', borderRadius:16, padding:'20px', border:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:14 }}>
+-        <div>
+-          <p style={lbl}>表示名</p>
+-          <input value={name} onChange={e => setName(e.target.value)} style={inp} onKeyDown={e => e.key==='Enter' && saveProfile()} />
+-        </div>
+-        <div>
+-          <p style={lbl}>ユーザーID</p>
+-          <div style={{ display:'flex', alignItems:'center', background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:10, overflow:'hidden' }}>
+-            <span style={{ padding:'13px 12px', color:'var(--muted)', fontSize:16, borderRight:'1px solid var(--border)' }}>@</span>
+-            <input value={username} onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g,''))} placeholder="username"
+-              style={{ ...inp, border:'none', borderRadius:0, background:'transparent' }} />
++      <div className="qt-card">
++        <div className="qt-form-grid">
++          <label className="qt-field">
++            <span>表示名</span>
++            <input className="qt-input" value={name} onChange={e => setName(e.target.value)} autoComplete="nickname" onKeyDown={e => e.key === 'Enter' && saveProfile()} />
++          </label>
++          <div className="qt-field">
++            <label htmlFor="pf-username"><span style={{ display: 'block', marginBottom: 8, fontSize: 11, fontWeight: 700, letterSpacing: 1, color: 'var(--muted)' }}>ユーザーID</span></label>
++            <div className="qt-at">
++              <span aria-hidden="true">@</span>
++              <input id="pf-username" className="qt-input" value={username} onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} placeholder="username" autoComplete="username" />
++            </div>
++            <p className="qt-hint" style={{ textAlign: 'left', marginTop: 4 }}>3〜20文字、英数字・アンダースコアのみ</p>
+           </div>
+-          <p style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>3〜20文字、英数字・アンダースコアのみ</p>
+-        </div>
+-        <div>
+-          <p style={lbl}>Bio</p>
+-          <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="自己紹介を書こう"
+-            style={{ ...inp, resize:'vertical', fontFamily:'inherit', lineHeight:1.6 }} />
++          <label className="qt-field qt-field--wide">
++            <span>Bio</span>
++            <textarea className="qt-input" value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="自己紹介を書こう" />
++          </label>
+         </div>
+-        {error && <p style={{ color:'var(--wrong)', fontSize:13, padding:'8px 12px', background:'rgba(239,68,68,0.1)', borderRadius:8 }}>{error}</p>}
+-        {ok && <p style={{ color:'var(--correct)', fontSize:13 }}>✓ 保存しました</p>}
+-        <button onClick={saveProfile}
+-          style={{ padding:'14px', borderRadius:12, fontSize:15, fontWeight:900, background:'linear-gradient(135deg,var(--accent),var(--accent2))', color:'#fff' }}>
+-          保存する
+-        </button>
++        {error && <p className="qt-msg qt-msg--ng" role="alert">{error}</p>}
++        {ok && <p className="qt-msg qt-msg--ok" role="status"><Icon name="check" size={16} />保存しました</p>}
++        <Button variant="primary" size="lg" block onClick={saveProfile}>保存する</Button>
+       </div>
+ 
+-      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+-        <div style={{ display:'flex', gap:8 }}>
+-          <button onClick={() => navigate('/help')}
+-            style={{ flex:1, padding:'13px', borderRadius:12, border:'1px solid var(--border)', background:'var(--surface2)', color:'var(--text)', fontSize:14, fontWeight:700, cursor:'pointer', textAlign:'center' }}>
+-            ❓ ヘルプ
+-          </button>
+-          <button onClick={() => navigate('/contact')}
+-            style={{ flex:1, padding:'13px', borderRadius:12, fontSize:14, fontWeight:700, background:'var(--surface2)', color:'var(--text)', border:'1px solid var(--border)', cursor:'pointer', textAlign:'center' }}>
+-            📩 お問い合わせ
+-          </button>
+-        </div>
+-        {isAdmin && (
+-          <button onClick={() => navigate('/admin')}
+-            style={{ width:'100%', padding:'13px', borderRadius:12, fontSize:13, fontWeight:700, background:'rgba(251,191,36,0.1)', color:'#f59e0b', border:'1px solid rgba(251,191,36,0.3)', cursor:'pointer', textAlign:'center' }}>
+-            ⚙️ 管理者
+-          </button>
+-        )}
++      <div className="qt-actions">
++        <Button icon="help" onClick={() => navigate('/help')}>ヘルプ</Button>
++        <Button icon="mail" onClick={() => navigate('/contact')}>お問い合わせ</Button>
+       </div>
+-      <button onClick={logout}
+-        style={{ padding:'14px', borderRadius:12, fontSize:14, fontWeight:700, background:'rgba(239,68,68,0.08)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>
+-        ログアウト
+-      </button>
+-      <button onClick={async () => {
++      {isAdmin && <Button icon="settings" block onClick={() => navigate('/admin')}>管理者</Button>}
++      <Button variant="danger" size="lg" block onClick={logout}>ログアウト</Button>
++      <Button variant="ghost" block onClick={async () => {
+         if (!confirm('アカウントを削除しますか？\nこの操作は取り消せません。すべてのデータが削除されます。')) return
+         if (!confirm('本当に削除しますか？')) return
+         await apiFetch('/auth/account', { method: 'DELETE' })
+         window.location.href = '/'
+-      }} style={{ padding:'14px', borderRadius:12, fontSize:13, fontWeight:700, background:'none', color:'var(--muted)', border:'1px solid var(--border)' }}>
+-        アカウントを削除する
+-      </button>
++      }}>アカウントを削除する</Button>
+     </div>
+   )
+ }
+diff --git a/src/components/profile/QuestionHistoryTab.tsx b/src/components/profile/QuestionHistoryTab.tsx
+index b9808fb..b3b0998 100644
+--- a/src/components/profile/QuestionHistoryTab.tsx
++++ b/src/components/profile/QuestionHistoryTab.tsx
+@@ -1,58 +1,42 @@
+ import { apiFetch } from '../../lib/api'
+ import { useState, useEffect } from 'react'
+ import QuestionReportModal from '../QuestionReportModal'
++import { Button, Icon } from '../ui'
+ 
+ interface QH { id: string; text: string; answer: string; userAnswer: string; isCorrect: boolean; playedAt: string; questionId?: number }
+ 
+ export default function QuestionHistoryTab() {
+   const [list, setList] = useState<QH[]>([])
+   const [loaded, setLoaded] = useState(false)
+-  const [reportTarget, setReportTarget] = useState<{id:number,text:string}|null>(null)
++  const [reportTarget, setReportTarget] = useState<{ id: number; text: string } | null>(null)
+ 
+   useEffect(() => {
+     apiFetch('/api/question-history/me').then(r => r.ok ? r.json() : []).then(d => { setList(d); setLoaded(true) }).catch(() => setLoaded(true))
+   }, [])
+ 
+-  if (!loaded) return <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:32 }}>読み込み中...</p>
++  if (!loaded) return <p className="qt-empty" role="status">読み込み中...</p>
+   return (
+     <>
+-      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+-        <p style={{ fontSize:12, color:'var(--muted)', textAlign:'center' }}>直近10問の解答履歴</p>
+-        {list.length === 0 && (
+-          <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:32 }}>履歴がありません。ランダムマッチで問題に答えると記録されます。</p>
+-        )}
++      <div className="qt">
++        <p className="qt-hint">直近10問の解答履歴</p>
++        {list.length === 0 && <p className="qt-empty">履歴がありません。ランダムマッチで問題に答えると記録されます。</p>}
+         {list.map(q => (
+-          <div key={q.id} style={{ background:'var(--surface)', borderRadius:14, padding:'14px 16px', border:`1px solid ${q.isCorrect ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.2)'}` }}>
+-            <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+-              <span style={{ fontSize:18, flexShrink:0, marginTop:1 }}>{q.isCorrect ? '✅' : '❌'}</span>
+-              <div style={{ flex:1, minWidth:0 }}>
+-                <p style={{ fontSize:14, fontWeight:700, lineHeight:1.5, wordBreak:'break-word' }}>{q.text}</p>
+-                <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
+-                  <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+-                    <span style={{ fontSize:11, color:'var(--muted)', flexShrink:0 }}>正解</span>
+-                    <span style={{ fontSize:13, fontWeight:800, color:'var(--correct)' }}>{q.answer}</span>
+-                  </div>
+-                  {!q.isCorrect && q.userAnswer && (
+-                    <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+-                      <span style={{ fontSize:11, color:'var(--muted)', flexShrink:0 }}>解答</span>
+-                      <span style={{ fontSize:13, fontWeight:700, color:'var(--wrong)' }}>{q.userAnswer}</span>
+-                    </div>
+-                  )}
+-                </div>
+-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:6 }}>
+-                  <p style={{ fontSize:11, color:'var(--muted)' }}>
+-                    {new Date(q.playedAt).toLocaleDateString('ja-JP')} {new Date(q.playedAt).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' })}
+-                  </p>
+-                  {q.questionId && (
+-                    <button onClick={() => setReportTarget({ id: q.questionId!, text: q.text })}
+-                      style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:11, padding:'2px 6px', borderRadius:6, display:'flex', alignItems:'center', gap:3 }}>
+-                      🚩 報告
+-                    </button>
+-                  )}
+-                </div>
++          <article key={q.id} className={`qt-q ${q.isCorrect ? 'qt-q--ok' : 'qt-q--ng'}`}>
++            <Icon className="qt-q__mark" name={q.isCorrect ? 'circle' : 'x'} size={22} strokeWidth={2.4} label={q.isCorrect ? '正解' : '不正解'} />
++            <div style={{ flex: 1, minWidth: 0 }}>
++              <p className="qt-q__text">{q.text}</p>
++              <dl>
++                <dt>正解</dt><dd className="qt-win">{q.answer}</dd>
++                {!q.isCorrect && q.userAnswer && <><dt>解答</dt><dd className="qt-lose">{q.userAnswer}</dd></>}
++              </dl>
++              <div className="qt-q__foot">
++                <span>{new Date(q.playedAt).toLocaleDateString('ja-JP')} {new Date(q.playedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
++                {q.questionId && (
++                  <Button variant="ghost" size="sm" icon="flag" onClick={() => setReportTarget({ id: q.questionId!, text: q.text })}>報告</Button>
++                )}
+               </div>
+             </div>
+-          </div>
++          </article>
+         ))}
+       </div>
+       {reportTarget && <QuestionReportModal questionId={reportTarget.id} questionText={reportTarget.text} onClose={() => setReportTarget(null)} />}
+diff --git a/src/components/profile/RecordsTab.tsx b/src/components/profile/RecordsTab.tsx
+index d016512..6c053f3 100644
+--- a/src/components/profile/RecordsTab.tsx
++++ b/src/components/profile/RecordsTab.tsx
+@@ -1,12 +1,26 @@
+ import { apiFetch } from '../../lib/api'
+ import { useState, useEffect } from 'react'
++import { Button, Icon, ProgressBar } from '../ui'
+ 
+ interface Stats { total: number; wins: number; winRate: number; totalCorrect: number; totalWrong: number }
+-interface Record { id: string; result: string; ruleId: string; playerCount: number; isMatchmaking?: boolean; playedAt: string; correct: number; wrong: number }
++// 注意: 以前は、TypeScript 標準の Record と同じ名前の型を宣言していて、それが型エラーの原因だった
++interface BattleRow { id: string; result: string; ruleId: string; playerCount: number; isMatchmaking?: boolean; playedAt: string; correct: number; wrong: number }
++
++const RULE_NAMES: Record<string, string> = {
++  free: 'フリー', newyork: 'ニューヨーク', updown: 'アップダウン', by: 'BY', freeze: 'フリーズ',
++  swedish: 'スウェーデン', divide: 'ディバイド', lucky: 'ラッキー', rensei: '連勝', rengou: '連合', combo: 'コンボ',
++}
++
++/** ルール名。mon だけは名前自体に丸とバツの記号が含まれるので、文字ではなく SVG で描く。 */
++function RuleName({ ruleId, isMatchmaking }: { ruleId: string; isMatchmaking?: boolean }) {
++  if (isMatchmaking) return <>ランダムマッチ</>
++  if (ruleId === 'mon') return <span aria-label="mon">m<Icon name="circle" size={13} />n<Icon name="x" size={13} /></span>
++  return <>{RULE_NAMES[ruleId] ?? ruleId.toUpperCase()}</>
++}
+ 
+ export default function RecordsTab() {
+-  const [stats, setStats] = useState<Stats>({ total:0, wins:0, winRate:0, totalCorrect:0, totalWrong:0 })
+-  const [records, setRecords] = useState<Record[]>([])
++  const [stats, setStats] = useState<Stats>({ total: 0, wins: 0, winRate: 0, totalCorrect: 0, totalWrong: 0 })
++  const [records, setRecords] = useState<BattleRow[]>([])
+   const [loaded, setLoaded] = useState(false)
+ 
+   useEffect(() => { fetchRecords() }, [])
+@@ -17,76 +31,52 @@ export default function RecordsTab() {
+     setLoaded(true)
+   }
+ 
+-  if (!loaded) return <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:32 }}>読み込み中...</p>
++  if (!loaded) return <p className="qt-empty" role="status">読み込み中...</p>
++  const answered = stats.totalCorrect + stats.totalWrong
+ 
+   return (
+-    <div style={{ display:'flex', flexDirection:'column', gap:12, width:'100%' }}>
+-      <div style={{ background:'var(--surface)', borderRadius:16, padding:'20px', border:'1px solid var(--border)' }}>
+-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:16 }}>
+-          {[
+-            { label:'対戦数', value: stats.total, color:'var(--text)' },
+-            { label:'勝利数', value: stats.wins, color:'var(--correct)' },
+-            { label:'勝率', value: `${stats.winRate}%`, color:'var(--accent)' },
+-          ].map(s => (
+-            <div key={s.label} style={{ textAlign:'center' }}>
+-              <p style={{ fontFamily:'Orbitron,sans-serif', fontSize:26, fontWeight:900, color:s.color }}>{s.value}</p>
+-              <p style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>{s.label}</p>
+-            </div>
+-          ))}
++    <div className="qt">
++      <div className="qt-card">
++        <div className="qt-stats">
++          <div><b>{stats.total}</b><small>対戦数</small></div>
++          <div><b className="qt-win">{stats.wins}</b><small>勝利数</small></div>
++          <div><b style={{ color: 'var(--accent3)' }}>{stats.winRate}%</b><small>勝率</small></div>
+         </div>
+-        {(stats.totalCorrect + stats.totalWrong) > 0 && (
+-          <div>
+-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--muted)', marginBottom:6 }}>
+-              <span>{stats.totalCorrect}問正解</span>
+-              <span>{stats.totalWrong}問誤答</span>
+-            </div>
+-            <div style={{ height:8, borderRadius:4, background:'var(--surface2)', overflow:'hidden' }}>
+-              <div style={{ height:'100%', borderRadius:4,
+-                width:`${Math.round(stats.totalCorrect/(stats.totalCorrect+stats.totalWrong)*100)}%`,
+-                background:'linear-gradient(90deg,var(--correct),var(--accent))' }} />
+-            </div>
+-          </div>
++        {answered > 0 && (
++          <>
++            <div className="qt-bar"><span>{stats.totalCorrect}問正解</span><span>{stats.totalWrong}問誤答</span></div>
++            <ProgressBar value={(stats.totalCorrect / answered) * 100} label="正答率" />
++          </>
+         )}
+       </div>
+ 
+-      <div style={{ background:'var(--surface)', borderRadius:14, padding:'16px', border:'1px solid var(--border)' }}>
+-        <p style={{ fontWeight:800, fontSize:14, marginBottom:12 }}>対戦履歴</p>
+-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
++      <div className="qt-card">
++        <h2>対戦履歴</h2>
++        <ul className="qt-list">
+           {records.map(r => (
+-            <div key={r.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px',
+-              background:'var(--surface2)', borderRadius:10 }}>
+-              <span style={{ fontSize:20, width:28, textAlign:'center' }}>
+-                {r.result==='WIN' ? '🥇' : r.result==='LOSE' ? '💀' : '🎮'}
++            <li key={r.id} className={`qt-row${r.result === 'WIN' ? ' qt-row--win' : r.result === 'LOSE' ? ' qt-row--lose' : ''}`}>
++              <span className="qt-row__icon">
++                <Icon name={r.result === 'WIN' ? 'medal' : r.result === 'LOSE' ? 'skull' : 'gamepad'} size={22} />
+               </span>
+-              <div style={{ flex:1 }}>
+-                <p style={{ fontSize:13, fontWeight:700 }}>
+-                  {r.isMatchmaking ? 'ランダムマッチ' : (({'mon':'m○n×','free':'フリー','newyork':'ニューヨーク','updown':'アップダウン','by':'BY','freeze':'フリーズ','swedish':'スウェーデン','divide':'ディバイド','lucky':'ラッキー','rensei':'連勝','rengou':'連合','combo':'コンボ'} as Record<string,string>)[r.ruleId] ?? r.ruleId.toUpperCase())}
+-                </p>
+-                <p style={{ fontSize:11, color:'var(--muted)' }}>
+-                  {r.playerCount}人 · {new Date(r.playedAt).toLocaleDateString('ja-JP')}
+-                </p>
++              <div className="qt-row__main">
++                <b><RuleName ruleId={r.ruleId} isMatchmaking={r.isMatchmaking} /></b>
++                <small>{r.playerCount}人 · {new Date(r.playedAt).toLocaleDateString('ja-JP')}</small>
+               </div>
+-              <div style={{ textAlign:'right' }}>
+-                <p style={{ fontSize:12, fontWeight:700,
+-                  color:r.result==='WIN'?'var(--correct)':r.result==='LOSE'?'var(--wrong)':'var(--muted)' }}>
+-                  {r.result==='WIN'?'勝利':r.result==='LOSE'?'失格':'終了'}
+-                </p>
+-                <p style={{ fontSize:11, color:'var(--muted)' }}>{r.correct}◯ {r.wrong}×</p>
++              <div className="qt-row__side">
++                <b className={r.result === 'WIN' ? 'qt-win' : r.result === 'LOSE' ? 'qt-lose' : ''}>{r.result === 'WIN' ? '勝利' : r.result === 'LOSE' ? '失格' : '終了'}</b>
++                <small><span className="qs-sr">正解</span>{r.correct}<Icon name="circle" size={11} /> <span className="qs-sr">誤答</span>{r.wrong}<Icon name="x" size={11} /></small>
+               </div>
+-            </div>
++            </li>
+           ))}
+-          {records.length === 0 && <p style={{ color:'var(--muted)', fontSize:13, textAlign:'center', padding:16 }}>対戦履歴がありません</p>}
+-        </div>
++          {records.length === 0 && <li className="qt-empty">対戦履歴がありません</li>}
++        </ul>
+       </div>
+ 
+-      <button onClick={async () => {
++      <Button variant="danger" size="lg" block onClick={async () => {
+         if (!confirm('戦績をすべてリセットしますか？この操作は取り消せません')) return
+         await apiFetch('/api/records/me', { method: 'DELETE' })
+         fetchRecords()
+-      }} style={{ padding:'13px', borderRadius:12, fontSize:13, fontWeight:700,
+-        background:'rgba(239,68,68,0.08)', color:'var(--wrong)', border:'1px solid rgba(239,68,68,0.2)' }}>
+-        戦績をリセット
+-      </button>
++      }}>戦績をリセット</Button>
+     </div>
+   )
+ }
+diff --git a/src/components/profile/TitleSelectTab.tsx b/src/components/profile/TitleSelectTab.tsx
+index 07ca9ac..46a2c59 100644
+--- a/src/components/profile/TitleSelectTab.tsx
++++ b/src/components/profile/TitleSelectTab.tsx
+@@ -2,11 +2,14 @@ import { useState } from 'react'
+ import { useAuth } from '../../context/AuthContext'
+ import { TITLES, getUnlockedTitles, getTitleById } from '../../lib/titles'
+ import { apiFetch } from '../../lib/api'
++import { Button, Icon, type IconName } from '../ui'
++
++type UpdateProfileWithTitle = (name: string, bio?: string, username?: string, titleId?: string) => Promise<unknown>
+ 
+ export default function TitleSelectTab({ stats }: { stats: { rate: number; total: number; wins: number; correct: number } }) {
+   const { user, updateProfile } = useAuth()
+   const unlocked = getUnlockedTitles(stats)
+-  const current = getTitleById((user as any)?.titleId)
++  const current = getTitleById(user?.titleId)
+   const [selected, setSelected] = useState(current.id)
+   const [saving, setSaving] = useState(false)
+   const [ok, setOk] = useState(false)
+@@ -14,54 +17,45 @@ export default function TitleSelectTab({ stats }: { stats: { rate: number; total
+   async function save() {
+     setSaving(true)
+     await apiFetch('/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: user!.name, titleId: selected }) })
+-    await (updateProfile as any)(user!.name, (user as any).bio, (user as any).username, selected)
++    await (updateProfile as unknown as UpdateProfileWithTitle)(user!.name, user!.bio, user!.username, selected)
+     setSaving(false); setOk(true); setTimeout(() => setOk(false), 2000)
+   }
+ 
+-  const categories = [
+-    { key: 'rank', label: '🏆 段位' },
+-    { key: 'achievement', label: '⭐ 実績' },
+-    { key: 'fun', label: '😄 ネタ' },
+-  ] as const
++  const categories: Array<{ key: 'rank' | 'achievement' | 'fun'; label: string; icon: IconName }> = [
++    { key: 'rank', label: '段位', icon: 'trophy' },
++    { key: 'achievement', label: '実績', icon: 'star' },
++    { key: 'fun', label: 'ネタ', icon: 'smile' },
++  ]
+ 
+   return (
+-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+-      <div style={{ background: 'var(--surface)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--border)', textAlign: 'center' }}>
+-        <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>現在の称号</p>
+-        <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--accent)' }}>{current.label}</p>
++    <div className="qt" style={{ gap: 20 }}>
++      <div className="qt-card qt-cur">
++        <small>現在の称号</small>
++        <b>{current.label}</b>
+       </div>
+ 
+       {categories.map(cat => (
+-        <div key={cat.key}>
+-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 10 }}>{cat.label}</p>
+-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
++        <section key={cat.key} aria-labelledby={`cat-${cat.key}`}>
++          <h2 className="qt-cat" id={`cat-${cat.key}`}><Icon name={cat.icon} size={14} />{cat.label}</h2>
++          <div className="qt-titles qt" role="radiogroup" aria-labelledby={`cat-${cat.key}`} style={{ gap: 8 }}>
+             {TITLES.filter(t => t.category === cat.key).map(t => {
+               const isUnlocked = unlocked.some(u => u.id === t.id)
+               const isSelected = selected === t.id
+               return (
+-                <button key={t.id} disabled={!isUnlocked} onClick={() => setSelected(t.id)}
+-                  style={{ padding: '12px 16px', borderRadius: 12, border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+-                    background: isSelected ? 'rgba(56,189,248,0.08)' : 'var(--surface)',
+-                    opacity: isUnlocked ? 1 : 0.35, cursor: isUnlocked ? 'pointer' : 'not-allowed',
+-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+-                  <div style={{ textAlign: 'left' }}>
+-                    <p style={{ fontSize: 14, fontWeight: 700, color: isSelected ? 'var(--accent)' : 'var(--text)' }}>{t.label}</p>
+-                    <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{t.description}</p>
+-                  </div>
+-                  {isSelected && <span style={{ fontSize: 16 }}>✓</span>}
+-                  {!isUnlocked && <span style={{ fontSize: 11, color: 'var(--muted)' }}>🔒</span>}
++                <button key={t.id} role="radio" aria-checked={isSelected} disabled={!isUnlocked} className="qt-title" onClick={() => setSelected(t.id)}>
++                  <span><b>{t.label}</b><small>{t.description}</small></span>
++                  {isSelected && <Icon name="check" size={18} strokeWidth={2.8} label="選択中" />}
++                  {!isUnlocked && <Icon name="lock" size={16} label="未解放" />}
+                 </button>
+               )
+             })}
+           </div>
+-        </div>
++        </section>
+       ))}
+ 
+-      <button onClick={save} disabled={saving}
+-        style={{ padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 700,
+-          background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+-        {ok ? '保存しました ✓' : saving ? '保存中...' : '称号を設定する'}
+-      </button>
++      <Button variant="primary" size="lg" block onClick={save} disabled={saving}>
++        {ok ? <><Icon name="check" size={18} />保存しました</> : saving ? '保存中...' : '称号を設定する'}
++      </Button>
+     </div>
+   )
+ }
+diff --git a/src/styles/pages.css b/src/styles/pages.css
+index 481cdf5..bf36202 100644
+--- a/src/styles/pages.css
++++ b/src/styles/pages.css
+@@ -105,3 +105,71 @@
+ .qr-tier { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 1px 8px; border-radius: var(--r-full); font-size: 11px; font-weight: 700; color: var(--tier, var(--sub)); background: color-mix(in srgb, var(--tier, #888) 14%, transparent); }
+ .qr-empty { padding: var(--sp-10); text-align: center; color: var(--muted); }
+ @media (min-width: 1024px) { .qr { padding: var(--sp-8); } }
++
++/* ===== マイページの各タブ(qt) ===== */
++.qt { display: flex; flex-direction: column; gap: var(--sp-3); width: 100%; }
++.qt-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--sp-5); }
++.qt-card h2 { font-size: var(--fs-md); font-weight: 800; margin-bottom: var(--sp-3); }
++.qt-empty { padding: var(--sp-8) var(--sp-4); text-align: center; color: var(--muted); font-size: var(--fs-sm); }
++.qt-hint { text-align: center; color: var(--muted); font-size: var(--fs-xs); }
++.qt-field { display: block; margin-bottom: var(--sp-4); }
++.qt-field > span { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
++.qt-input { width: 100%; min-height: 48px; padding: 12px 16px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--r-md); font-size: 16px; color: var(--text); font-family: inherit; }
++.qt-input:focus { border-color: var(--accent); }
++textarea.qt-input { resize: vertical; line-height: 1.6; }
++.qt-at { display: flex; align-items: center; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
++.qt-at > span { padding: 0 12px; color: var(--muted); border-right: 1px solid var(--border); align-self: stretch; display: grid; place-items: center; }
++.qt-at .qt-input { border: 0; border-radius: 0; background: transparent; }
++.qt-msg { margin-bottom: var(--sp-3); padding: 8px 12px; border-radius: var(--r-sm); font-size: var(--fs-sm); }
++.qt-msg--ng { background: var(--lose-soft); color: var(--wrong); }
++.qt-msg--ok { background: var(--win-soft); color: var(--correct); display: flex; align-items: center; gap: 6px; }
++.qt-avatar { position: relative; align-self: center; width: 80px; height: 80px; border-radius: 50%; background: none; padding: 0; }
++.qt-avatar .qs-avatar { border: 3px solid var(--border); }
++.qt-avatar__cam { position: absolute; right: -2px; bottom: -2px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
++.qt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
++@media (min-width: 768px) { .qt-form-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sp-4); } .qt-form-grid .qt-field--wide { grid-column: 1 / -1; } }
++
++.qt-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); text-align: center; margin-bottom: var(--sp-4); }
++.qt-stats b { display: block; font-family: Orbitron, sans-serif; font-size: 26px; font-weight: 900; }
++.qt-stats small { font-size: 11px; color: var(--muted); }
++.qt-bar { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: var(--muted); }
++.qt-list { list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); }
++.qt-row { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3); background: var(--surface2); border-radius: var(--r-md); }
++.qt-row__icon { flex: none; width: 32px; display: grid; place-items: center; color: var(--muted); }
++.qt-row--win .qt-row__icon { color: var(--gold); }
++.qt-row--lose .qt-row__icon { color: var(--wrong); }
++.qt-row__main { flex: 1; min-width: 0; }
++.qt-row__main b { display: block; font-size: var(--fs-sm); }
++.qt-row__main small { font-size: 11px; color: var(--muted); }
++.qt-row__side { text-align: right; flex: none; }
++.qt-row__side b { display: block; font-size: 12px; }
++.qt-row__side small { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: var(--muted); }
++.qt-win { color: var(--correct); } .qt-lose { color: var(--wrong); }
++
++.qt-q { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--sp-4); display: flex; gap: var(--sp-3); }
++.qt-q--ok { border-color: color-mix(in srgb, var(--correct) 35%, transparent); }
++.qt-q--ng { border-color: color-mix(in srgb, var(--wrong) 30%, transparent); }
++.qt-q__mark { flex: none; margin-top: 2px; }
++.qt-q--ok .qt-q__mark { color: var(--correct); } .qt-q--ng .qt-q__mark { color: var(--wrong); }
++.qt-q__text { font-size: var(--fs-md); font-weight: 700; line-height: 1.6; overflow-wrap: anywhere; }
++.qt-q dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin-top: var(--sp-2); font-size: var(--fs-sm); align-items: baseline; }
++.qt-q dt { font-size: 11px; color: var(--muted); }
++.qt-q dd { font-weight: 800; overflow-wrap: anywhere; }
++.qt-q__foot { display: flex; justify-content: space-between; align-items: center; margin-top: var(--sp-2); font-size: 11px; color: var(--muted); }
++
++.qt-cur { text-align: center; }
++.qt-cur small { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
++.qt-cur b { font-size: var(--fs-lg); font-weight: 900; color: var(--accent3); }
++.qt-cat { display: flex; align-items: center; gap: 6px; margin-bottom: var(--sp-2); font-size: 12px; font-weight: 700; color: var(--muted); }
++.qt-title { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); width: 100%; min-height: 56px; padding: var(--sp-3) var(--sp-4); text-align: left; border-radius: var(--r-md); background: var(--surface); border: 1.5px solid var(--border); }
++.qt-title[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
++.qt-title[aria-checked="true"] b { color: var(--accent3); }
++.qt-title:disabled { opacity: .45; cursor: not-allowed; }
++.qt-title b { display: block; font-size: var(--fs-md); }
++.qt-title small { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
++@media (min-width: 768px) { .qt-titles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); } }
++
++.qt-genres { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: center; margin-top: var(--sp-3); }
++.qt-genre { padding: 6px 12px; border-radius: var(--r-sm); background: var(--surface2); font-size: 12px; }
++.qt-genre b { margin-left: 6px; color: var(--accent3); font-weight: 800; }
++.qt-genre small { margin-left: 4px; font-size: 10px; color: var(--muted); }
+diff --git a/tests/pages.test.ts b/tests/pages.test.ts
+index e32bb7f..1fb7a61 100644
+--- a/tests/pages.test.ts
++++ b/tests/pages.test.ts
+@@ -59,3 +59,14 @@ test('Google ログインの URL は API_BASE を使う(VITE_API_URL 未設定
+   assert.match(s, /\$\{API_BASE\}\/auth\/google/)
+   assert.doesNotMatch(s, /\$\{import\.meta\.env\.VITE_API_URL\}/)
+ })
++
++test('マイページの各タブは絵文字を使わず、状態を読み上げに伝える', () => {
++  for (const f of ['ProfileTab', 'RecordsTab', 'QuestionHistoryTab', 'TitleSelectTab', 'GenreRadarTab'])
++    assert.equal([...read(`components/profile/${f}.tsx`).matchAll(EMOJI)].length, 0, f)
++  assert.match(read('components/profile/TitleSelectTab.tsx'), /role="radio" aria-checked/)
++  assert.match(read('components/profile/ProfileTab.tsx'), /aria-label=\{avatarUploading/)
++  assert.match(read('components/profile/RecordsTab.tsx'), /role="status"/)
++})
++test('戦績タブは標準の Record 型を隠していない(型エラーの回帰ガード)', () => {
++  assert.doesNotMatch(read('components/profile/RecordsTab.tsx'), /^\s*(interface|type)\s+Record\b/m)
++})
+diff --git a/tests/ui.test.ts b/tests/ui.test.ts
+index 226357f..9844969 100644
+--- a/tests/ui.test.ts
++++ b/tests/ui.test.ts
+@@ -45,7 +45,7 @@ test('移行の網羅性: ソース内の絵文字がすべて対応表に載っ
+ })
+ 
+ // ラチェット: 絵文字は増やさない。ページを移行するたびに、この値を下げる(最終的に 0)。
+-const EMOJI_BASELINE = Number(process.env.EMOJI_BASELINE ?? 0) || 120
++const EMOJI_BASELINE = Number(process.env.EMOJI_BASELINE ?? 0) || 99
+ test(`絵文字の残数は ${EMOJI_BASELINE} 以下(移行が進むたびに下げる)`, () => {
+   const found = emojiInSource()
+   assert.ok(found.length <= EMOJI_BASELINE, `絵文字が増えています: ${found.length} > ${EMOJI_BASELINE}`)
+-- 
+2.43.0
+
